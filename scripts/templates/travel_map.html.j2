@@ -34,6 +34,11 @@
     /* ── Map ── */
     #map { position: absolute; inset: 0; }
 
+    /* Night mode: tint the WebGL canvas only (markers/controls stay bright).
+       Avoids a full Mapbox style reload — instant, no tile refetch. */
+    .mapboxgl-canvas { transition: filter 0.7s ease; }
+    body.night .mapboxgl-canvas { filter: brightness(0.42) contrast(1.08) saturate(0.85) hue-rotate(202deg); }
+
     /* ── Sidebar ── */
     .sidebar {
       position: absolute; top: 16px; left: 16px; bottom: calc(var(--timeline-h) + 24px);
@@ -397,7 +402,7 @@
 
   <!-- Master timeline -->
   <div class="timeline-bar">
-    <div class="timeline-label">Journey Timeline · 2023 — 2026</div>
+    <div class="timeline-label" id="timeline-label">Journey Timeline</div>
     <div class="timeline-track" id="timeline-track">
       {% for seg in timeline %}
       <div class="tl-seg{% if seg.has_colorado %} co{% endif %}"
@@ -534,7 +539,7 @@
     }
 
     function setMapLabelsVisible(visible) {
-      if (!map.getStyle()) return;
+      if (!map || !map.isStyleLoaded()) return;
       map.getStyle().layers.forEach(layer => {
         if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
           try { map.setLayoutProperty(layer.id, 'visibility', visible ? 'visible' : 'none'); } catch (_) {}
@@ -688,7 +693,6 @@
         if (directorMode) {
           const lookAhead = Math.min(prog + 0.08, 1);
           const ahead = pointOnPath(path, lookAhead) || pos;
-          setMapLabelsVisible(false);
           map.easeTo({
             center:[ahead.lng, ahead.lat],
             zoom: Math.min(6.5, Math.max(4.5, map.getZoom())),
@@ -769,12 +773,13 @@
     }
 
     // ── Night mode ──
+    // Tint the canvas instead of reloading the whole base style. A full
+    // setStyle() swap tore down/rebuilt every source + refetched all tiles,
+    // which threw "Style is not done loading" and left dark tile gaps.
     function toggleNight() {
       nightMode=!nightMode;
       document.getElementById('btn-night').classList.toggle('on', nightMode);
-      const sel = selectedId;
-      map.setStyle(nightMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/satellite-streets-v12');
-      map.once('style.load', ()=>{ setupTerrain(); drawRoutes(); drawStops(); selectTrip(sel); });
+      document.body.classList.toggle('night', nightMode);
     }
 
     // ── Events ──
@@ -833,6 +838,18 @@
     document.getElementById('token-input').addEventListener('keydown', e=>{
       if (e.key === 'Enter') document.getElementById('token-submit').click();
     });
+
+    // ── Timeline label: derive real year span from trip data ──
+    (function setTimelineRange() {
+      const years = TRIPS
+        .flatMap(t => [t.start, t.end])
+        .map(d => parseInt(String(d).slice(0, 4), 10))
+        .filter(y => y >= 1990 && y <= 2100);
+      if (!years.length) return;
+      const lo = Math.min(...years), hi = Math.max(...years);
+      document.getElementById('timeline-label').textContent =
+        `Journey Timeline · ${lo}${hi > lo ? ' — ' + hi : ''}`;
+    })();
 
     // ── Boot ──
     (function boot() {
