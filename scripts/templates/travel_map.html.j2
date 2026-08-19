@@ -409,7 +409,6 @@
   </div>
 
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
-  <script src="https://unpkg.com/deck.gl@9.0.36/dist.min.js"></script>
   <script>
     const TRIPS = {{ trips_json | safe }};
     const DASHBOARD = {{ dashboard_json | safe }};
@@ -423,7 +422,8 @@
     let selectedId = 'all', animProg = 0, animStopIdx = 0;
     let isPlaying = false, animFrame = null, lastTs = 0;
     let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
-    let vehicleMarker = null, stopMarkers = [], deckOverlay = null;
+    let vehicleMarker = null, stopMarkers = [];
+    const MAX_PITCH = 45;
 
     const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div></div>`;
 
@@ -460,7 +460,9 @@
         container: 'map',
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
         center: [-105, 39], zoom: 4, pitch: 0, bearing: 0,
-        antialias: true, projection: 'globe',
+        antialias: true,
+        maxPitch: MAX_PITCH,
+        projection: 'mercator',
       });
       map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
       map.on('load', onMapLoad);
@@ -469,9 +471,9 @@
     function onMapLoad() {
       setupTerrain();
       drawRoutes();
-      initDeck();
       drawStops();
       updateHero();
+      setMapLabelsVisible(true);
       document.getElementById('btn-play').disabled = true;
       document.getElementById('prog-text').textContent = 'Select a trip to play';
       introFlyover();
@@ -521,51 +523,23 @@
       return [r,g,b];
     }
 
-    // ── Terrain + atmosphere ──
+    // ── Terrain (subtle — routes use Mapbox line layers on surface) ──
     function setupTerrain() {
       setSplash(50);
-      map.addSource('mapbox-dem', { type:'raster-dem', url:'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize:512, maxzoom:14 });
-      map.setTerrain({ source:'mapbox-dem', exaggeration: 1.75 });
-      map.setFog({
-        color:'rgb(6,8,13)', 'high-color':'rgb(30,80,160)',
-        'horizon-blend':0.06, 'space-color':'rgb(4,6,10)', 'star-intensity':0.6,
-      });
-      if (map.getLayer('building')) {
-        map.setPaintProperty('building','fill-extrusion-opacity',0.65);
-        map.setPaintProperty('building','fill-extrusion-color','#c8d0d8');
+      if (!map.getSource('mapbox-dem')) {
+        map.addSource('mapbox-dem', { type:'raster-dem', url:'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize:512, maxzoom:14 });
       }
+      map.setTerrain({ source:'mapbox-dem', exaggeration: 1.0 });
       setSplash(70);
     }
 
-    // ── deck.gl: PathLayer with precomputed short-path arcs — selected trip only ──
-    function buildDeckLayers() {
-      if (!isSingleTrip()) return [];
-      const trip = activeTrip();
-      if (!trip || !trip.arcs || !trip.arcs.length) return [];
-      const paths = trip.arcs.map(a => ({
-        path: a.path3d || a.path.map(p => [p[0], p[1], 0]),
-        color: hexToRgb(trip.color),
-      }));
-      return [new deck.PathLayer({
-        id: 'trip-arcs-3d', data: paths,
-        getPath: d => d.path,
-        getColor: d => [...d.color, 200],
-        getWidth: 3, widthUnits: 'pixels',
-        capRounded: true, jointRounded: true, billboard: false,
-      })];
-    }
-
-    function initDeck() {
-      if (deckOverlay) {
-        deckOverlay.setProps({ layers: [] });
-        return;
-      }
-      deckOverlay = new deck.MapboxOverlay({ interleaved: false, layers: [] });
-      map.addControl(deckOverlay);
-      setSplash(85);
-    }
-    function updateDeck() {
-      if (deckOverlay) deckOverlay.setProps({ layers: buildDeckLayers() });
+    function setMapLabelsVisible(visible) {
+      if (!map.getStyle()) return;
+      map.getStyle().layers.forEach(layer => {
+        if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+          try { map.setLayoutProperty(layer.id, 'visibility', visible ? 'visible' : 'none'); } catch (_) {}
+        }
+      });
     }
 
     // ── Route ghost lines ──
@@ -576,12 +550,12 @@
         const isSelected = selectedId === trip.id;
         const isOverview = selectedId === 'all';
         const visible = isOverview || isSelected;
-        const lineOp = isSelected ? 0.9 : (isOverview ? 0.16 : 0);
-        const glowOp = isSelected ? 0.28 : (isOverview ? 0.03 : 0);
-        const lineW = isSelected ? 3.5 : (isOverview ? 1 : 0);
+        const lineOp = isSelected ? 0.95 : (isOverview ? 0.14 : 0);
+        const glowOp = isSelected ? 0.35 : (isOverview ? 0.04 : 0);
+        const lineW = isSelected ? 4 : (isOverview ? 1 : 0);
         if (!map.getSource(srcId)) {
           map.addSource(srcId,{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:coords}}});
-          map.addLayer({id:`${srcId}-glow`,type:'line',source:srcId,paint:{'line-color':trip.color,'line-width':6,'line-opacity':glowOp,'line-blur':4},layout:{visibility:visible?'visible':'none'}});
+          map.addLayer({id:`${srcId}-glow`,type:'line',source:srcId,paint:{'line-color':trip.color,'line-width':8,'line-opacity':glowOp,'line-blur':3},layout:{visibility:visible?'visible':'none'}});
           map.addLayer({id:`${srcId}-line`,type:'line',source:srcId,layout:{'line-cap':'round','line-join':'round',visibility:visible?'visible':'none'},paint:{'line-color':trip.color,'line-width':lineW,'line-opacity':lineOp}});
         } else {
           map.setLayoutProperty(`${srcId}-line`, 'visibility', visible ? 'visible' : 'none');
@@ -652,29 +626,28 @@
       }
     }
 
-    // ── Intro flyover ──
+    // ── Intro — continental US, flat mercator view ──
     function introFlyover() {
       map.fitBounds([[US_BOUNDS.west, US_BOUNDS.south], [US_BOUNDS.east, US_BOUNDS.north]], {
-        padding:{top:80,bottom:120,left:380,right:220}, pitch:0, bearing:0, duration:0,
+        padding:{top:80,bottom:120,left:380,right:220},
+        pitch:0, bearing:0, duration:1200, maxZoom:5,
       });
-      setTimeout(()=>{
-        map.flyTo({ center:[-105, 39], zoom:4.2, pitch:48, bearing:-15, duration:3500, essential:true });
-      }, 600);
-      setTimeout(hideSplash, 4000);
+      setTimeout(hideSplash, 2000);
     }
 
-    // ── Fit trip ──
+    // ── Fit trip — frame route in continental US ──
     function fitTrip(animate=true) {
       const bounds = new mapboxgl.LngLatBounds();
       activeTrips().forEach(t => t.stops.forEach(s => bounds.extend([s.lng,s.lat])));
       if (bounds.isEmpty()) return;
-      const trip = activeTrip();
-      const isCo = trip && trip.has_colorado;
+      const hideLabels = isSingleTrip();
+      setMapLabelsVisible(!hideLabels);
       map.fitBounds(bounds, {
         padding:{top:80,bottom:120,left:380,right:220},
-        pitch: isSingleTrip() ? 52 : 42, bearing: -12,
-        duration: animate ? 1600 : 0,
-        maxZoom: isCo ? 7.5 : (isSingleTrip() ? 9 : 5),
+        pitch: isSingleTrip() ? 40 : 0,
+        bearing: isSingleTrip() ? -8 : 0,
+        duration: animate ? 1400 : 0,
+        maxZoom: isSingleTrip() ? 6 : 5,
         minZoom: 3,
       });
     }
@@ -715,11 +688,13 @@
         if (directorMode) {
           const lookAhead = Math.min(prog + 0.08, 1);
           const ahead = pointOnPath(path, lookAhead) || pos;
-          const segLen = path.length;
-          const zoom = Math.min(9, Math.max(5.5, 8 - segLen/80));
+          setMapLabelsVisible(false);
           map.easeTo({
-            center:[ahead.lng, ahead.lat], zoom, pitch:58,
-            bearing: bearing*0.5, duration:600, essential:true,
+            center:[ahead.lng, ahead.lat],
+            zoom: Math.min(6.5, Math.max(4.5, map.getZoom())),
+            pitch: Math.min(MAX_PITCH, 42),
+            bearing: bearing * 0.3,
+            duration:600, essential:true,
           });
         }
       }
@@ -771,6 +746,7 @@
       document.getElementById('btn-play').disabled=false;
       document.getElementById('btn-pause').disabled=true;
       document.getElementById('playback-bar').classList.remove('visible');
+      setMapLabelsVisible(selectedId === 'all');
     }
     function resetVisuals() {
       stopPlayback(); animProg=0; animStopIdx=0;
@@ -787,7 +763,8 @@
       selectedId=id;
       document.querySelectorAll('.trip-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       document.querySelectorAll('.tl-seg').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
-      resetVisuals(); drawRoutes(); drawStops(); updateHero(); updateDeck(); fitTrip();
+      resetVisuals(); drawRoutes(); drawStops(); updateHero(); fitTrip();
+      setMapLabelsVisible(selectedId === 'all');
       document.getElementById('btn-play').disabled = !isSingleTrip();
     }
 
@@ -797,7 +774,7 @@
       document.getElementById('btn-night').classList.toggle('on', nightMode);
       const sel = selectedId;
       map.setStyle(nightMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/satellite-streets-v12');
-      map.once('style.load', ()=>{ setupTerrain(); drawRoutes(); initDeck(); drawStops(); updateDeck(); selectTrip(sel); });
+      map.once('style.load', ()=>{ setupTerrain(); drawRoutes(); drawStops(); selectTrip(sel); });
     }
 
     // ── Events ──
