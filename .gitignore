@@ -4,7 +4,11 @@ __pycache__/
 .env
 data/tesla_session/
 output/travel_map.html
+output/index.html
 .DS_Store
 *.egg-info/
 dist/
 build/
+
+# Personal Tesla CSV exports (never commit)
+Tesla_Charging_History_*.csv

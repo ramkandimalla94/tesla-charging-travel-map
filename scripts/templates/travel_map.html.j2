@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tesla Travel Replay</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -229,9 +230,40 @@
     }
 
     kbd { background: var(--glass-light); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 10px; font-family: inherit; }
+
+    /* Onboarding */
+    #onboarding {
+      position: fixed; inset: 0; z-index: 9000; background: rgba(6,8,13,0.55);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0.4s;
+    }
+    #onboarding.visible { opacity: 1; visibility: visible; }
+    .onboard-card {
+      max-width: 420px; margin-left: 360px; padding: 28px 32px;
+      background: var(--glass); border: 1px solid var(--border); border-radius: 20px;
+      backdrop-filter: blur(24px); box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    }
+    .onboard-card h2 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+    .onboard-card p { font-size: 13px; color: var(--muted); line-height: 1.55; margin-bottom: 20px; }
+    .onboard-card .highlight { color: #fbbf24; font-weight: 600; }
+    .onboard-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .onboard-actions .btn { flex: 1; min-width: 140px; justify-content: center; padding: 12px 16px; font-size: 13px; }
+    .onboard-actions .btn.gold { background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #f59e0b; color: #fff; }
   </style>
 </head>
 <body>
+
+  <!-- Onboarding -->
+  <div id="onboarding">
+    <div class="onboard-card">
+      <h2>⚡ Start Here</h2>
+      <p>Welcome to your Tesla charging travel replay. Pick a journey from the sidebar — try the <span class="highlight">Colorado round trip</span> for the full 3D experience with numbered stops and playback.</p>
+      <div class="onboard-actions">
+        <button class="btn gold" id="onboard-co">🏔 Colorado Trip</button>
+        <button class="btn" id="onboard-dismiss">Explore Overview</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Splash -->
   <div id="splash">
@@ -375,7 +407,23 @@
     function setSplash(pct) { document.getElementById('splash-fill').style.width = pct + '%'; }
     function hideSplash() {
       setSplash(100);
-      setTimeout(() => document.getElementById('splash').classList.add('hidden'), 400);
+      setTimeout(() => {
+        document.getElementById('splash').classList.add('hidden');
+        showOnboarding();
+      }, 400);
+    }
+    function showOnboarding() {
+      if (localStorage.getItem('tesla-map-onboarded')) return;
+      document.getElementById('onboarding').classList.add('visible');
+    }
+    function dismissOnboarding() {
+      document.getElementById('onboarding').classList.remove('visible');
+      localStorage.setItem('tesla-map-onboarded', '1');
+    }
+    function startWithColorado() {
+      const co = TRIPS.find(t => t.has_colorado);
+      if (co) selectTrip(co.id);
+      dismissOnboarding();
     }
 
     // ── Map init ──
@@ -751,6 +799,12 @@
       if (e.code==='ArrowLeft') { stopPlayback(); if(isSingleTrip()&&animStopIdx>0){animStopIdx--; animProg=animStopIdx/Math.max(activeStops().length-1,1); updateTrail(animProg);} }
       if (e.code==='KeyR') document.getElementById('btn-reset').click();
       if (e.code==='KeyD') document.getElementById('btn-director').click();
+    });
+
+    document.getElementById('onboard-co').addEventListener('click', startWithColorado);
+    document.getElementById('onboard-dismiss').addEventListener('click', dismissOnboarding);
+    document.getElementById('onboarding').addEventListener('click', e=>{
+      if (e.target.id === 'onboarding') dismissOnboarding();
     });
 
     // ── Init ──
