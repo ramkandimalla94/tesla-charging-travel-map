@@ -1,0 +1,12 @@
+{
+  "name": "Tesla Charging Travel Map",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "map-server",
+      "command": ".venv/bin/python -m http.server 8765"
+    }
+  ],
+  "ports": [8765]
+}
