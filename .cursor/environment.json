@@ -8,5 +8,10 @@
       "command": ".venv/bin/python -m http.server 8765"
     }
   ],
-  "ports": [8765]
+  "ports": [
+    {
+      "name": "map-server",
+      "port": 8765
+    }
+  ]
 }
