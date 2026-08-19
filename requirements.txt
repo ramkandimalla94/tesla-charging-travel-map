@@ -1,0 +1,5 @@
+pandas
+geopy
+playwright
+jinja2
+python-dotenv

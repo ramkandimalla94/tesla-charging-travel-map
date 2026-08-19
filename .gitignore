@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/tesla_session/
+output/travel_map.html
+.DS_Store
+*.egg-info/
+dist/
+build/
