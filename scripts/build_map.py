@@ -197,6 +197,128 @@ def extract_state(location: str) -> str | None:
     return m.group(1) if m else None
 
 
+def short_location_label(location: str) -> str:
+    city_match = re.match(r"^([^,]+)", location)
+    city = city_match.group(1).strip() if city_match else location
+    state = extract_state(location)
+    return f"{city}, {state}" if state else city
+
+
+def parse_ts(ts: str) -> datetime:
+    return datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+
+
+def nearest_path_index(path: list[list[float]], lat: float, lng: float) -> int:
+    best, best_d = 0, float("inf")
+    for i, p in enumerate(path):
+        d = (p[0] - lat) ** 2 + (p[1] - lng) ** 2
+        if d < best_d:
+            best_d, best = d, i
+    return best
+
+
+def extract_leg_path(
+    route_path: list[list[float]], lat1: float, lng1: float, lat2: float, lng2: float
+) -> list[list[float]]:
+    if not route_path:
+        return great_circle_arc(lat1, lng1, lat2, lng2, num_points=32)
+    i1 = nearest_path_index(route_path, lat1, lng1)
+    i2 = nearest_path_index(route_path, lat2, lng2)
+    if i1 <= i2 and i2 - i1 >= 1:
+        return route_path[i1 : i2 + 1]
+    return great_circle_arc(lat1, lng1, lat2, lng2, num_points=32)
+
+
+def build_playback_timeline(stops: list[dict], route_path: list[list[float]]) -> dict:
+    """
+    Time-weighted playback segments for cinematic replay.
+    Long halts between charges produce longer dwell + slower leg pacing.
+    """
+    if len(stops) < 1:
+        return {"segments": [], "total_video_ms": 0, "real_duration_ms": 0}
+
+    raw_segments: list[dict] = []
+    real_total_ms = 0
+
+    for i, stop in enumerate(stops):
+        label = short_location_label(stop["location"])
+        if i < len(stops) - 1:
+            nxt = stops[i + 1]
+            gap_ms = max(
+                60_000,
+                int((parse_ts(nxt["datetime"]) - parse_ts(stop["datetime"])).total_seconds() * 1000),
+            )
+            real_total_ms += gap_ms
+            gap_hours = gap_ms / 3_600_000
+            dwell_ratio = min(0.88, max(0.18, gap_hours / (gap_hours + 2.5)))
+            dwell_ms = int(gap_ms * dwell_ratio)
+            travel_ms = gap_ms - dwell_ms
+            leg_path = extract_leg_path(
+                route_path, stop["lat"], stop["lng"], nxt["lat"], nxt["lng"]
+            )
+            raw_segments.append({
+                "type": "dwell",
+                "real_duration_ms": dwell_ms,
+                "lat": stop["lat"],
+                "lng": stop["lng"],
+                "label": label,
+                "stop_index": i,
+            })
+            raw_segments.append({
+                "type": "travel",
+                "real_duration_ms": travel_ms,
+                "path": leg_path,
+                "from_label": label,
+                "to_label": short_location_label(nxt["location"]),
+                "stop_index": i,
+            })
+        else:
+            final_ms = 300_000
+            if stop.get("end_datetime"):
+                final_ms = max(
+                    60_000,
+                    int(
+                        (parse_ts(stop["end_datetime"]) - parse_ts(stop["datetime"])).total_seconds()
+                        * 1000
+                    ),
+                )
+            real_total_ms += final_ms
+            raw_segments.append({
+                "type": "dwell",
+                "real_duration_ms": final_ms,
+                "lat": stop["lat"],
+                "lng": stop["lng"],
+                "label": label,
+                "stop_index": i,
+            })
+
+    target_ms = min(90_000, max(20_000, len(stops) * 2_800))
+    scale = target_ms / max(real_total_ms, 1)
+    video_segments: list[dict] = []
+    for seg in raw_segments:
+        dur = seg["real_duration_ms"] * scale
+        if seg["type"] == "dwell":
+            dur = max(700, min(9_000, dur))
+        else:
+            dur = max(1_200, min(18_000, dur))
+        video_segments.append({**seg, "duration_ms": int(dur)})
+
+    return {
+        "segments": video_segments,
+        "total_video_ms": sum(s["duration_ms"] for s in video_segments),
+        "real_duration_ms": real_total_ms,
+    }
+
+
+def is_featured_trip(trip: dict, miles: int, stop_count: int) -> bool:
+    return (
+        trip.get("has_colorado")
+        or miles >= 600
+        or stop_count >= 10
+        or trip_duration_days(trip["start"], trip["end"]) >= 4
+    )
+
+
 def trip_duration_days(start: str, end: str) -> int:
     try:
         s = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
@@ -225,6 +347,8 @@ def prepare_trips(trips_data: dict) -> list[dict]:
         state_names = [STATE_NAMES.get(s, s) for s in states]
         via_summary = trip.get("via_summary") or ", ".join(states)
         arcs = build_arcs(stops, trip_color(i), trip["id"])
+        playback = build_playback_timeline(stops, route_path)
+        featured = is_featured_trip(trip, miles, len(stops))
         prepared.append({
             "id": trip["id"],
             "name": trip["name"],
@@ -246,7 +370,9 @@ def prepare_trips(trips_data: dict) -> list[dict]:
             "dest_label": trip.get("dest_label", ""),
             "has_colorado": trip.get("has_colorado", False),
             "colorado_stops": trip.get("colorado_stops", 0),
+            "featured": featured,
             "arcs": arcs,
+            "playback": playback,
             "region": "colorado" if trip.get("has_colorado") else (
                 "pnw" if any(s in states for s in ("WA", "OR", "ID")) else "other"
             ),
@@ -269,6 +395,7 @@ def build_dashboard(trips: list[dict]) -> dict:
             "name": longest["name"], "miles": longest["miles"], "id": longest["id"],
         } if longest else None,
         "colorado_trips": sum(1 for t in trips if t["has_colorado"]),
+        "featured_trips": sum(1 for t in trips if t.get("featured")),
         "us_bounds": US_BOUNDS,
     }
 

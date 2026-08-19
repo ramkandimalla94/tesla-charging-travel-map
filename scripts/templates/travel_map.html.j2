@@ -194,6 +194,10 @@
     .vehicle-body svg { width: 22px; height: 22px; fill: #fff; }
 
     /* Numbered stop pins */
+    .stop-pin-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      pointer-events: none;
+    }
     .stop-pin {
       width: 28px; height: 28px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
@@ -205,6 +209,71 @@
     }
     .stop-pin.visible { opacity: 1; transform: scale(1); }
     .stop-pin.active { transform: scale(1.35); box-shadow: 0 0 20px currentColor; }
+
+    .stop-label {
+      font-size: 10px; font-weight: 700; color: #fff; letter-spacing: 0.2px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.8);
+      white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+      opacity: 0; transform: translateY(4px); transition: opacity 0.35s, transform 0.35s;
+      pointer-events: none;
+    }
+    .stop-label.visible { opacity: 1; transform: translateY(0); }
+    .stop-label.active {
+      font-size: 11px; color: #fbbf24;
+      text-shadow: 0 1px 6px rgba(0,0,0,1), 0 0 12px rgba(245,158,11,0.6);
+    }
+
+    /* Live location HUD during playback / recording */
+    .location-hud {
+      position: absolute; top: 24px; left: 50%; transform: translateX(-50%); z-index: 12;
+      background: rgba(6,8,13,0.72); backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 999px;
+      padding: 10px 22px; font-size: 14px; font-weight: 700; letter-spacing: -0.2px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45); display: none; max-width: min(90vw, 520px);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .location-hud.visible { display: block; }
+    .location-hud .phase { color: var(--muted); font-weight: 500; font-size: 11px; margin-right: 8px; }
+
+    /* Cinema / Instagram export mode */
+    body.cinema-mode .sidebar,
+    body.cinema-mode .sidebar-toggle,
+    body.cinema-mode .stats-panel,
+    body.cinema-mode .map-tools,
+    body.cinema-mode .timeline-bar,
+    body.cinema-mode .playback-bar,
+    body.cinema-mode #onboarding,
+    body.cinema-mode .mapboxgl-ctrl-group,
+    body.cinema-mode .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
+
+    body.cinema-mode #map {
+      inset: 0;
+    }
+    body.cinema-mode.portrait-export #map-wrap {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: #000;
+    }
+    body.cinema-mode.portrait-export #map {
+      width: min(100vw, calc(100vh * 9 / 16));
+      height: 100vh;
+      position: relative;
+      inset: auto;
+    }
+
+    .cinema-title {
+      position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%); z-index: 13;
+      text-align: center; display: none; pointer-events: none;
+    }
+    body.cinema-mode .cinema-title.visible { display: block; }
+    .cinema-title h2 { font-size: 22px; font-weight: 800; text-shadow: 0 2px 12px rgba(0,0,0,0.9); }
+    .cinema-title p { font-size: 12px; color: #cbd5e1; margin-top: 4px; text-shadow: 0 1px 8px rgba(0,0,0,0.9); }
+
+    .export-status {
+      position: fixed; bottom: 24px; right: 24px; z-index: 10001;
+      background: rgba(6,8,13,0.88); border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px 16px; font-size: 12px; display: none;
+    }
+    .export-status.visible { display: block; }
 
     /* Sidebar toggle */
     .sidebar-toggle {
@@ -286,9 +355,9 @@
   <div id="onboarding">
     <div class="onboard-card">
       <h2>⚡ Start Here</h2>
-      <p>Welcome to your Tesla charging travel replay. Pick a journey from the sidebar — try the <span class="highlight">Colorado round trip</span> for the full 3D experience with numbered stops and playback.</p>
+      <p>Welcome to your Tesla charging travel replay. Pick a journey from the sidebar — try an <span class="highlight">Epic Road Trip</span> for the full cinematic playback with location labels and video export.</p>
       <div class="onboard-actions">
-        <button class="btn gold" id="onboard-co">🏔 Colorado Trip</button>
+        <button class="btn gold" id="onboard-featured">🎬 Epic Trip</button>
         <button class="btn" id="onboard-dismiss">Explore Overview</button>
       </div>
     </div>
@@ -302,7 +371,11 @@
     <div class="splash-bar"><div class="splash-fill" id="splash-fill"></div></div>
   </div>
 
-  <div id="map"></div>
+  <div id="map-wrap"><div id="map"></div></div>
+
+  <div class="location-hud" id="location-hud"><span class="phase" id="hud-phase"></span><span id="hud-text"></span></div>
+  <div class="cinema-title" id="cinema-title"><h2 id="cinema-title-text"></h2><p id="cinema-subtitle"></p></div>
+  <div class="export-status" id="export-status">Recording…</div>
 
   <!-- Sidebar toggle -->
   <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">◀</button>
@@ -332,18 +405,18 @@
         <div class="trip-dot" style="background:linear-gradient(90deg,#3b82f6,#f59e0b)"></div>
         <div><div class="trip-name">Overview — All Trips</div><div class="trip-meta">{{ trips|length }} routes · {{ dashboard.total_kwh|int }} kWh total</div></div>
       </div>
-      {% set co_trips = trips|selectattr('has_colorado')|list %}
-      {% if co_trips %}
-      <div class="group-label co-label">🏔 Colorado Trips</div>
-      {% for trip in co_trips %}
+      {% set featured_trips = trips|selectattr('featured')|list %}
+      {% if featured_trips %}
+      <div class="group-label co-label">🎬 Epic Road Trips</div>
+      {% for trip in featured_trips %}
       <div class="trip-item co" data-id="{{ trip.id }}">
         <div class="trip-dot" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
-        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.colorado_stops }} CO stops · {{ trip.stop_count }} total · {{ trip.miles }} mi</div></div>
+        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.stop_count }} stops · {{ trip.miles }} mi · {{ trip.duration_days }} days</div></div>
       </div>
       {% endfor %}
       {% endif %}
-      <div class="group-label">Road Trips</div>
-      {% for trip in trips if not trip.has_colorado %}
+      <div class="group-label">All Road Trips</div>
+      {% for trip in trips if not trip.featured %}
       <div class="trip-item" data-id="{{ trip.id }}">
         <div class="trip-dot" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.start }} → {{ trip.end }} · {{ trip.miles }} mi</div></div>
@@ -359,6 +432,7 @@
         <button class="btn" id="btn-reset">↺</button>
       </div>
       <div class="btn-row">
+        <button class="btn" id="btn-export" disabled title="Export Instagram video">🎥 Export</button>
         <button class="btn" id="btn-loop" title="Loop trip">🔁 Loop</button>
         <button class="btn" id="btn-director" title="Director mode camera">🎬 Director</button>
         <button class="btn" id="btn-night" title="Night mode">🌙</button>
@@ -424,9 +498,10 @@
     let map;
 
     // ── State ──
-    let selectedId = 'all', animProg = 0, animStopIdx = 0;
+    let selectedId = 'all', animTimeMs = 0, animProg = 0, animStopIdx = 0;
     let isPlaying = false, animFrame = null, lastTs = 0;
     let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
+    let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [];
     const MAX_PITCH = 45;
 
@@ -449,10 +524,57 @@
       document.getElementById('onboarding').classList.remove('visible');
       localStorage.setItem('tesla-map-onboarded', '1');
     }
-    function startWithColorado() {
-      const co = TRIPS.find(t => t.has_colorado);
-      if (co) selectTrip(co.id);
+    function startWithFeatured() {
+      const epic = TRIPS.find(t => t.featured) || TRIPS.find(t => t.has_colorado) || TRIPS[0];
+      if (epic) selectTrip(epic.id);
       dismissOnboarding();
+    }
+
+    function shortLabel(location) {
+      const city = (location || '').split(',')[0].trim();
+      const st = (location || '').match(/,\s*([A-Z]{2})\b/);
+      return st ? `${city}, ${st[1]}` : city;
+    }
+
+    function activePlayback() {
+      const t = activeTrip();
+      return t?.playback || null;
+    }
+
+    function playbackProgress() {
+      const pb = activePlayback();
+      if (!pb || !pb.total_video_ms) return 0;
+      return Math.min(1, animTimeMs / pb.total_video_ms);
+    }
+
+    function positionAtTime(elapsedMs) {
+      const pb = activePlayback();
+      if (!pb || !pb.segments?.length) return null;
+      let cursor = 0;
+      for (const seg of pb.segments) {
+        const end = cursor + seg.duration_ms;
+        if (elapsedMs < end) {
+          const frac = Math.max(0, Math.min(1, (elapsedMs - cursor) / seg.duration_ms));
+          if (seg.type === 'dwell') {
+            return {
+              lat: seg.lat, lng: seg.lng, phase: 'dwell', label: seg.label,
+              stopIndex: seg.stop_index, frac, bearing: 0, path: [[seg.lat, seg.lng]],
+            };
+          }
+          const path = seg.path || [];
+          const pos = pointOnPath(path, frac) || { lat: seg.path?.[0]?.[0], lng: seg.path?.[0]?.[1] };
+          return {
+            ...pos, phase: 'travel', label: seg.to_label, stopIndex: seg.stop_index,
+            frac, bearing: pathBearing(path, frac), path,
+          };
+        }
+        cursor = end;
+      }
+      const last = pb.segments[pb.segments.length - 1];
+      return {
+        lat: last.lat, lng: last.lng, phase: 'dwell', label: last.label || last.to_label,
+        stopIndex: last.stop_index, frac: 1, bearing: 0, path: last.path || [[last.lat, last.lng]],
+      };
     }
 
     // ── Map init ──
@@ -578,21 +700,29 @@
       const single = isSingleTrip();
       activeTrips().forEach(trip => {
         trip.stops.forEach((s,i) => {
+          const wrap = document.createElement('div');
+          wrap.className = 'stop-pin-wrap';
           const el = document.createElement('div');
+          const lbl = document.createElement('div');
+          lbl.className = 'stop-label';
+          lbl.textContent = shortLabel(s.location);
           if (single) {
             el.className = 'stop-pin';
             el.style.background = trip.color;
             el.textContent = i+1;
+            wrap.appendChild(el);
+            wrap.appendChild(lbl);
           } else {
             el.className = 'stop-dot';
             el.style.background = trip.color;
+            wrap.appendChild(el);
           }
-          const m = new mapboxgl.Marker({element:el, anchor:'center'})
+          const m = new mapboxgl.Marker({element:wrap, anchor:'bottom'})
             .setLngLat([s.lng,s.lat])
             .setPopup(new mapboxgl.Popup({offset:12,maxWidth:'260px'}).setHTML(popupHtml(s)))
             .addTo(map);
-          m._idx=i; m._el=el; m._stop=s;
-          if (single) el.classList.add('visible');
+          m._idx=i; m._el=el; m._lbl=lbl; m._wrap=wrap; m._stop=s;
+          if (single) { el.classList.add('visible'); lbl.classList.add('visible'); }
           stopMarkers.push(m);
         });
       });
@@ -605,7 +735,7 @@
       const viaEl = document.getElementById('hero-via');
       if (selectedId==='all') {
         document.getElementById('hero-name').textContent = 'All Journeys — Select a trip';
-        viaEl.innerHTML = 'Looking for Colorado? Choose <strong>🏔 Colorado Trips</strong> below.';
+        viaEl.innerHTML = 'Pick an <strong>Epic Road Trip</strong> below for cinematic playback and Instagram export.';
         document.getElementById('hero-miles').textContent = DASHBOARD.total_miles.toLocaleString()+' mi';
         document.getElementById('hero-kwh').textContent = DASHBOARD.total_kwh.toLocaleString()+' kWh';
         document.getElementById('hero-days').textContent = TRIPS.length+' trips';
@@ -645,8 +775,7 @@
       const bounds = new mapboxgl.LngLatBounds();
       activeTrips().forEach(t => t.stops.forEach(s => bounds.extend([s.lng,s.lat])));
       if (bounds.isEmpty()) return;
-      const hideLabels = isSingleTrip();
-      setMapLabelsVisible(!hideLabels);
+      setMapLabelsVisible(true);
       map.fitBounds(bounds, {
         padding:{top:80,bottom:120,left:380,right:220},
         pitch: isSingleTrip() ? 40 : 0,
@@ -658,44 +787,63 @@
     }
 
     // ── Trail + vehicle ──
-    function updateTrail(prog) {
+    function updateLocationHud(state) {
+      const hud = document.getElementById('location-hud');
+      if (!state || !isSingleTrip()) {
+        hud.classList.remove('visible');
+        return;
+      }
+      hud.classList.add('visible');
+      document.getElementById('hud-phase').textContent = state.phase === 'dwell' ? '⚡ Charging' : '🚗 Driving';
+      document.getElementById('hud-text').textContent = state.label || '';
+    }
+
+    function updateTrailFromState(state) {
       const path = activePath(), stops = activeStops();
-      if (!path.length) return;
-      animStopIdx = findStopIdx(stops, path, prog);
-      const pos = pointOnPath(path, prog);
-      const endIdx = Math.max(1, Math.ceil(prog*(path.length-1)));
-      const trailCoords = path.slice(0,endIdx+1).map(p=>[p[1],p[0]]);
-      if (pos) trailCoords.push([pos.lng,pos.lat]);
-      const color = stops[Math.min(animStopIdx,stops.length-1)]?.tripColor||'#3b82f6';
+      if (!state) return;
+      animStopIdx = state.stopIndex ?? 0;
+      animProg = playbackProgress();
+      const pos = { lat: state.lat, lng: state.lng };
+      const segPath = state.path?.length ? state.path : path;
+      let trailCoords = [];
+      if (state.phase === 'travel' && segPath?.length) {
+        const endIdx = Math.max(1, Math.ceil(state.frac * (segPath.length - 1)));
+        trailCoords = segPath.slice(0, endIdx + 1).map(p => [p[1], p[0]]);
+      } else if (path.length) {
+        const endIdx = Math.max(1, Math.ceil(animProg * (path.length - 1)));
+        trailCoords = path.slice(0, endIdx + 1).map(p => [p[1], p[0]]);
+      }
+      if (pos.lat != null) trailCoords.push([pos.lng, pos.lat]);
+      const color = stops[Math.min(animStopIdx, stops.length - 1)]?.tripColor || '#3b82f6';
+      const bearing = state.bearing || 0;
 
       if (map.getSource('active-trail')) {
         map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:trailCoords}});
         map.setPaintProperty('active-trail-line','line-color',color);
         map.setPaintProperty('active-trail-glow','line-color',color);
-      } else {
+      } else if (trailCoords.length) {
         map.addSource('active-trail',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:trailCoords}}});
         map.addLayer({id:'active-trail-glow',type:'line',source:'active-trail',paint:{'line-color':color,'line-width':16,'line-opacity':0.3,'line-blur':8}});
         map.addLayer({id:'active-trail-line',type:'line',source:'active-trail',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':color,'line-width':4,'line-opacity':1}});
       }
 
-      if (pos) {
-        const bearing = pathBearing(path, prog);
+      if (pos.lat != null) {
         if (vehicleMarker) {
-          vehicleMarker.setLngLat([pos.lng,pos.lat]);
-          vehicleMarker.getElement().querySelector('.vehicle-body').style.transform = `rotate(${bearing}deg)`;
+          vehicleMarker.setLngLat([pos.lng, pos.lat]);
+          const body = vehicleMarker.getElement().querySelector('.vehicle-body');
+          if (body) body.style.transform = `rotate(${bearing}deg)`;
         } else {
           const el = document.createElement('div');
           el.innerHTML = carHtml;
           vehicleMarker = new mapboxgl.Marker({element:el, anchor:'center', rotationAlignment:'map'})
-            .setLngLat([pos.lng,pos.lat]).addTo(map);
+            .setLngLat([pos.lng, pos.lat]).addTo(map);
         }
-        // Director mode: camera leads vehicle
         if (directorMode) {
-          const lookAhead = Math.min(prog + 0.08, 1);
-          const ahead = pointOnPath(path, lookAhead) || pos;
+          const lookFrac = Math.min((state.frac || animProg) + 0.08, 1);
+          const ahead = pointOnPath(segPath?.length ? segPath : path, lookFrac) || pos;
           map.easeTo({
             center:[ahead.lng, ahead.lat],
-            zoom: Math.min(6.5, Math.max(4.5, map.getZoom())),
+            zoom: Math.min(6.8, Math.max(4.8, map.getZoom())),
             pitch: Math.min(MAX_PITCH, 42),
             bearing: bearing * 0.3,
             duration:600, essential:true,
@@ -704,62 +852,142 @@
       }
 
       stopMarkers.forEach(m => {
-        if (m._idx <= animStopIdx) { m._el.classList.add('visible'); m._el.classList.toggle('active', m._idx===animStopIdx); }
+        const show = m._idx <= animStopIdx;
+        m._el.classList.toggle('visible', show);
+        if (m._lbl) m._lbl.classList.toggle('visible', show);
+        m._el.classList.toggle('active', m._idx === animStopIdx);
+        if (m._lbl) m._lbl.classList.toggle('active', m._idx === animStopIdx);
       });
 
-      // UI updates
-      document.getElementById('scrubber').value = Math.round(prog*1000);
-      document.getElementById('timeline-scrub').style.left = (prog*100)+'%';
+      document.getElementById('scrubber').value = Math.round(animProg * 1000);
+      document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
       const cur = stops[animStopIdx];
-      document.getElementById('prog-text').textContent = cur ? `Stop ${animStopIdx+1}: ${cur.location.split(',')[0]}` : 'Ready';
-      if (cur) { document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0,10)||''; document.getElementById('prog-end').textContent = cur.datetime?.slice(0,10)||''; }
+      document.getElementById('prog-text').textContent = cur
+        ? `${state.phase === 'dwell' ? 'At' : 'En route ·'} ${shortLabel(cur.location)}`
+        : 'Ready';
+      if (cur) {
+        document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0,10)||'';
+        document.getElementById('prog-end').textContent = cur.datetime?.slice(0,10)||'';
+      }
+      updateLocationHud(state);
+    }
+
+    function updateTrail(prog) {
+      animTimeMs = prog * (activePlayback()?.total_video_ms || 0);
+      updateTrailFromState(positionAtTime(animTimeMs));
     }
 
     // ── Playback ──
     function animate(ts) {
       if (!isPlaying) return;
       if (!lastTs) lastTs=ts;
-      const path=activePath();
-      animProg += ((ts-lastTs)/(BASE_MS/speed)) / Math.max(path.length,1);
-      lastTs=ts;
-      if (animProg>=1) {
-        animProg=1; updateTrail(1);
-        if (loopTrip) { animProg=0; animStopIdx=0; stopMarkers.forEach(m=>{m._el.classList.remove('visible','active');}); lastTs=0; animFrame=requestAnimationFrame(animate); return; }
-        stopPlayback(); return;
+      const pb = activePlayback();
+      if (!pb?.total_video_ms) { stopPlayback(); return; }
+      animTimeMs += (ts - lastTs) * speed;
+      lastTs = ts;
+      if (animTimeMs >= pb.total_video_ms) {
+        animTimeMs = pb.total_video_ms;
+        updateTrailFromState(positionAtTime(animTimeMs));
+        if (isRecording) finishRecording();
+        if (loopTrip) {
+          animTimeMs = 0; animStopIdx = 0;
+          stopMarkers.forEach(m => { m._el.classList.remove('visible','active'); if (m._lbl) m._lbl.classList.remove('visible','active'); });
+          lastTs = 0;
+          if (!isRecording) { animFrame = requestAnimationFrame(animate); }
+          return;
+        }
+        stopPlayback();
+        return;
       }
-      updateTrail(animProg);
-      animFrame=requestAnimationFrame(animate);
+      updateTrailFromState(positionAtTime(animTimeMs));
+      animFrame = requestAnimationFrame(animate);
     }
-    function startPlayback() {
+    function startPlayback(forRecording=false) {
       if (!isSingleTrip()) {
         document.getElementById('prog-text').textContent = 'Select a trip first';
         return;
       }
-      if (!activePath().length) return;
-      if (animProg>=1) { animProg=0; resetVisuals(); drawStops(); }
-      isPlaying=true; lastTs=0;
-      document.getElementById('btn-play').disabled=true;
-      document.getElementById('btn-pause').disabled=false;
+      if (!activePlayback()?.total_video_ms) return;
+      if (animTimeMs >= activePlayback().total_video_ms) { animTimeMs = 0; resetVisuals(false); drawStops(); }
+      isPlaying = true; lastTs = 0;
+      document.getElementById('btn-play').disabled = true;
+      document.getElementById('btn-pause').disabled = false;
       document.getElementById('playback-bar').classList.add('visible');
-      document.getElementById('playback-text').textContent = `Playing · ${speed}×`;
-      animFrame=requestAnimationFrame(animate);
+      document.getElementById('playback-text').textContent = (forRecording ? 'Recording · ' : 'Playing · ') + speed + '×';
+      document.getElementById('location-hud').classList.add('visible');
+      animFrame = requestAnimationFrame(animate);
     }
     function stopPlayback() {
       isPlaying=false;
       if (animFrame) cancelAnimationFrame(animFrame);
-      document.getElementById('btn-play').disabled=false;
-      document.getElementById('btn-pause').disabled=true;
-      document.getElementById('playback-bar').classList.remove('visible');
-      setMapLabelsVisible(selectedId === 'all');
+      document.getElementById('btn-play').disabled = !isSingleTrip();
+      document.getElementById('btn-pause').disabled = true;
+      if (!isRecording) document.getElementById('playback-bar').classList.remove('visible');
     }
-    function resetVisuals() {
-      stopPlayback(); animProg=0; animStopIdx=0;
+    function resetVisuals(clearHud=true) {
+      stopPlayback(); animTimeMs=0; animProg=0; animStopIdx=0;
       if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
       if (map.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
-      stopMarkers.forEach(m=>{m._el.classList.remove('visible','active');});
+      stopMarkers.forEach(m=>{m._el.classList.remove('visible','active'); if (m._lbl) m._lbl.classList.remove('visible','active');});
       document.getElementById('scrubber').value=0;
       document.getElementById('timeline-scrub').style.left='0%';
       document.getElementById('prog-text').textContent = isSingleTrip() ? 'Ready' : 'Select a trip to play';
+      if (clearHud) document.getElementById('location-hud').classList.remove('visible');
+    }
+
+    async function exportTripVideo() {
+      if (!isSingleTrip() || !map) return;
+      const trip = activeTrip();
+      const status = document.getElementById('export-status');
+      status.textContent = 'Preparing recording…';
+      status.classList.add('visible');
+      resetVisuals();
+      drawStops();
+      fitTrip(false);
+      await new Promise(r => setTimeout(r, 1600));
+
+      document.body.classList.add('cinema-mode', 'portrait-export');
+      const title = document.getElementById('cinema-title');
+      document.getElementById('cinema-title-text').textContent = trip.name;
+      document.getElementById('cinema-subtitle').textContent =
+        `${trip.miles.toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days} days`;
+      title.classList.add('visible');
+      map.resize();
+      await new Promise(r => setTimeout(r, 500));
+
+      const canvas = map.getCanvas();
+      const stream = canvas.captureStream(30);
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8_000_000 });
+      mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${trip.id}_instagram.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        isRecording = false;
+        document.body.classList.remove('cinema-mode', 'portrait-export');
+        title.classList.remove('visible');
+        status.classList.remove('visible');
+        map.resize();
+        fitTrip(false);
+      };
+
+      isRecording = true;
+      status.textContent = 'Recording trip…';
+      mediaRecorder.start(250);
+      startPlayback(true);
+    }
+
+    function finishRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        document.getElementById('export-status').textContent = 'Saving video…';
+        mediaRecorder.stop();
+      }
+      stopPlayback();
     }
 
     // ── Select trip ──
@@ -768,8 +996,9 @@
       document.querySelectorAll('.trip-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       document.querySelectorAll('.tl-seg').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       resetVisuals(); drawRoutes(); drawStops(); updateHero(); fitTrip();
-      setMapLabelsVisible(selectedId === 'all');
+      setMapLabelsVisible(true);
       document.getElementById('btn-play').disabled = !isSingleTrip();
+      document.getElementById('btn-export').disabled = !isSingleTrip();
     }
 
     // ── Night mode ──
@@ -793,8 +1022,20 @@
     document.getElementById('btn-pause').addEventListener('click', stopPlayback);
     document.getElementById('btn-step').addEventListener('click', ()=>{
       if (!isSingleTrip()) return;
-      stopPlayback(); const stops=activeStops();
-      if (animStopIdx<stops.length-1) { animStopIdx++; animProg=animStopIdx/Math.max(stops.length-1,1); updateTrail(animProg); }
+      stopPlayback();
+      const pb = activePlayback();
+      if (!pb) return;
+      let cursor = 0, targetIdx = animStopIdx + 1;
+      for (const seg of pb.segments) {
+        if (seg.stop_index >= targetIdx && seg.type === 'dwell') {
+          animTimeMs = cursor;
+          updateTrailFromState(positionAtTime(animTimeMs));
+          return;
+        }
+        cursor += seg.duration_ms;
+      }
+      animTimeMs = pb.total_video_ms;
+      updateTrailFromState(positionAtTime(animTimeMs));
     });
     document.getElementById('btn-reset').addEventListener('click', ()=>{ resetVisuals(); drawStops(); fitTrip(); });
     document.getElementById('btn-loop').addEventListener('click', ()=>{
@@ -807,9 +1048,11 @@
     document.getElementById('speed').addEventListener('input', e=>{ speed=parseFloat(e.target.value); document.getElementById('speed-label').textContent=speed+'×'; });
     document.getElementById('scrubber').addEventListener('input', e=>{
       if (!isSingleTrip()) return;
-      stopPlayback(); animProg=parseInt(e.target.value)/1000;
-      animStopIdx=findStopIdx(activeStops(), activePath(), animProg);
-      updateTrail(animProg);
+      stopPlayback();
+      const pb = activePlayback();
+      if (!pb) return;
+      animTimeMs = (parseInt(e.target.value)/1000) * pb.total_video_ms;
+      updateTrailFromState(positionAtTime(animTimeMs));
     });
     document.getElementById('sidebar-toggle').addEventListener('click', ()=>{
       const sb=document.getElementById('sidebar');
@@ -820,12 +1063,22 @@
       if (e.target.tagName==='INPUT') return;
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
       if (e.code==='ArrowRight') { stopPlayback(); document.getElementById('btn-step').click(); }
-      if (e.code==='ArrowLeft') { stopPlayback(); if(isSingleTrip()&&animStopIdx>0){animStopIdx--; animProg=animStopIdx/Math.max(activeStops().length-1,1); updateTrail(animProg);} }
+      if (e.code==='ArrowLeft') { stopPlayback(); if(isSingleTrip()&&animStopIdx>0){
+        const pb = activePlayback(); if (!pb) return;
+        let cursor = 0, targetIdx = animStopIdx - 1;
+        for (const seg of pb.segments) {
+          if (seg.stop_index === targetIdx && seg.type === 'dwell') {
+            animTimeMs = cursor; updateTrailFromState(positionAtTime(animTimeMs)); return;
+          }
+          cursor += seg.duration_ms;
+        }
+      }}
       if (e.code==='KeyR') document.getElementById('btn-reset').click();
       if (e.code==='KeyD') document.getElementById('btn-director').click();
     });
 
-    document.getElementById('onboard-co').addEventListener('click', startWithColorado);
+    document.getElementById('btn-export').addEventListener('click', exportTripVideo);
+    document.getElementById('onboard-featured').addEventListener('click', startWithFeatured);
     document.getElementById('onboard-dismiss').addEventListener('click', dismissOnboarding);
     document.getElementById('onboarding').addEventListener('click', e=>{
       if (e.target.id === 'onboarding') dismissOnboarding();

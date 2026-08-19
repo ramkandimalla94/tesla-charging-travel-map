@@ -1,6 +1,6 @@
 # Tesla Charging Travel Map
 
-A cinematic 3D replay of Tesla Supercharger road trips — built from your charging history CSV exports. Satellite terrain, elevated route arcs, trip playback, and a polished dashboard.
+Turn your Tesla Supercharger history into **Instagram-ready trip videos** — cinematic 3D satellite replay with time-accurate pacing, location labels, and one-click export.
 
 ![Overview](docs/screenshots/01-overview.png)
 
@@ -8,15 +8,54 @@ A cinematic 3D replay of Tesla Supercharger road trips — built from your charg
 
 **https://ramkandimalla94.github.io/tesla-charging-travel-map/**
 
-On first visit, paste your [Mapbox public token](https://account.mapbox.com/access-tokens/) — it's stored in your browser only. For zero-prompt deploys, add `MAPBOX_TOKEN` as a GitHub Actions secret and push the workflow file (see below).
+On first visit, paste your [Mapbox public token](https://account.mapbox.com/access-tokens/) — it's stored in your browser only.
 
 ## Features
 
-- **3D satellite map** with Mapbox terrain and deck.gl elevated arcs
-- **24 segmented trips** across 10 states — 8,859 kWh · 14,173 miles
-- **Trip playback** with director-mode camera, scrubber, and keyboard shortcuts
-- **Colorado highlight** — dedicated section for the Dallas → Colorado round trip
-- **Night mode**, timeline scrubber, GPX export per trip
+- **3D satellite map** with Mapbox terrain and elevated route lines
+- **Time-accurate playback** — long overnight halts show as slower pacing between Supercharger stops
+- **Location labels on map** — city/state names appear at each stop during replay
+- **Instagram video export** — one-click `.webm` download per trip (9:16 cinema mode)
+- **Works for any Tesla owner** — drop in your CSV exports; home base auto-detected (or override via config)
+- Trip segmentation, timeline scrubber, director camera, night mode, GPX export
+
+## Quick start (local)
+
+```bash
+git clone https://github.com/ramkandimalla94/tesla-charging-travel-map.git
+cd tesla-charging-travel-map
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+cp .env.example .env
+# Edit .env → MAPBOX_TOKEN=pk.eyJ...
+
+python scripts/build_map.py
+python -m http.server 8765
+open http://127.0.0.1:8765/output/travel_map.html
+```
+
+### Full pipeline (your own Tesla CSV exports)
+
+Place exports in the project root (`Tesla_Charging_History_*.csv`) or in `data/imports/`:
+
+```bash
+python scripts/merge_csvs.py
+python scripts/geocode_locations.py   # first run only
+python scripts/segment_trips.py
+python scripts/build_map.py
+```
+
+Optional: copy `data/owner_config.json.example` → `data/owner_config.json` to pin your home base if auto-detection isn't right.
+
+### Export a trip video for Instagram
+
+1. Select any trip from the sidebar (try **Epic Road Trips** for long journeys)
+2. Click **🎥 Export** — enters cinema mode and records the replay
+3. A `.webm` file downloads when playback finishes (~20–90 seconds)
+4. Convert to MP4 if needed: `ffmpeg -i trip_xxx_instagram.webm -c:v libx264 trip.mp4`
+
+Use **▶ Play** for preview; adjust speed with the slider. **🎬 Director** keeps the camera chasing the car.
 
 ## Screenshots
 

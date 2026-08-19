@@ -26,22 +26,24 @@ from pathlib import Path
 
 import pandas as pd
 
+from home_config import extract_city, haversine_miles, resolve_home_config
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 MERGED = DATA_DIR / "merged_charges.csv"
 CACHE_FILE = DATA_DIR / "locations_cache.json"
 OUTPUT = DATA_DIR / "trips.json"
 
-HOME_BASES = {"MAA Market Center", "Addison, TX"}
 MERGE_WINDOW = timedelta(hours=24)
+HOME_BASES: set[str] = set()
+HOME_LAT, HOME_LNG = 39.0, -98.0
+HOME_LABEL = "Home"
+HOME_RADIUS_MILES = 120
+FAR_FROM_HOME_MILES = 350
 
 # Colorado state bounding box
 CO_BBOX = {"lat_min": 37.0, "lat_max": 41.0, "lng_min": -109.1, "lng_max": -102.0}
 
-# DFW home center (Addison / Plano)
-HOME_LAT, HOME_LNG = 32.96, -96.83
-HOME_RADIUS_MILES = 120
-FAR_FROM_HOME_MILES = 350
 TIME_GAP_DAYS = 14
 BIG_JUMP_MILES = 700
 
@@ -49,16 +51,6 @@ BIG_JUMP_MILES = 700
 def load_cache() -> dict:
     with open(CACHE_FILE, encoding="utf-8") as f:
         return json.load(f)
-
-
-def haversine_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    r = 3959.0
-    p = math.pi / 180
-    a = (
-        math.sin((lat2 - lat1) * p / 2) ** 2
-        + math.cos(lat1 * p) * math.cos(lat2 * p) * math.sin((lng2 - lng1) * p / 2) ** 2
-    )
-    return 2 * r * math.asin(math.sqrt(a))
 
 
 def dist_from_home(lat: float | None, lng: float | None) -> float | None:
@@ -104,53 +96,23 @@ def is_home(location: str) -> bool:
     return location in HOME_BASES
 
 
-def extract_city(location: str) -> str:
-    m = re.match(r"^([^,]+)", location)
-    return m.group(1).strip() if m else location
-
-
 def extract_state_code(location: str) -> str | None:
     m = re.search(r",\s*([A-Z]{2})\b", location)
     return m.group(1) if m else None
 
 
-# Map suburb/end-city labels to a recognizable destination name
-DEST_ALIASES = {
-    "Kirkland": "Seattle",
-    "Bellevue": "Seattle",
-    "Redmond": "Seattle",
-    "Renton": "Seattle",
-    "North Bend": "Seattle",
-    "Tulalip Bay": "Seattle",
-    "Auburn": "Seattle",
-    "Suquamish": "Seattle",
-    "Silverdale": "Seattle",
-    "Puyallup": "Seattle",
-    "Georgetown": "San Antonio",
-    "Henrietta": "Dallas",
-    "Childress": "Dallas",
-    "Addison": "Dallas",
-    "Plano": "Dallas",
-    "Irving": "Dallas",
-    "Red Oak": "Dallas",
-    "Vernon": "Dallas",
-}
-
-
 def origin_label(stops: list[dict]) -> str:
     first = stops[0]
-    if first.get("dist_home") is not None and first["dist_home"] < 200:
-        return "Dallas"
-    city = extract_city(first["location"])
-    return DEST_ALIASES.get(city, city)
+    if first.get("dist_home") is not None and first["dist_home"] < HOME_RADIUS_MILES:
+        return HOME_LABEL
+    return extract_city(first["location"])
 
 
 def dest_label(stops: list[dict]) -> str:
     last = stops[-1]
-    if last.get("dist_home") is not None and last["dist_home"] < 200:
-        return "Dallas"
-    city = extract_city(last["location"])
-    return DEST_ALIASES.get(city, city)
+    if last.get("dist_home") is not None and last["dist_home"] < HOME_RADIUS_MILES:
+        return HOME_LABEL
+    return extract_city(last["location"])
 
 
 def ordered_via_states(stops: list[dict]) -> list[str]:
@@ -213,7 +175,7 @@ def should_split_trip(prev: dict, curr: dict) -> tuple[bool, str]:
         and prev_dh > FAR_FROM_HOME_MILES
         and curr_dh < HOME_RADIUS_MILES
     ):
-        return True, "return_to_dfw"
+        return True, "return_to_home"
 
     prev_reg = prev.get("region", "UNK")
     curr_reg = curr.get("region", "UNK")
@@ -245,13 +207,11 @@ def make_trip_name(start_dt: str, stops: list[dict]) -> str:
     co_stops = [s for s in stops if is_colorado(s.get("lat"), s.get("lng"), s["location"])]
     if co_stops:
         first, last = stops[0], stops[-1]
-        if first.get("region") == "TX" or (
-            first.get("dist_home") and first["dist_home"] < 200
-        ):
-            origin = "Dallas"
+        if first.get("dist_home") and first["dist_home"] < HOME_RADIUS_MILES:
+            origin = HOME_LABEL
         else:
             origin = extract_city(first["location"])
-        if last.get("region") == "TX" and len(co_stops) >= 2:
+        if last.get("dist_home") is not None and last["dist_home"] < HOME_RADIUS_MILES and len(co_stops) >= 2:
             dest = "Colorado (Round Trip)"
         else:
             co_cities = list(dict.fromkeys(extract_city(s["location"]) for s in co_stops))
@@ -360,6 +320,17 @@ def segment_trips(charges: list[dict]) -> tuple[list[dict], list[dict]]:
     return trips, local
 
 
+def init_home_config(locations: list[str], cache: dict) -> None:
+    global HOME_BASES, HOME_LAT, HOME_LNG, HOME_LABEL, HOME_RADIUS_MILES, FAR_FROM_HOME_MILES
+    cfg = resolve_home_config(locations, cache)
+    HOME_BASES = cfg["home_bases"]
+    HOME_LAT = cfg["home_lat"]
+    HOME_LNG = cfg["home_lng"]
+    HOME_LABEL = cfg["home_label"]
+    HOME_RADIUS_MILES = cfg["home_radius_miles"]
+    FAR_FROM_HOME_MILES = cfg["far_from_home_miles"]
+
+
 def main() -> None:
     if not MERGED.exists():
         raise FileNotFoundError(f"Run merge_csvs.py first. Missing {MERGED}")
@@ -371,12 +342,16 @@ def main() -> None:
     df = df.sort_values("ChargeStartDateTime")
 
     cache = load_cache()
+    init_home_config(df["SiteLocationName"].tolist(), cache)
     charges = [charge_to_stop(row, cache) for _, row in df.iterrows()]
 
     trips, local = segment_trips(charges)
 
     output = {
         "home_bases": sorted(HOME_BASES),
+        "home_label": HOME_LABEL,
+        "home_lat": HOME_LAT,
+        "home_lng": HOME_LNG,
         "trips": trips,
         "local_charges": local,
         "stats": {
@@ -384,6 +359,7 @@ def main() -> None:
             "trip_count": len(trips),
             "local_count": len(local),
             "total_stops_in_trips": sum(len(t["stops"]) for t in trips),
+            "home_detection": "config" if (DATA_DIR / "owner_config.json").exists() else "auto",
         },
     }
 
