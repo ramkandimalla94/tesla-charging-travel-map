@@ -249,9 +249,33 @@
     .onboard-actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .onboard-actions .btn { flex: 1; min-width: 140px; justify-content: center; padding: 12px 16px; font-size: 13px; }
     .onboard-actions .btn.gold { background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #f59e0b; color: #fff; }
+
+    /* Token gate (GitHub Pages — no embedded token) */
+    #token-gate {
+      position: fixed; inset: 0; z-index: 10000; background: var(--bg);
+      display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
+    }
+    #token-gate.visible { display: flex; }
+    #token-gate h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    #token-gate p { font-size: 13px; color: var(--muted); max-width: 420px; text-align: center; line-height: 1.55; margin-bottom: 20px; }
+    #token-gate input {
+      width: min(420px, 90vw); padding: 12px 16px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--glass-light); color: var(--text);
+      font-size: 13px; margin-bottom: 12px;
+    }
+    #token-gate a { color: #93c5fd; }
   </style>
 </head>
 <body>
+
+  <!-- Token gate (shown when no token baked in at build time) -->
+  <div id="token-gate">
+    <div class="logo" style="font-size:48px;margin-bottom:12px">⚡</div>
+    <h2>Mapbox Token Required</h2>
+    <p>Paste your free <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener">Mapbox public token</a> to load satellite terrain. Stored locally in your browser only.</p>
+    <input type="password" id="token-input" placeholder="pk.eyJ..." autocomplete="off">
+    <button class="btn primary" id="token-submit" style="padding:12px 32px">Launch Map</button>
+  </div>
 
   <!-- Onboarding -->
   <div id="onboarding">
@@ -393,7 +417,7 @@
     const US_BOUNDS = DASHBOARD.us_bounds;
     const BASE_MS = 1600;
 
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    let map;
 
     // ── State ──
     let selectedId = 'all', animProg = 0, animStopIdx = 0;
@@ -427,14 +451,32 @@
     }
 
     // ── Map init ──
-    setSplash(20);
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      center: [-105, 39], zoom: 4, pitch: 0, bearing: 0,
-      antialias: true, projection: 'globe',
-    });
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+    function bootMap(accessToken) {
+      mapboxgl.accessToken = accessToken;
+      localStorage.setItem('mapbox-token', accessToken);
+      document.getElementById('token-gate').classList.remove('visible');
+      setSplash(20);
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        center: [-105, 39], zoom: 4, pitch: 0, bearing: 0,
+        antialias: true, projection: 'globe',
+      });
+      map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+      map.on('load', onMapLoad);
+    }
+
+    function onMapLoad() {
+      setupTerrain();
+      drawRoutes();
+      initDeck();
+      drawStops();
+      updateHero();
+      document.getElementById('btn-play').disabled = true;
+      document.getElementById('prog-text').textContent = 'Select a trip to play';
+      introFlyover();
+    }
+
     // ── Helpers ──
     function isSingleTrip() { return selectedId !== 'all'; }
     function activeTrips() { return isSingleTrip() ? TRIPS.filter(t => t.id === selectedId) : TRIPS; }
@@ -807,17 +849,25 @@
       if (e.target.id === 'onboarding') dismissOnboarding();
     });
 
-    // ── Init ──
-    map.on('load', ()=>{
-      setupTerrain();
-      drawRoutes();
-      initDeck();
-      drawStops();
-      updateHero();
-      document.getElementById('btn-play').disabled = true;
-      document.getElementById('prog-text').textContent = 'Select a trip to play';
-      introFlyover();
+    document.getElementById('token-submit').addEventListener('click', ()=>{
+      const t = document.getElementById('token-input').value.trim();
+      if (t.startsWith('pk.')) bootMap(t);
     });
+    document.getElementById('token-input').addEventListener('keydown', e=>{
+      if (e.key === 'Enter') document.getElementById('token-submit').click();
+    });
+
+    // ── Boot ──
+    (function boot() {
+      const saved = localStorage.getItem('mapbox-token');
+      const token = MAPBOX_TOKEN || saved;
+      if (token) {
+        bootMap(token);
+      } else {
+        document.getElementById('splash').classList.add('hidden');
+        document.getElementById('token-gate').classList.add('visible');
+      }
+    })();
   </script>
 </body>
 </html>

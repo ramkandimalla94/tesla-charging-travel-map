@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import os
@@ -379,11 +380,15 @@ def render_html(trips: list[dict], dashboard: dict, timeline: list[dict], mapbox
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Build 3D Tesla travel map")
+    parser.add_argument("--public", action="store_true", help="Build without embedded Mapbox token (for GitHub Pages)")
+    args = parser.parse_args()
+
     load_dotenv(ROOT / ".env")
     if not TRIPS_FILE.exists():
         raise FileNotFoundError(f"Run segment_trips.py first. Missing {TRIPS_FILE}")
 
-    mapbox_token = os.getenv("MAPBOX_TOKEN", "").strip()
+    mapbox_token = "" if args.public else os.getenv("MAPBOX_TOKEN", "").strip()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     GPX_DIR.mkdir(parents=True, exist_ok=True)
@@ -406,6 +411,10 @@ def main() -> None:
         write_gpx(trip, GPX_DIR / f"{trip['id']}.gpx")
 
     HTML_OUTPUT.write_text(render_html(prepared, dashboard, timeline, mapbox_token), encoding="utf-8")
+    if args.public:
+        pages_index = OUTPUT_DIR / "index.html"
+        pages_index.write_text(HTML_OUTPUT.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"  Public index: {pages_index}")
 
     print(f"Built 3D map — {len(prepared)} trips")
     print(f"  Dashboard: {dashboard['total_kwh']} kWh · {dashboard['total_miles']:,} mi")

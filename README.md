@@ -6,7 +6,9 @@ A cinematic 3D replay of Tesla Supercharger road trips — built from your charg
 
 ## Live demo
 
-After enabling GitHub Pages (see below): **https://ramkandimalla94.github.io/tesla-charging-travel-map/**
+**https://ramkandimalla94.github.io/tesla-charging-travel-map/**
+
+On first visit, paste your [Mapbox public token](https://account.mapbox.com/access-tokens/) — it's stored in your browser only. For zero-prompt deploys, add `MAPBOX_TOKEN` as a GitHub Actions secret and push the workflow file (see below).
 
 ## Features
 
@@ -57,12 +59,17 @@ CSV exports are **not committed** (personal data). Only processed `data/trips.js
 
 ## GitHub Pages setup
 
-1. Fork or clone this repo
-2. Add **`MAPBOX_TOKEN`** as a repository secret: Settings → Secrets → Actions
-3. Enable Pages: Settings → Pages → Source: **GitHub Actions**
-4. Push to `main` — the workflow builds and deploys automatically
+**Already live** at https://ramkandimalla94.github.io/tesla-charging-travel-map/ (public build — enter Mapbox token once in browser).
 
-The Mapbox token is injected at build time in CI only — never committed to source.
+For automatic CI deploys with your token baked in at build time:
+
+1. `MAPBOX_TOKEN` is already set as a repository secret
+2. Enable Pages source: **GitHub Actions** (Settings → Pages)
+3. Grant workflow scope and push the workflow file:
+   ```bash
+   gh auth refresh -s workflow
+   git add .github/workflows/pages.yml && git commit -m "Add Pages CI workflow" && git push
+   ```
 
 ## Browser verification
 
