@@ -109,6 +109,75 @@ def extract_city(location: str) -> str:
     return m.group(1).strip() if m else location
 
 
+def extract_state_code(location: str) -> str | None:
+    m = re.search(r",\s*([A-Z]{2})\b", location)
+    return m.group(1) if m else None
+
+
+# Map suburb/end-city labels to a recognizable destination name
+DEST_ALIASES = {
+    "Kirkland": "Seattle",
+    "Bellevue": "Seattle",
+    "Redmond": "Seattle",
+    "Renton": "Seattle",
+    "North Bend": "Seattle",
+    "Tulalip Bay": "Seattle",
+    "Auburn": "Seattle",
+    "Suquamish": "Seattle",
+    "Silverdale": "Seattle",
+    "Puyallup": "Seattle",
+    "Georgetown": "San Antonio",
+    "Henrietta": "Dallas",
+    "Childress": "Dallas",
+    "Addison": "Dallas",
+    "Plano": "Dallas",
+    "Irving": "Dallas",
+    "Red Oak": "Dallas",
+    "Vernon": "Dallas",
+}
+
+
+def origin_label(stops: list[dict]) -> str:
+    first = stops[0]
+    if first.get("dist_home") is not None and first["dist_home"] < 200:
+        return "Dallas"
+    city = extract_city(first["location"])
+    return DEST_ALIASES.get(city, city)
+
+
+def dest_label(stops: list[dict]) -> str:
+    last = stops[-1]
+    if last.get("dist_home") is not None and last["dist_home"] < 200:
+        return "Dallas"
+    city = extract_city(last["location"])
+    return DEST_ALIASES.get(city, city)
+
+
+def ordered_via_states(stops: list[dict]) -> list[str]:
+    """States visited in chronological order (deduped)."""
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for s in stops:
+        st = extract_state_code(s["location"])
+        if not st and s.get("in_colorado"):
+            st = "CO"
+        if st and st not in seen:
+            ordered.append(st)
+            seen.add(st)
+    return ordered
+
+
+def format_via_summary(stops: list[dict]) -> str:
+    co_count = sum(1 for s in stops if s.get("in_colorado"))
+    parts: list[str] = []
+    for st in ordered_via_states(stops):
+        if st == "CO" and co_count > 1:
+            parts.append(f"CO (×{co_count} stops)")
+        else:
+            parts.append(st)
+    return ", ".join(parts)
+
+
 def merge_consecutive_stops(charges: list[dict]) -> list[dict]:
     if not charges:
         return []
@@ -189,6 +258,14 @@ def make_trip_name(start_dt: str, stops: list[dict]) -> str:
             dest = co_cities[0] if len(co_cities) == 1 else "Colorado"
         return f"{month} — {origin} → {dest}"
 
+    via = ordered_via_states(stops)
+    origin = origin_label(stops)
+    dest = dest_label(stops)
+
+    if len(via) >= 3:
+        via_str = format_via_summary(stops)
+        return f"{month} — {origin} → {dest} (via {via_str})"
+
     cities: list[str] = []
     seen: set[str] = set()
     for s in stops:
@@ -197,7 +274,7 @@ def make_trip_name(start_dt: str, stops: list[dict]) -> str:
             cities.append(city)
             seen.add(city)
     if len(cities) >= 2:
-        route = f"{cities[0]} → {cities[-1]}"
+        route = f"{origin} → {dest}" if origin != dest else cities[0]
     elif cities:
         route = cities[0]
     else:
@@ -234,6 +311,7 @@ def finalize_trip(stops: list[dict], trip_index: int, end_dt: str | None = None)
     start = merged[0]["datetime"]
     end = end_dt or merged[-1]["datetime"]
     co_stops = [s for s in merged if s.get("in_colorado")]
+    via = ordered_via_states(merged)
     return {
         "id": make_trip_id(trip_index, start, merged),
         "name": make_trip_name(start, merged),
@@ -242,6 +320,10 @@ def finalize_trip(stops: list[dict], trip_index: int, end_dt: str | None = None)
         "stops": merged,
         "has_colorado": len(co_stops) > 0,
         "colorado_stops": len(co_stops),
+        "via_states": via,
+        "via_summary": format_via_summary(merged),
+        "origin_label": origin_label(merged),
+        "dest_label": dest_label(merged),
     }
 
 

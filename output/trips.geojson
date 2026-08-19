@@ -21,7 +21,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_002_2023-06-03_Madisonville_to_Centerville",
-        "name": "Jun 2023 \u2014 Madisonville \u2192 Centerville",
+        "name": "Jun 2023 \u2014 Madisonville",
         "color": "#4ECDC4"
       },
       "geometry": {
@@ -486,7 +486,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_004_2023-08-19_Waco_to_Red_Oak",
-        "name": "Aug 2023 \u2014 Waco \u2192 Red Oak",
+        "name": "Aug 2023 \u2014 Waco",
         "color": "#FFEAA7"
       },
       "geometry": {
@@ -955,7 +955,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_005_2023-09-03_Red_Oak_to_Georgetown",
-        "name": "Sep 2023 \u2014 Red Oak \u2192 San Antonio",
+        "name": "Sep 2023 \u2014 Red Oak",
         "color": "#DDA0DD"
       },
       "geometry": {
@@ -1665,7 +1665,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_007_2024-04-13_New_Boston_to_Sulphur_Springs",
-        "name": "Apr 2024 \u2014 New Boston \u2192 Sulphur Springs",
+        "name": "Apr 2024 \u2014 New Boston",
         "color": "#F7DC6F"
       },
       "geometry": {
@@ -3967,7 +3967,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_010_2024-10-12_Vernon_to_Vernon",
-        "name": "Oct 2024 \u2014 Vernon \u2192 Tucumcari",
+        "name": "Oct 2024 \u2014 Vernon",
         "color": "#F8B500"
       },
       "geometry": {
@@ -5268,7 +5268,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_011_2024-11-19_Henrietta_to_Kirkland",
-        "name": "Nov 2024 \u2014 Henrietta \u2192 Kirkland",
+        "name": "Nov 2024 \u2014 Dallas \u2192 Seattle (via TX, NM, AZ, UT, ID, OR, WA)",
         "color": "#00CED1"
       },
       "geometry": {
@@ -8273,7 +8273,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_012_2024-12-15_North_Bend_to_Tulalip_Bay",
-        "name": "Dec 2024 \u2014 North Bend \u2192 Tulalip Bay",
+        "name": "Dec 2024 \u2014 North Bend",
         "color": "#FF69B4"
       },
       "geometry": {
@@ -8439,7 +8439,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_014_2025-03-27_Yakima_to_North_Bend",
-        "name": "Mar 2025 \u2014 Yakima \u2192 North Bend",
+        "name": "Mar 2025 \u2014 Yakima \u2192 Seattle (via WA, OR, ID, NV, UT)",
         "color": "#FF8C00"
       },
       "geometry": {
@@ -11296,7 +11296,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_015_2025-05-23_Renton_to_Chehalis",
-        "name": "May 2025 \u2014 Renton \u2192 Chehalis",
+        "name": "May 2025 \u2014 Seattle \u2192 Chehalis",
         "color": "#9370DB"
       },
       "geometry": {
@@ -12173,7 +12173,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_016_2025-08-10_Renton_to_Bellevue",
-        "name": "Aug 2025 \u2014 Renton \u2192 Bellevue",
+        "name": "Aug 2025 \u2014 Renton",
         "color": "#20B2AA"
       },
       "geometry": {
@@ -12318,7 +12318,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_019_2025-12-11_Bellevue_to_Rochester",
-        "name": "Dec 2025 \u2014 Bellevue \u2192 Rochester",
+        "name": "Dec 2025 \u2014 Seattle \u2192 Rochester (via WA, OR, ID, NV, UT, AZ, CA)",
         "color": "#00FA9A"
       },
       "geometry": {
@@ -16867,7 +16867,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_021_2026-02-10_Auburn_to_Bellevue",
-        "name": "Feb 2026 \u2014 Auburn \u2192 Suquamish",
+        "name": "Feb 2026 \u2014 Auburn",
         "color": "#1E90FF"
       },
       "geometry": {
@@ -17328,7 +17328,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_022_2026-04-19_Kirkland_to_Bellevue",
-        "name": "Apr 2026 \u2014 Kirkland \u2192 Bellevue",
+        "name": "Apr 2026 \u2014 Kirkland",
         "color": "#ADFF2F"
       },
       "geometry": {
@@ -17441,7 +17441,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_023_2026-05-25_Kelso_to_Tumwater",
-        "name": "May 2026 \u2014 Kelso \u2192 Tumwater",
+        "name": "May 2026 \u2014 Kelso \u2192 Tumwater (via WA, OR, CA)",
         "color": "#FF1493"
       },
       "geometry": {
@@ -20270,7 +20270,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_024_2026-07-03_Puyallup_to_Auburn",
-        "name": "Jul 2026 \u2014 Puyallup \u2192 Silverdale",
+        "name": "Jul 2026 \u2014 Puyallup",
         "color": "#00BFFF"
       },
       "geometry": {

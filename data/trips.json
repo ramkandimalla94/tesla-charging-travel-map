@@ -23,11 +23,17 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX"
+      ],
+      "via_summary": "TX",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_002_2023-06-03_Madisonville_to_Centerville",
-      "name": "Jun 2023 — Madisonville → Centerville",
+      "name": "Jun 2023 — Madisonville",
       "start": "2023-06-03 17:30:09+00:00",
       "end": "2023-06-04 13:44:57+00:00",
       "stops": [
@@ -67,7 +73,13 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX"
+      ],
+      "via_summary": "TX",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_003_2023-07-09_Irving_to_Irving",
@@ -88,11 +100,17 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX"
+      ],
+      "via_summary": "TX",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_004_2023-08-19_Waco_to_Red_Oak",
-      "name": "Aug 2023 — Waco → Red Oak",
+      "name": "Aug 2023 — Waco",
       "start": "2023-08-19 21:56:13+00:00",
       "end": "2023-09-02 14:34:01+00:00",
       "stops": [
@@ -142,11 +160,17 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX"
+      ],
+      "via_summary": "TX",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_005_2023-09-03_Red_Oak_to_Georgetown",
-      "name": "Sep 2023 — Red Oak → San Antonio",
+      "name": "Sep 2023 — Red Oak",
       "start": "2023-09-03 17:18:05+00:00",
       "end": "2023-09-12 02:24:10+00:00",
       "stops": [
@@ -196,7 +220,13 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX"
+      ],
+      "via_summary": "TX",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_006_2023-11-05_Denison_to_Denison",
@@ -229,11 +259,17 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX"
+      ],
+      "via_summary": "TX",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_007_2024-04-13_New_Boston_to_Sulphur_Springs",
-      "name": "Apr 2024 — New Boston → Sulphur Springs",
+      "name": "Apr 2024 — New Boston",
       "start": "2024-04-13 20:09:35+00:00",
       "end": "2024-04-15 03:30:31+00:00",
       "stops": [
@@ -261,7 +297,13 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX"
+      ],
+      "via_summary": "TX",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_008_2024-06-01_Temple_to_Temple",
@@ -283,7 +325,13 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX"
+      ],
+      "via_summary": "TX",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_009_2024-06-30_Henrietta_to_Vernon",
@@ -481,11 +529,19 @@
         }
       ],
       "has_colorado": true,
-      "colorado_stops": 8
+      "colorado_stops": 8,
+      "via_states": [
+        "TX",
+        "NM",
+        "CO"
+      ],
+      "via_summary": "TX, NM, CO (×8 stops)",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_010_2024-10-12_Vernon_to_Vernon",
-      "name": "Oct 2024 — Vernon → Tucumcari",
+      "name": "Oct 2024 — Vernon",
       "start": "2024-10-12 15:34:24+00:00",
       "end": "2024-10-16 13:24:19+00:00",
       "stops": [
@@ -580,11 +636,18 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX",
+        "NM"
+      ],
+      "via_summary": "TX, NM",
+      "origin_label": "Dallas",
+      "dest_label": "Dallas"
     },
     {
       "id": "trip_011_2024-11-19_Henrietta_to_Kirkland",
-      "name": "Nov 2024 — Henrietta → Kirkland",
+      "name": "Nov 2024 — Dallas → Seattle (via TX, NM, AZ, UT, ID, OR, WA)",
       "start": "2024-11-19 19:43:54+00:00",
       "end": "2024-11-29 02:42:10+00:00",
       "stops": [
@@ -789,11 +852,23 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "TX",
+        "NM",
+        "AZ",
+        "UT",
+        "ID",
+        "OR",
+        "WA"
+      ],
+      "via_summary": "TX, NM, AZ, UT, ID, OR, WA",
+      "origin_label": "Dallas",
+      "dest_label": "Seattle"
     },
     {
       "id": "trip_012_2024-12-15_North_Bend_to_Tulalip_Bay",
-      "name": "Dec 2024 — North Bend → Tulalip Bay",
+      "name": "Dec 2024 — North Bend",
       "start": "2024-12-15 22:14:27+00:00",
       "end": "2024-12-29 03:08:27+00:00",
       "stops": [
@@ -855,7 +930,13 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA"
+      ],
+      "via_summary": "WA",
+      "origin_label": "Seattle",
+      "dest_label": "Seattle"
     },
     {
       "id": "trip_013_2025-01-19_Leavenworth_to_Leavenworth",
@@ -888,11 +969,17 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA"
+      ],
+      "via_summary": "WA",
+      "origin_label": "Leavenworth",
+      "dest_label": "Leavenworth"
     },
     {
       "id": "trip_014_2025-03-27_Yakima_to_North_Bend",
-      "name": "Mar 2025 — Yakima → North Bend",
+      "name": "Mar 2025 — Yakima → Seattle (via WA, OR, ID, NV, UT)",
       "start": "2025-03-27 23:02:21+00:00",
       "end": "2025-04-27 02:26:00+00:00",
       "stops": [
@@ -1123,11 +1210,21 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA",
+        "OR",
+        "ID",
+        "NV",
+        "UT"
+      ],
+      "via_summary": "WA, OR, ID, NV, UT",
+      "origin_label": "Yakima",
+      "dest_label": "Seattle"
     },
     {
       "id": "trip_015_2025-05-23_Renton_to_Chehalis",
-      "name": "May 2025 — Renton → Chehalis",
+      "name": "May 2025 — Seattle → Chehalis",
       "start": "2025-05-23 00:57:12+00:00",
       "end": "2025-06-29 03:32:20+00:00",
       "stops": [
@@ -1299,11 +1396,18 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA",
+        "OR"
+      ],
+      "via_summary": "WA, OR",
+      "origin_label": "Seattle",
+      "dest_label": "Chehalis"
     },
     {
       "id": "trip_016_2025-08-10_Renton_to_Bellevue",
-      "name": "Aug 2025 — Renton → Bellevue",
+      "name": "Aug 2025 — Renton",
       "start": "2025-08-10 18:16:08+00:00",
       "end": "2025-09-11 01:53:07+00:00",
       "stops": [
@@ -1365,7 +1469,13 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA"
+      ],
+      "via_summary": "WA",
+      "origin_label": "Seattle",
+      "dest_label": "Seattle"
     },
     {
       "id": "trip_017_2025-10-26_Leavenworth_to_Leavenworth",
@@ -1388,7 +1498,13 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA"
+      ],
+      "via_summary": "WA",
+      "origin_label": "Leavenworth",
+      "dest_label": "Leavenworth"
     },
     {
       "id": "trip_018_2025-11-22_Bellevue_to_Bellevue",
@@ -1410,11 +1526,17 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA"
+      ],
+      "via_summary": "WA",
+      "origin_label": "Seattle",
+      "dest_label": "Seattle"
     },
     {
       "id": "trip_019_2025-12-11_Bellevue_to_Rochester",
-      "name": "Dec 2025 — Bellevue → Rochester",
+      "name": "Dec 2025 — Seattle → Rochester (via WA, OR, ID, NV, UT, AZ, CA)",
       "start": "2025-12-11 23:04:12+00:00",
       "end": "2025-12-29 04:32:33+00:00",
       "stops": [
@@ -1843,7 +1965,19 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA",
+        "OR",
+        "ID",
+        "NV",
+        "UT",
+        "AZ",
+        "CA"
+      ],
+      "via_summary": "WA, OR, ID, NV, UT, AZ, CA",
+      "origin_label": "Seattle",
+      "dest_label": "Rochester"
     },
     {
       "id": "trip_020_2026-01-15_Tulalip_Bay_to_Tulalip_Bay",
@@ -1865,11 +1999,17 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA"
+      ],
+      "via_summary": "WA",
+      "origin_label": "Seattle",
+      "dest_label": "Seattle"
     },
     {
       "id": "trip_021_2026-02-10_Auburn_to_Bellevue",
-      "name": "Feb 2026 — Auburn → Suquamish",
+      "name": "Feb 2026 — Auburn",
       "start": "2026-02-10 16:41:26+00:00",
       "end": "2026-02-25 04:38:53+00:00",
       "stops": [
@@ -2019,11 +2159,17 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA"
+      ],
+      "via_summary": "WA",
+      "origin_label": "Seattle",
+      "dest_label": "Seattle"
     },
     {
       "id": "trip_022_2026-04-19_Kirkland_to_Bellevue",
-      "name": "Apr 2026 — Kirkland → Bellevue",
+      "name": "Apr 2026 — Kirkland",
       "start": "2026-04-19 14:42:56+00:00",
       "end": "2026-04-29 15:55:13+00:00",
       "stops": [
@@ -2085,11 +2231,17 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA"
+      ],
+      "via_summary": "WA",
+      "origin_label": "Seattle",
+      "dest_label": "Seattle"
     },
     {
       "id": "trip_023_2026-05-25_Kelso_to_Tumwater",
-      "name": "May 2026 — Kelso → Tumwater",
+      "name": "May 2026 — Kelso → Tumwater (via WA, OR, CA)",
       "start": "2026-05-25 19:35:20+00:00",
       "end": "2026-06-08 05:01:30+00:00",
       "stops": [
@@ -2408,11 +2560,19 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA",
+        "OR",
+        "CA"
+      ],
+      "via_summary": "WA, OR, CA",
+      "origin_label": "Kelso",
+      "dest_label": "Tumwater"
     },
     {
       "id": "trip_024_2026-07-03_Puyallup_to_Auburn",
-      "name": "Jul 2026 — Puyallup → Silverdale",
+      "name": "Jul 2026 — Puyallup",
       "start": "2026-07-03 17:43:47+00:00",
       "end": "2026-07-18 09:44:12+00:00",
       "stops": [
@@ -2534,7 +2694,13 @@
         }
       ],
       "has_colorado": false,
-      "colorado_stops": 0
+      "colorado_stops": 0,
+      "via_states": [
+        "WA"
+      ],
+      "via_summary": "WA",
+      "origin_label": "Seattle",
+      "dest_label": "Seattle"
     }
   ],
   "local_charges": [

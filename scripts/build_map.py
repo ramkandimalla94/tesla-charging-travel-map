@@ -217,11 +217,12 @@ def prepare_trips(trips_data: dict) -> list[dict]:
         route_path = build_route_path(stops)
         miles = path_miles(route_path)
         total_kwh = round(sum(s["kwh"] for s in stops), 1)
-        states = sorted({
+        states = trip.get("via_states") or sorted({
             st for s in stops
             if (st := extract_state(s["location"]) or ("CO" if s.get("in_colorado") else None))
         })
         state_names = [STATE_NAMES.get(s, s) for s in states]
+        via_summary = trip.get("via_summary") or ", ".join(states)
         arcs = build_arcs(stops, trip_color(i), trip["id"])
         prepared.append({
             "id": trip["id"],
@@ -239,6 +240,9 @@ def prepare_trips(trips_data: dict) -> list[dict]:
             "duration_days": trip_duration_days(trip["start"], trip["end"]),
             "states": states,
             "state_names": state_names,
+            "via_summary": via_summary,
+            "origin_label": trip.get("origin_label", ""),
+            "dest_label": trip.get("dest_label", ""),
             "has_colorado": trip.get("has_colorado", False),
             "colorado_stops": trip.get("colorado_stops", 0),
             "arcs": arcs,

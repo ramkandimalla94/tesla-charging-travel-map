@@ -58,7 +58,10 @@
       border: 1px solid rgba(59,130,246,0.2); flex-shrink: 0;
     }
     .hero.co { background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(234,88,12,0.08)); border-color: rgba(245,158,11,0.25); }
-    .hero-name { font-size: 14px; font-weight: 700; line-height: 1.3; margin-bottom: 8px; }
+    .hero-name { font-size: 14px; font-weight: 700; line-height: 1.3; margin-bottom: 4px; }
+    .hero-via { font-size: 11px; color: var(--muted); margin-bottom: 8px; line-height: 1.4; }
+    .hero-via strong { color: #93c5fd; font-weight: 600; }
+    .hero.co .hero-via strong { color: #fbbf24; }
     .hero-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .hero-stat { font-size: 10px; color: var(--muted); }
     .hero-stat strong { display: block; font-size: 15px; font-weight: 700; color: var(--text); margin-top: 1px; }
@@ -77,7 +80,11 @@
     }
     .trip-item:hover { background: var(--glass-light); }
     .trip-item.active { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.25); }
-    .trip-item.co .trip-name { color: #fbbf24; }
+    .trip-item.co { border: 1px solid rgba(245,158,11,0.25); background: rgba(245,158,11,0.06); }
+    .trip-item.co:hover { background: rgba(245,158,11,0.12); }
+    .trip-item.co.active { background: rgba(245,158,11,0.18); border-color: rgba(245,158,11,0.45); }
+    .trip-item.co .trip-name { color: #fbbf24; font-weight: 700; }
+    .group-label.co-label { color: #fbbf24; font-size: 10px; }
     .trip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
     .trip-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .trip-meta { font-size: 10px; color: var(--muted); margin-top: 1px; }
@@ -248,6 +255,7 @@
 
     <div class="hero" id="hero-card">
       <div class="hero-name" id="hero-name">Select a trip</div>
+      <div class="hero-via" id="hero-via"></div>
       <div class="hero-meta">
         <div class="hero-stat">Distance<strong id="hero-miles">—</strong></div>
         <div class="hero-stat">Energy<strong id="hero-kwh">—</strong></div>
@@ -265,11 +273,11 @@
       </div>
       {% set co_trips = trips|selectattr('has_colorado')|list %}
       {% if co_trips %}
-      <div class="group-label">🏔 Colorado</div>
+      <div class="group-label co-label">🏔 Colorado Trips</div>
       {% for trip in co_trips %}
       <div class="trip-item co" data-id="{{ trip.id }}">
         <div class="trip-dot" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
-        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.start }} · {{ trip.stop_count }} stops · {{ trip.miles }} mi</div></div>
+        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.colorado_stops }} CO stops · {{ trip.stop_count }} total · {{ trip.miles }} mi</div></div>
       </div>
       {% endfor %}
       {% endif %}
@@ -477,14 +485,17 @@
         const coords = (trip.route_path||[]).map(p=>[p[1],p[0]]);
         const isSelected = selectedId === trip.id;
         const isOverview = selectedId === 'all';
-        const lineOp = isSelected ? 0.85 : (isOverview ? 0.18 : 0.06);
-        const glowOp = isSelected ? 0.25 : (isOverview ? 0.04 : 0.02);
-        const lineW = isSelected ? 3 : (isOverview ? 1.2 : 0.8);
+        const visible = isOverview || isSelected;
+        const lineOp = isSelected ? 0.9 : (isOverview ? 0.16 : 0);
+        const glowOp = isSelected ? 0.28 : (isOverview ? 0.03 : 0);
+        const lineW = isSelected ? 3.5 : (isOverview ? 1 : 0);
         if (!map.getSource(srcId)) {
           map.addSource(srcId,{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:coords}}});
-          map.addLayer({id:`${srcId}-glow`,type:'line',source:srcId,paint:{'line-color':trip.color,'line-width':6,'line-opacity':glowOp,'line-blur':4}});
-          map.addLayer({id:`${srcId}-line`,type:'line',source:srcId,layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':trip.color,'line-width':lineW,'line-opacity':lineOp}});
+          map.addLayer({id:`${srcId}-glow`,type:'line',source:srcId,paint:{'line-color':trip.color,'line-width':6,'line-opacity':glowOp,'line-blur':4},layout:{visibility:visible?'visible':'none'}});
+          map.addLayer({id:`${srcId}-line`,type:'line',source:srcId,layout:{'line-cap':'round','line-join':'round',visibility:visible?'visible':'none'},paint:{'line-color':trip.color,'line-width':lineW,'line-opacity':lineOp}});
         } else {
+          map.setLayoutProperty(`${srcId}-line`, 'visibility', visible ? 'visible' : 'none');
+          map.setLayoutProperty(`${srcId}-glow`, 'visibility', visible ? 'visible' : 'none');
           map.setPaintProperty(`${srcId}-line`, 'line-opacity', lineOp);
           map.setPaintProperty(`${srcId}-line`, 'line-width', lineW);
           map.setPaintProperty(`${srcId}-glow`, 'line-opacity', glowOp);
@@ -522,17 +533,26 @@
     function updateHero() {
       const trips = activeTrips();
       const card = document.getElementById('hero-card');
+      const viaEl = document.getElementById('hero-via');
       if (selectedId==='all') {
-        document.getElementById('hero-name').textContent = 'All Journeys — Select a trip to explore';
+        document.getElementById('hero-name').textContent = 'All Journeys — Select a trip';
+        viaEl.innerHTML = 'Looking for Colorado? Choose <strong>🏔 Colorado Trips</strong> below.';
         document.getElementById('hero-miles').textContent = DASHBOARD.total_miles.toLocaleString()+' mi';
         document.getElementById('hero-kwh').textContent = DASHBOARD.total_kwh.toLocaleString()+' kWh';
         document.getElementById('hero-days').textContent = TRIPS.length+' trips';
         document.getElementById('hero-stops').textContent = TRIPS.reduce((s,t)=>s+t.stop_count,0);
-        document.getElementById('hero-states').innerHTML = DASHBOARD.state_names.map(s=>`<span>${s}</span>`).join('');
+        document.getElementById('hero-states').innerHTML = '<span style="opacity:0.7">Lifetime: '+DASHBOARD.state_names.join(' · ')+'</span>';
         card.classList.remove('co');
       } else {
         const t = trips[0];
         document.getElementById('hero-name').textContent = t.name;
+        if (t.has_colorado) {
+          viaEl.innerHTML = 'Via: <strong>' + (t.via_summary || t.states.join(', ')) + '</strong> · 🏔 ' + t.colorado_stops + ' Colorado stops';
+        } else if (t.via_summary) {
+          viaEl.innerHTML = 'Via: <strong>' + t.via_summary + '</strong> · No Colorado on this route';
+        } else {
+          viaEl.innerHTML = t.states.length ? 'Via: <strong>' + t.states.join(', ') + '</strong>' : '';
+        }
         document.getElementById('hero-miles').textContent = t.miles.toLocaleString()+' mi';
         document.getElementById('hero-kwh').textContent = t.total_kwh+' kWh';
         document.getElementById('hero-days').textContent = t.duration_days+' days';
@@ -557,13 +577,16 @@
     function fitTrip(animate=true) {
       const bounds = new mapboxgl.LngLatBounds();
       activeTrips().forEach(t => t.stops.forEach(s => bounds.extend([s.lng,s.lat])));
-      if (!bounds.isEmpty()) {
-        map.fitBounds(bounds, {
-          padding:{top:80,bottom:120,left:380,right:220},
-          pitch: isSingleTrip() ? 55 : 48, bearing: -12,
-          duration: animate ? 1600 : 0, maxZoom: isSingleTrip() ? 10 : 5,
-        });
-      }
+      if (bounds.isEmpty()) return;
+      const trip = activeTrip();
+      const isCo = trip && trip.has_colorado;
+      map.fitBounds(bounds, {
+        padding:{top:80,bottom:120,left:380,right:220},
+        pitch: isSingleTrip() ? 52 : 42, bearing: -12,
+        duration: animate ? 1600 : 0,
+        maxZoom: isCo ? 7.5 : (isSingleTrip() ? 9 : 5),
+        minZoom: 3,
+      });
     }
 
     // ── Trail + vehicle ──
