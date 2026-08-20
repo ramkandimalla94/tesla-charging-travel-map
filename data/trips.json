@@ -61,7 +61,7 @@
         "Seattle, WA",
         "Seattle, WA - NE Northgate Way (Floor 2)"
       ],
-      "canonical_location": "Issaquah, WA"
+      "canonical_location": "Bellevue, WA - Northeast 8th Street"
     }
   ],
   "owners": [
@@ -1311,10 +1311,10 @@
       "is_shared": false
     },
     {
-      "id": "trip_010_2025-01-18_Bellevue_to_Leavenworth",
+      "id": "trip_010_2025-01-18_Bellevue_to_Bellevue",
       "name": "Jan 2025 — Bellevue → Leavenworth",
       "start": "2025-01-18T22:52:19+00:00",
-      "end": "2025-01-20 01:34:11+00:00",
+      "end": "2025-01-20T03:34:11+00:00",
       "stops": [
         {
           "datetime": "2025-01-18T22:52:19+00:00",
@@ -1357,6 +1357,21 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182"
+        },
+        {
+          "datetime": "2025-01-20T03:34:11+00:00",
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
+          "kwh": 0.0,
+          "invoice_url": "",
+          "dist_home": 0.0,
+          "region": "HOME",
+          "in_colorado": false,
+          "owner": "Rama Kandimalla",
+          "vin": "7SAYGDEEXRA255182",
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -1366,7 +1381,7 @@
       ],
       "via_summary": "WA",
       "origin_label": "Bellevue",
-      "dest_label": "Leavenworth",
+      "dest_label": "Bellevue",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
       "owner_short": "Rama",
@@ -1789,10 +1804,10 @@
       "is_shared": false
     },
     {
-      "id": "trip_013_2025-06-15_Bellevue_to_Chehalis",
+      "id": "trip_013_2025-06-15_Bellevue_to_Bellevue",
       "name": "Jun 2025 — Bellevue → Olympic Peninsula",
       "start": "2025-06-15 19:39:09+00:00",
-      "end": "2025-06-29 03:32:20+00:00",
+      "end": "2025-06-29T05:32:20+00:00",
       "stops": [
         {
           "datetime": "2025-06-15 19:39:09+00:00",
@@ -1886,6 +1901,21 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182"
+        },
+        {
+          "datetime": "2025-06-29T05:32:20+00:00",
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
+          "kwh": 0.0,
+          "invoice_url": "",
+          "dist_home": 0.0,
+          "region": "HOME",
+          "in_colorado": false,
+          "owner": "Rama Kandimalla",
+          "vin": "7SAYGDEEXRA255182",
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -1896,7 +1926,7 @@
       ],
       "via_summary": "WA, OR",
       "origin_label": "Bellevue",
-      "dest_label": "Chehalis",
+      "dest_label": "Bellevue",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
       "owner_short": "Rama",
@@ -2439,10 +2469,10 @@
       "is_shared": true
     },
     {
-      "id": "trip_017_2025-10-26_Bellevue_to_Leavenworth",
+      "id": "trip_017_2025-10-26_Bellevue_to_Bellevue",
       "name": "Oct 2025 — Bellevue → Leavenworth",
       "start": "2025-10-26T15:20:17+00:00",
-      "end": "2025-10-27 04:54:41+00:00",
+      "end": "2025-10-26T19:20:17+00:00",
       "stops": [
         {
           "datetime": "2025-10-26T15:20:17+00:00",
@@ -2472,6 +2502,21 @@
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
           "end_datetime": "2025-10-27 04:54:41+00:00"
+        },
+        {
+          "datetime": "2025-10-26T19:20:17+00:00",
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
+          "kwh": 0.0,
+          "invoice_url": "",
+          "dist_home": 0.0,
+          "region": "HOME",
+          "in_colorado": false,
+          "owner": "Rama Kandimalla",
+          "vin": "7SAYGDEEXRA255182",
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -2481,7 +2526,7 @@
       ],
       "via_summary": "WA",
       "origin_label": "Bellevue",
-      "dest_label": "Leavenworth",
+      "dest_label": "Bellevue",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
       "owner_short": "Rama",
@@ -2495,10 +2540,10 @@
       "is_shared": false
     },
     {
-      "id": "trip_018_2025-12-11_Bellevue_to_Rochester",
+      "id": "trip_018_2025-12-11_Bellevue_to_Bellevue",
       "name": "Dec 2025 — Bellevue → Redondo Beach (via WA, OR, ID, NV, UT, AZ, CA)",
       "start": "2025-12-11 23:04:12+00:00",
-      "end": "2025-12-29 04:32:33+00:00",
+      "end": "2025-12-29T06:15:01+00:00",
       "stops": [
         {
           "datetime": "2025-12-11 23:04:12+00:00",
@@ -2999,6 +3044,21 @@
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
           "end_datetime": "2025-12-29 04:32:33+00:00"
+        },
+        {
+          "datetime": "2025-12-29T06:15:01+00:00",
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
+          "kwh": 0.0,
+          "invoice_url": "",
+          "dist_home": 0.0,
+          "region": "HOME",
+          "in_colorado": false,
+          "owner": "Rama Kandimalla",
+          "vin": "7SAYGDEEXRA255182",
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -3014,7 +3074,7 @@
       ],
       "via_summary": "WA, OR, ID, NV, UT, AZ, CA",
       "origin_label": "Bellevue",
-      "dest_label": "Rochester",
+      "dest_label": "Bellevue",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
       "owner_short": "Rama",
@@ -3290,10 +3350,10 @@
       "is_shared": false
     },
     {
-      "id": "trip_022_2026-05-25_Bellevue_to_Tumwater",
+      "id": "trip_022_2026-05-25_Bellevue_to_Bellevue",
       "name": "May 2026 — Bellevue → Oceanside (via WA, OR, CA)",
       "start": "2026-05-25T17:35:20+00:00",
-      "end": "2026-06-08 05:01:30+00:00",
+      "end": "2026-06-08T06:55:57+00:00",
       "stops": [
         {
           "datetime": "2026-05-25T17:35:20+00:00",
@@ -3677,6 +3737,21 @@
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
           "end_datetime": "2026-06-08 05:01:30+00:00"
+        },
+        {
+          "datetime": "2026-06-08T06:55:57+00:00",
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
+          "kwh": 0.0,
+          "invoice_url": "",
+          "dist_home": 0.0,
+          "region": "HOME",
+          "in_colorado": false,
+          "owner": "Rama Kandimalla",
+          "vin": "7SAYGDEEXRA255182",
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -3688,7 +3763,7 @@
       ],
       "via_summary": "WA, OR, CA",
       "origin_label": "Bellevue",
-      "dest_label": "Tumwater",
+      "dest_label": "Bellevue",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
       "owner_short": "Rama",
@@ -5667,7 +5742,7 @@
     "total_charges": 375,
     "trip_count": 23,
     "local_count": 139,
-    "total_stops_in_trips": 233,
+    "total_stops_in_trips": 238,
     "home_detection": "config",
     "vehicle_count": 3,
     "owner_count": 2
