@@ -357,8 +357,6 @@
       inset: 0; font-size: 0; border-width: 1.5px;
       box-shadow: 0 0 10px var(--beacon-glow, rgba(94,234,212,0.45));
     }
-    .beacon.waypoint.revealed { width: 28px; height: 28px; }
-    .beacon.waypoint.revealed .beacon-core { font-size: 10px; }
 
     .stop-dot {
       width: 5px; height: 5px; border-radius: 50%;
@@ -1146,12 +1144,11 @@
         const isEnd = m._idx === lastIdx;
         const show = isStart || isEnd;
         m._el.classList.toggle('visible', show);
-        m._el.classList.remove('active', 'revealed');
+        m._el.classList.remove('active');
         if (m._lbl) {
           m._lbl.classList.toggle('visible', show);
           m._lbl.classList.remove('active');
         }
-        if (m._waypointCore && !show) m._waypointCore.textContent = '';
       });
     }
 
@@ -1182,7 +1179,6 @@
             beacon.style.setProperty('--beacon-glow', trip.color + '88');
             const coreText = isStart ? '▶' : (isEnd ? '◆' : '');
             beacon.innerHTML = `<div class="beacon-ring"></div><div class="beacon-core" style="background:${trip.color}">${coreText}</div>`;
-            const coreEl = beacon.querySelector('.beacon-core');
             const lbl = document.createElement('div');
             lbl.className = 'beacon-label';
             if (sameHome && isStart) lbl.textContent = `Home · ${shortLabel(s.location)}`;
@@ -1191,7 +1187,6 @@
             wrap.appendChild(beacon);
             if (isMilestone) wrap.appendChild(lbl);
             var el = beacon, lblRef = isMilestone ? lbl : null;
-            if (!isMilestone) el._waypointCore = coreEl;
           } else {
             const dot = document.createElement('div');
             dot.className = 'stop-dot';
@@ -1212,7 +1207,6 @@
             .setPopup(new mapboxgl.Popup({ offset: 14, maxWidth: '280px' }).setHTML(popupHtml(s)))
             .addTo(map);
           m._idx = i; m._el = el; m._lbl = lblRef; m._stop = s;
-          m._waypointCore = el._waypointCore || null;
           m._isMilestone = isMilestone;
           stopMarkers.push(m);
         });
@@ -1476,8 +1470,6 @@
         const isActive = m._idx === animStopIdx;
         m._el.classList.toggle('visible', reached || m._isMilestone);
         m._el.classList.toggle('active', isActive);
-        m._el.classList.toggle('revealed', reached && !m._isMilestone);
-        if (m._waypointCore && reached && !m._isMilestone) m._waypointCore.textContent = String(m._idx + 1);
         if (m._lbl) {
           m._lbl.classList.toggle('visible', isActive);
           m._lbl.classList.toggle('active', isActive);
