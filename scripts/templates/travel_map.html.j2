@@ -194,6 +194,10 @@
     .vehicle-body svg { width: 22px; height: 22px; fill: #fff; }
 
     /* Numbered stop pins */
+    .stop-pin-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      pointer-events: auto;
+    }
     .stop-pin {
       width: 28px; height: 28px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
@@ -203,8 +207,19 @@
       transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), opacity 0.4s;
       opacity: 0; transform: scale(0);
     }
-    .stop-pin.visible { opacity: 1; transform: scale(1); }
-    .stop-pin.active { transform: scale(1.35); box-shadow: 0 0 20px currentColor; }
+    .stop-pin-wrap.visible .stop-pin { opacity: 1; transform: scale(1); }
+    .stop-pin-wrap.active .stop-pin { transform: scale(1.35); box-shadow: 0 0 20px currentColor; }
+    .stop-label {
+      margin-top: 5px; max-width: 140px; text-align: center;
+      font-size: 11px; font-weight: 700; line-height: 1.2; color: #fff;
+      background: rgba(0,0,0,0.72); padding: 3px 8px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      opacity: 1; transform: translateY(0);
+      pointer-events: none;
+    }
+    .stop-pin-wrap.active .stop-label { color: #fde68a; background: rgba(120,53,15,0.88); border-color: rgba(251,191,36,0.45); font-size: 12px; }
 
     /* Sidebar toggle */
     .sidebar-toggle {
@@ -420,15 +435,18 @@
     const MAPBOX_TOKEN = {{ mapbox_token | tojson }};
     const US_BOUNDS = DASHBOARD.us_bounds;
     const BASE_MS = 1600;
+    const TRIP_PLAYBACK_MS = 48000;
 
     let map;
 
     // ── State ──
     let selectedId = 'all', animProg = 0, animStopIdx = 0;
     let isPlaying = false, animFrame = null, lastTs = 0;
-    let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
+    let speed = 1, loopTrip = false, directorMode = false, nightMode = false;
     let vehicleMarker = null, stopMarkers = [];
-    const MAX_PITCH = 45;
+    let smoothBearing = 0, lastCameraUpdate = 0, tripFollowZoom = 7;
+    const MAX_PITCH = 50;
+    const CAMERA_INTERVAL_MS = 500;
 
     const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div></div>`;
 
@@ -478,7 +496,7 @@
       drawRoutes();
       drawStops();
       updateHero();
-      setMapLabelsVisible(true);
+      ensureMapLabelsVisible();
       document.getElementById('btn-play').disabled = true;
       document.getElementById('prog-text').textContent = 'Select a trip to play';
       introFlyover();
@@ -538,12 +556,19 @@
       setSplash(70);
     }
 
-    function setMapLabelsVisible(visible) {
+    function stopLabel(location) {
+      return (location || '').split(',')[0].split(' - ')[0].trim();
+    }
+
+    function ensureMapLabelsVisible() {
       if (!map || !map.isStyleLoaded()) return;
       map.getStyle().layers.forEach(layer => {
-        if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
-          try { map.setLayoutProperty(layer.id, 'visibility', visible ? 'visible' : 'none'); } catch (_) {}
-        }
+        if (layer.type !== 'symbol' || !layer.layout || !layer.layout['text-field']) return;
+        try {
+          map.setLayoutProperty(layer.id, 'visibility', 'visible');
+          map.setPaintProperty(layer.id, 'text-opacity', 1);
+          map.setPaintProperty(layer.id, 'icon-opacity', 1);
+        } catch (_) {}
       });
     }
 
@@ -580,19 +605,18 @@
         trip.stops.forEach((s,i) => {
           const el = document.createElement('div');
           if (single) {
-            el.className = 'stop-pin';
-            el.style.background = trip.color;
-            el.textContent = i+1;
+            el.className = 'stop-pin-wrap';
+            el.innerHTML = `<div class="stop-pin" style="background:${trip.color}">${i+1}</div><div class="stop-label">${stopLabel(s.location)}</div>`;
+            el.classList.add('visible');
           } else {
             el.className = 'stop-dot';
             el.style.background = trip.color;
           }
-          const m = new mapboxgl.Marker({element:el, anchor:'center'})
+          const m = new mapboxgl.Marker({element:el, anchor:'bottom'})
             .setLngLat([s.lng,s.lat])
             .setPopup(new mapboxgl.Popup({offset:12,maxWidth:'260px'}).setHTML(popupHtml(s)))
             .addTo(map);
           m._idx=i; m._el=el; m._stop=s;
-          if (single) el.classList.add('visible');
           stopMarkers.push(m);
         });
       });
@@ -643,17 +667,49 @@
     // ── Fit trip — frame route in continental US ──
     function fitTrip(animate=true) {
       const bounds = new mapboxgl.LngLatBounds();
-      activeTrips().forEach(t => t.stops.forEach(s => bounds.extend([s.lng,s.lat])));
+      activeTrips().forEach(t => {
+        (t.route_path || t.stops).forEach(p => {
+          const lat = Array.isArray(p) ? p[0] : p.lat;
+          const lng = Array.isArray(p) ? p[1] : p.lng;
+          bounds.extend([lng, lat]);
+        });
+      });
       if (bounds.isEmpty()) return;
-      const hideLabels = isSingleTrip();
-      setMapLabelsVisible(!hideLabels);
+      ensureMapLabelsVisible();
+      const single = isSingleTrip();
       map.fitBounds(bounds, {
-        padding:{top:80,bottom:120,left:380,right:220},
-        pitch: isSingleTrip() ? 40 : 0,
-        bearing: isSingleTrip() ? -8 : 0,
+        padding:{top:90,bottom:130,left:380,right:220},
+        pitch: single ? 35 : 0,
+        bearing: single ? 0 : 0,
         duration: animate ? 1400 : 0,
-        maxZoom: isSingleTrip() ? 6 : 5,
+        maxZoom: single ? 8.5 : 5,
         minZoom: 3,
+      });
+      map.once('moveend', () => {
+        if (single) {
+          tripFollowZoom = Math.min(9, Math.max(7.5, map.getZoom()));
+          if (map.getZoom() < 7.5) map.setZoom(7.5);
+          ensureMapLabelsVisible();
+        }
+      });
+    }
+
+    function updateDirectorCamera(pos, bearing) {
+      if (!directorMode || !pos) return;
+      const now = performance.now();
+      if (now - lastCameraUpdate < CAMERA_INTERVAL_MS) return;
+      lastCameraUpdate = now;
+
+      let diff = ((bearing - smoothBearing + 540) % 360) - 180;
+      smoothBearing = (smoothBearing + diff * 0.12 + 360) % 360;
+
+      map.easeTo({
+        center: [pos.lng, pos.lat],
+        zoom: tripFollowZoom,
+        pitch: 38,
+        bearing: smoothBearing,
+        duration: CAMERA_INTERVAL_MS,
+        essential: true,
       });
     }
 
@@ -689,22 +745,14 @@
           vehicleMarker = new mapboxgl.Marker({element:el, anchor:'center', rotationAlignment:'map'})
             .setLngLat([pos.lng,pos.lat]).addTo(map);
         }
-        // Director mode: camera leads vehicle
-        if (directorMode) {
-          const lookAhead = Math.min(prog + 0.08, 1);
-          const ahead = pointOnPath(path, lookAhead) || pos;
-          map.easeTo({
-            center:[ahead.lng, ahead.lat],
-            zoom: Math.min(6.5, Math.max(4.5, map.getZoom())),
-            pitch: Math.min(MAX_PITCH, 42),
-            bearing: bearing * 0.3,
-            duration:600, essential:true,
-          });
-        }
+        // Director mode: smooth follow — throttled, no spin
+        if (directorMode) updateDirectorCamera(pos, bearing);
       }
 
       stopMarkers.forEach(m => {
-        if (m._idx <= animStopIdx) { m._el.classList.add('visible'); m._el.classList.toggle('active', m._idx===animStopIdx); }
+        if (!m._el.classList.contains('stop-pin-wrap')) return;
+        m._el.classList.add('visible');
+        m._el.classList.toggle('active', m._idx === animStopIdx);
       });
 
       // UI updates
@@ -719,12 +767,11 @@
     function animate(ts) {
       if (!isPlaying) return;
       if (!lastTs) lastTs=ts;
-      const path=activePath();
-      animProg += ((ts-lastTs)/(BASE_MS/speed)) / Math.max(path.length,1);
+      animProg += (ts-lastTs) / (TRIP_PLAYBACK_MS / speed);
       lastTs=ts;
       if (animProg>=1) {
         animProg=1; updateTrail(1);
-        if (loopTrip) { animProg=0; animStopIdx=0; stopMarkers.forEach(m=>{m._el.classList.remove('visible','active');}); lastTs=0; animFrame=requestAnimationFrame(animate); return; }
+        if (loopTrip) { animProg=0; animStopIdx=0; stopMarkers.forEach(m=>{ if (m._el.classList.contains('stop-pin-wrap')) m._el.classList.remove('active'); }); lastTs=0; animFrame=requestAnimationFrame(animate); return; }
         stopPlayback(); return;
       }
       updateTrail(animProg);
@@ -750,13 +797,13 @@
       document.getElementById('btn-play').disabled=false;
       document.getElementById('btn-pause').disabled=true;
       document.getElementById('playback-bar').classList.remove('visible');
-      setMapLabelsVisible(selectedId === 'all');
+      ensureMapLabelsVisible();
     }
     function resetVisuals() {
-      stopPlayback(); animProg=0; animStopIdx=0;
+      stopPlayback(); animProg=0; animStopIdx=0; smoothBearing=0; lastCameraUpdate=0;
       if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
       if (map.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
-      stopMarkers.forEach(m=>{m._el.classList.remove('visible','active');});
+      stopMarkers.forEach(m=>{ if (m._el.classList.contains('stop-pin-wrap')) m._el.classList.remove('active'); });
       document.getElementById('scrubber').value=0;
       document.getElementById('timeline-scrub').style.left='0%';
       document.getElementById('prog-text').textContent = isSingleTrip() ? 'Ready' : 'Select a trip to play';
@@ -768,7 +815,7 @@
       document.querySelectorAll('.trip-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       document.querySelectorAll('.tl-seg').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       resetVisuals(); drawRoutes(); drawStops(); updateHero(); fitTrip();
-      setMapLabelsVisible(selectedId === 'all');
+      ensureMapLabelsVisible();
       document.getElementById('btn-play').disabled = !isSingleTrip();
     }
 
@@ -801,7 +848,10 @@
       loopTrip=!loopTrip; document.getElementById('btn-loop').classList.toggle('active-toggle', loopTrip);
     });
     document.getElementById('btn-director').addEventListener('click', ()=>{
-      directorMode=!directorMode; document.getElementById('btn-director').classList.toggle('active-toggle', directorMode);
+      directorMode=!directorMode;
+      document.getElementById('btn-director').classList.toggle('active-toggle', directorMode);
+      smoothBearing = map.getBearing();
+      lastCameraUpdate = 0;
     });
     document.getElementById('btn-night').addEventListener('click', toggleNight);
     document.getElementById('speed').addEventListener('input', e=>{ speed=parseFloat(e.target.value); document.getElementById('speed-label').textContent=speed+'×'; });
