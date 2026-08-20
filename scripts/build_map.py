@@ -523,6 +523,9 @@ def prepare_trips(trips_data: dict) -> list[dict]:
             "arcs": arcs,
             "playback": playback,
             "story": story,
+            "owner": trip.get("owner", ""),
+            "owner_short": trip.get("owner_short", ""),
+            "vin": trip.get("vin", ""),
             "region": "colorado" if trip.get("has_colorado") else (
                 "pnw" if any(s in states for s in ("WA", "OR", "ID")) else "other"
             ),
@@ -532,8 +535,13 @@ def prepare_trips(trips_data: dict) -> list[dict]:
 
 def build_dashboard(trips: list[dict]) -> dict:
     all_states: set[str] = set()
+    owners: set[str] = set()
     for t in trips:
         all_states.update(t["states"])
+        if t.get("owner_short"):
+            owners.add(t["owner_short"])
+        elif t.get("owner"):
+            owners.add(t["owner"].split()[0])
     longest = max(trips, key=lambda t: t["miles"]) if trips else None
     return {
         "total_kwh": round(sum(t["total_kwh"] for t in trips), 0),
@@ -546,6 +554,7 @@ def build_dashboard(trips: list[dict]) -> dict:
         } if longest else None,
         "colorado_trips": sum(1 for t in trips if t["has_colorado"]),
         "featured_trips": sum(1 for t in trips if t.get("featured")),
+        "owners": sorted(owners),
         "us_bounds": US_BOUNDS,
     }
 
@@ -596,7 +605,7 @@ def build_geojson(trips: list[dict]) -> dict:
 
 def write_gpx(trip: dict, path: Path) -> None:
     gpx = ET.Element("gpx", {
-        "version": "1.1", "creator": "tesla-charging-history-map",
+        "version": "1.1", "creator": "Road Replay",
         "xmlns": "http://www.topografix.com/GPX/1/1",
     })
     ET.SubElement(ET.SubElement(gpx, "metadata"), "name").text = trip["name"]

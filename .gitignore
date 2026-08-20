@@ -10,5 +10,7 @@ output/index.html
 dist/
 build/
 
-# Personal Tesla CSV exports (never commit)
+data/imports/
 Tesla_Charging_History_*.csv
+*_charging_history_*.csv
+*charging_history*.csv

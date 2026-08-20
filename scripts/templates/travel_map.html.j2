@@ -619,7 +619,10 @@
       {% for trip in featured_trips %}
       <div class="trip-item featured" data-id="{{ trip.id }}">
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
-        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d</div></div>
+        <div>
+          <div class="trip-name">{{ trip.name }}</div>
+          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d{% if trip.owner_short %} · {{ trip.owner_short }}{% endif %}</div>
+        </div>
       </div>
       {% endfor %}
       {% endif %}
@@ -627,7 +630,10 @@
       {% for trip in trips if not trip.featured %}
       <div class="trip-item" data-id="{{ trip.id }}">
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
-        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi</div></div>
+        <div>
+          <div class="trip-name">{{ trip.name }}</div>
+          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi{% if trip.owner_short %} · {{ trip.owner_short }}{% endif %}</div>
+        </div>
       </div>
       {% endfor %}
     </div>
@@ -1130,8 +1136,9 @@
         const t = trips[0];
         panelTitle.textContent = t.name.split('—').pop()?.trim() || t.name;
         document.getElementById('hero-name').textContent = t.name;
-        if (t.via_summary) viaEl.innerHTML = `Route via <em>${t.via_summary}</em> · ${t.state_names?.join(' → ') || ''}`;
-        else viaEl.innerHTML = t.states.length ? `Through <em>${t.states.join(', ')}</em>` : '';
+        const ownerBit = t.owner_short ? ` · <em>${t.owner_short}'s Tesla</em>` : '';
+        if (t.via_summary) viaEl.innerHTML = `Route via <em>${t.via_summary}</em>${ownerBit}`;
+        else viaEl.innerHTML = (t.states.length ? `Through <em>${t.states.join(', ')}</em>` : '') + ownerBit;
         document.getElementById('hero-miles').textContent = t.miles.toLocaleString();
         document.getElementById('hero-kwh').textContent = t.total_kwh;
         document.getElementById('hero-days').textContent = t.duration_days;

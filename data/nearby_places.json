@@ -1,5 +1,8 @@
 {
   "places": [
+    {"id": "glenwood-springs", "name": "Glenwood Hot Springs", "category": "adventure", "emoji": "♨", "lat": 39.5505, "lng": -107.3248, "tagline": "World-famous hot springs pool"},
+    {"id": "frisco-co-marina", "name": "Frisco Bay Marina", "category": "scenic", "emoji": "⛵", "lat": 39.5744, "lng": -106.0965, "tagline": "Lake Dillon mountain marina"},
+    {"id": "pueblo-reservoir", "name": "Lake Pueblo", "category": "nature", "emoji": "🏞", "lat": 38.2544, "lng": -104.6091, "tagline": "Reservoir & state park"},
     {"id": "palo-duro-canyon", "name": "Palo Duro Canyon", "category": "nature", "emoji": "🏜", "lat": 34.937, "lng": -101.647, "tagline": "Texas Grand Canyon"},
     {"id": "cadillac-ranch", "name": "Cadillac Ranch", "category": "landmark", "emoji": "🎨", "lat": 35.187, "lng": -101.987, "tagline": "Iconic roadside art"},
     {"id": "caprock-canyons", "name": "Caprock Canyons", "category": "nature", "emoji": "🦬", "lat": 34.437, "lng": -101.067, "tagline": "Bison & red-rock canyons"},
