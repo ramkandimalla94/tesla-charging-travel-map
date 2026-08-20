@@ -801,7 +801,11 @@ def render_html(trips: list[dict], dashboard: dict, timeline: list[dict], mapbox
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build 3D Tesla travel map")
-    parser.add_argument("--public", action="store_true", help="Build without embedded Mapbox token (for GitHub Pages)")
+    parser.add_argument(
+        "--public",
+        action="store_true",
+        help="Also write output/index.html for GitHub Pages (token still embedded when MAPBOX_TOKEN is set)",
+    )
     parser.add_argument(
         "--refresh-routes",
         action="store_true",
@@ -816,7 +820,10 @@ def main() -> None:
     mapbox_token = os.getenv("MAPBOX_TOKEN", "").strip()
     if args.refresh_routes and not mapbox_token:
         raise SystemExit("--refresh-routes requires MAPBOX_TOKEN in .env or environment")
-    embed_token = "" if args.public else mapbox_token
+    if args.public and not mapbox_token:
+        raise SystemExit("--public requires MAPBOX_TOKEN so the live site launches without a paste prompt")
+    # Embed whenever available so local + Pages builds open the map immediately.
+    embed_token = mapbox_token
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     GPX_DIR.mkdir(parents=True, exist_ok=True)
