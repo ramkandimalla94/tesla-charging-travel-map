@@ -210,25 +210,22 @@ def parse_ts(ts: str) -> datetime:
     return datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
 
 
-def nearest_path_index(path: list[list[float]], lat: float, lng: float) -> int:
-    best, best_d = 0, float("inf")
-    for i, p in enumerate(path):
-        d = (p[0] - lat) ** 2 + (p[1] - lng) ** 2
-        if d < best_d:
-            best_d, best = d, i
-    return best
-
-
 def extract_leg_path(
-    route_path: list[list[float]], lat1: float, lng1: float, lat2: float, lng2: float
+    lat1: float, lng1: float, lat2: float, lng2: float,
 ) -> list[list[float]]:
-    if not route_path:
-        return great_circle_arc(lat1, lng1, lat2, lng2, num_points=32)
-    i1 = nearest_path_index(route_path, lat1, lng1)
-    i2 = nearest_path_index(route_path, lat2, lng2)
-    if i1 <= i2 and i2 - i1 >= 1:
-        return route_path[i1 : i2 + 1]
-    return great_circle_arc(lat1, lng1, lat2, lng2, num_points=32)
+    """Always use a smooth great-circle arc between consecutive stops."""
+    dist = haversine_miles(lat1, lng1, lat2, lng2)
+    points = max(32, min(128, int(max(dist, 5) * 1.5)))
+    return great_circle_arc(lat1, lng1, lat2, lng2, num_points=points)
+
+
+def leg_bearing_deg(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    p = math.pi / 180
+    lat1r, lat2r = lat1 * p, lat2 * p
+    dLng = (lng2 - lng1) * p
+    y = math.sin(dLng) * math.cos(lat2r)
+    x = math.cos(lat1r) * math.sin(lat2r) - math.sin(lat1r) * math.cos(lat2r) * math.cos(dLng)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
 
 
 def build_playback_timeline(stops: list[dict], route_path: list[list[float]]) -> dict:
@@ -256,7 +253,7 @@ def build_playback_timeline(stops: list[dict], route_path: list[list[float]]) ->
             dwell_ms = int(gap_ms * dwell_ratio)
             travel_ms = gap_ms - dwell_ms
             leg_path = extract_leg_path(
-                route_path, stop["lat"], stop["lng"], nxt["lat"], nxt["lng"]
+                stop["lat"], stop["lng"], nxt["lat"], nxt["lng"]
             )
             raw_segments.append({
                 "type": "dwell",
@@ -270,6 +267,7 @@ def build_playback_timeline(stops: list[dict], route_path: list[list[float]]) ->
                 "type": "travel",
                 "real_duration_ms": travel_ms,
                 "path": leg_path,
+                "bearing": round(leg_bearing_deg(stop["lat"], stop["lng"], nxt["lat"], nxt["lng"]), 1),
                 "from_label": label,
                 "to_label": short_location_label(nxt["location"]),
                 "stop_index": i,
