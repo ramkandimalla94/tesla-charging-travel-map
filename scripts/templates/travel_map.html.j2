@@ -1267,18 +1267,25 @@
     function fitTrip(animate=true) {
       const bounds = new mapboxgl.LngLatBounds();
       activeTrips().forEach(t => {
-        (t.route_path || []).forEach(p => bounds.extend([p[1], p[0]]));
-        if (!t.route_path?.length) t.stops.forEach(s => bounds.extend([s.lng, s.lat]));
+        t.stops.forEach(s => bounds.extend([s.lng, s.lat]));
       });
       if (bounds.isEmpty()) return;
+      const trip = activeTrip();
       const stopCount = activeTrips().reduce((sum, t) => sum + t.stop_count, 0);
+      const miles = trip?.miles || 0;
       setMapLabelsVisible(!isSingleTrip());
+      let maxZoom = 5;
+      if (isSingleTrip()) {
+        maxZoom = Math.min(5.4, Math.max(3.6, 7.2 - Math.log2(Math.max(stopCount, 2))));
+        if (miles > 1800) maxZoom = Math.min(maxZoom, 4.2);
+        else if (miles > 900) maxZoom = Math.min(maxZoom, 4.8);
+      }
       map.fitBounds(bounds, {
         padding:{top:88,bottom:200,left:360,right:48},
-        pitch: isSingleTrip() ? 38 : 0,
-        bearing: isSingleTrip() ? -8 : 0,
+        pitch: isSingleTrip() ? 32 : 0,
+        bearing: isSingleTrip() ? 0 : 0,
         duration: animate ? 1600 : 0,
-        maxZoom: isSingleTrip() ? Math.min(6.8, Math.max(4.6, 7.4 - Math.log2(Math.max(stopCount, 2)))) : 5,
+        maxZoom,
         minZoom: 3,
       });
     }

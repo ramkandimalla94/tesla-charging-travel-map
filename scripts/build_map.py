@@ -8,6 +8,10 @@ import json
 import math
 import os
 import re
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
@@ -20,6 +24,7 @@ DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "output"
 GPX_DIR = OUTPUT_DIR / "gpx"
 TRIPS_FILE = DATA_DIR / "trips.json"
+ROUTES_CACHE_FILE = DATA_DIR / "routes_cache.json"
 NEARBY_PLACES_FILE = DATA_DIR / "nearby_places.json"
 VISITED_PLACES_FILE = DATA_DIR / "visited_places.json"
 HTML_OUTPUT = OUTPUT_DIR / "travel_map.html"
@@ -27,6 +32,8 @@ GEOJSON_OUTPUT = OUTPUT_DIR / "trips.geojson"
 
 POI_RADIUS_MILES = 40
 POI_MAX_PER_STOP = 3
+MIN_ROUTE_MILES = 0.3
+ROUTE_FETCH_DELAY_S = 0.25
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -274,8 +281,88 @@ def path_miles(path: list[list[float]]) -> float:
     return round(total)
 
 
-def build_route_path(stops: list[dict]) -> list[list[float]]:
-    """Build smooth great-circle route path within a single trip."""
+def simplify_path(path: list[list[float]], max_points: int = 160) -> list[list[float]]:
+    if len(path) <= max_points:
+        return path
+    step = (len(path) - 1) / (max_points - 1)
+    simplified = [path[int(round(i * step))] for i in range(max_points)]
+    if simplified[-1] != path[-1]:
+        simplified[-1] = path[-1]
+    return simplified
+
+
+def leg_cache_key(lat1: float, lng1: float, lat2: float, lng2: float) -> str:
+    return f"{lat1:.5f},{lng1:.5f}|{lat2:.5f},{lng2:.5f}"
+
+
+def load_routes_cache() -> dict:
+    if ROUTES_CACHE_FILE.exists():
+        with open(ROUTES_CACHE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def save_routes_cache(cache: dict) -> None:
+    ROUTES_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(ROUTES_CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cache, f, indent=2)
+
+
+def fetch_mapbox_driving_route(
+    lat1: float, lng1: float, lat2: float, lng2: float, token: str
+) -> tuple[list[list[float]], float] | None:
+    coords = f"{lng1},{lat1};{lng2},{lat2}"
+    query = urllib.parse.urlencode({
+        "geometries": "geojson",
+        "overview": "full",
+        "steps": "false",
+        "access_token": token,
+    })
+    url = f"https://api.mapbox.com/directions/v5/mapbox/driving/{coords}?{query}"
+    try:
+        with urllib.request.urlopen(url, timeout=30) as resp:
+            data = json.loads(resp.read())
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        print(f"  Route fetch failed ({lat1:.4f},{lng1:.4f})→({lat2:.4f},{lng2:.4f}): {exc}")
+        return None
+    if data.get("code") != "Ok" or not data.get("routes"):
+        print(f"  No driving route ({lat1:.4f},{lng1:.4f})→({lat2:.4f},{lng2:.4f}): {data.get('code')}")
+        return None
+    route = data["routes"][0]
+    path = [[pt[1], pt[0]] for pt in route["geometry"]["coordinates"]]
+    return path, route["distance"] / 1609.344
+
+
+def get_driving_segment(
+    lat1: float, lng1: float, lat2: float, lng2: float,
+    cache: dict, token: str, refresh: bool, stats: dict,
+) -> list[list[float]]:
+    dist = haversine_miles(lat1, lng1, lat2, lng2)
+    if dist < MIN_ROUTE_MILES:
+        return [[lat1, lng1], [lat2, lng2]]
+    key = leg_cache_key(lat1, lng1, lat2, lng2)
+    if key in cache and (not refresh or key in stats["session_keys"]):
+        stats["cache_hits"] += 1
+        return cache[key]["path"]
+    if token:
+        result = fetch_mapbox_driving_route(lat1, lng1, lat2, lng2, token)
+        if result:
+            path, miles = result
+            path = simplify_path(path)
+            cache[key] = {"path": path, "distance_miles": round(miles, 1)}
+            stats["session_keys"].add(key)
+            stats["fetched"] += 1
+            time.sleep(ROUTE_FETCH_DELAY_S)
+            return path
+        stats["fetch_failed"] += 1
+    stats["fallback"] += 1
+    points = max(48, min(160, int(max(dist, 5) * 1.2)))
+    return great_circle_arc(lat1, lng1, lat2, lng2, num_points=points)
+
+
+def build_route_path(
+    stops: list[dict], cache: dict, token: str, refresh: bool, stats: dict,
+) -> list[list[float]]:
     if not stops:
         return []
     path: list[list[float]] = [[stops[0]["lat"], stops[0]["lng"]]]
@@ -283,18 +370,19 @@ def build_route_path(stops: list[dict]) -> list[list[float]]:
         a, b = stops[i - 1], stops[i]
         if not is_valid_coord(a["lat"], a["lng"]) or not is_valid_coord(b["lat"], b["lng"]):
             continue
-        dist = haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"])
-        # Always arc long legs; denser sampling for cinematic smooth curves
-        if dist > 15:
-            points = max(48, min(160, int(dist * 1.2)))
-            segment = great_circle_arc(a["lat"], a["lng"], b["lat"], b["lng"], num_points=points)
-            path.extend(segment[1:])
-        else:
-            path.append([b["lat"], b["lng"]])
+        if haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"]) > 1500:
+            continue
+        segment = get_driving_segment(
+            a["lat"], a["lng"], b["lat"], b["lng"], cache, token, refresh, stats
+        )
+        path.extend(segment[1:])
     return path
 
 
-def build_arcs(stops: list[dict], color: str, trip_id: str) -> list[dict]:
+def build_arcs(
+    stops: list[dict], color: str, trip_id: str,
+    cache: dict, token: str, refresh: bool, stats: dict,
+) -> list[dict]:
     """Build short-path arc segments for deck.gl PathLayer (selected trip only)."""
     arcs: list[dict] = []
     for i in range(1, len(stops)):
@@ -302,16 +390,18 @@ def build_arcs(stops: list[dict], color: str, trip_id: str) -> list[dict]:
         if not is_valid_coord(a["lat"], a["lng"]) or not is_valid_coord(b["lat"], b["lng"]):
             continue
         dist = haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"])
-        # Skip absurd jumps (bad data)
         if dist > 1500:
             continue
-        path_coords = great_circle_arc(a["lat"], a["lng"], b["lat"], b["lng"], num_points=32)
+        path_coords = get_driving_segment(
+            a["lat"], a["lng"], b["lat"], b["lng"], cache, token, refresh, stats
+        )
+        route_miles = path_miles(path_coords)
         arcs.append({
             "fromLng": a["lng"], "fromLat": a["lat"],
             "toLng": b["lng"], "toLat": b["lat"],
             "color": color, "tripId": trip_id,
-            "distance": round(dist),
-            "height": min(0.6, max(0.1, dist / 1000)),
+            "distance": round(route_miles),
+            "height": min(0.6, max(0.1, route_miles / 1000)),
             "path": [[p[1], p[0]] for p in path_coords],
             "path3d": elevated_arc_coords(a["lat"], a["lng"], b["lat"], b["lng"], num_points=32),
         })
@@ -336,8 +426,10 @@ def parse_ts(ts: str) -> datetime:
 
 def extract_leg_path(
     lat1: float, lng1: float, lat2: float, lng2: float,
+    cache: dict | None = None, token: str = "", refresh: bool = False, stats: dict | None = None,
 ) -> list[list[float]]:
-    """Always use a smooth great-circle arc between consecutive stops."""
+    if cache is not None and stats is not None:
+        return get_driving_segment(lat1, lng1, lat2, lng2, cache, token, refresh, stats)
     dist = haversine_miles(lat1, lng1, lat2, lng2)
     points = max(32, min(128, int(max(dist, 5) * 1.5)))
     return great_circle_arc(lat1, lng1, lat2, lng2, num_points=points)
@@ -357,6 +449,10 @@ def build_playback_timeline(
     route_path: list[list[float]],
     story: dict | None = None,
     stop_pois: list[list[dict]] | None = None,
+    cache: dict | None = None,
+    token: str = "",
+    refresh: bool = False,
+    stats: dict | None = None,
 ) -> dict:
     """
     Time-weighted playback segments for cinematic replay.
@@ -388,7 +484,8 @@ def build_playback_timeline(
             dwell_ms = int(gap_ms * dwell_ratio)
             travel_ms = gap_ms - dwell_ms
             leg_path = extract_leg_path(
-                stop["lat"], stop["lng"], nxt["lat"], nxt["lng"]
+                stop["lat"], stop["lng"], nxt["lat"], nxt["lng"],
+                cache, token, refresh, stats,
             )
             raw_segments.append({
                 "type": "dwell",
@@ -489,7 +586,13 @@ def trip_duration_days(start: str, end: str) -> int:
         return 1
 
 
-def prepare_trips(trips_data: dict) -> list[dict]:
+def prepare_trips(
+    trips_data: dict,
+    cache: dict,
+    token: str,
+    refresh: bool,
+    stats: dict,
+) -> list[dict]:
     all_places = load_nearby_places()
     visited_all = load_visited_places()
     prepared: list[dict] = []
@@ -500,7 +603,7 @@ def prepare_trips(trips_data: dict) -> list[dict]:
         ]
         if not stops:
             continue
-        route_path = build_route_path(stops)
+        route_path = build_route_path(stops, cache, token, refresh, stats)
         miles = path_miles(route_path)
         total_kwh = round(sum(s["kwh"] for s in stops), 1)
         states = trip.get("via_states") or sorted({
@@ -509,14 +612,16 @@ def prepare_trips(trips_data: dict) -> list[dict]:
         })
         state_names = [STATE_NAMES.get(s, s) for s in states]
         via_summary = trip.get("via_summary") or ", ".join(states)
-        arcs = build_arcs(stops, trip_color(i), trip["id"])
+        arcs = build_arcs(stops, trip_color(i), trip["id"], cache, token, refresh, stats)
         visited_for_trip = visited_all.get(trip["id"], {})
         stop_pois = [
             match_pois_for_stop(s, all_places, visited_for_trip) for s in stops
         ]
         story = build_trip_story(trip, stops, stop_pois)
         story["intro_title"] = trip["name"]
-        playback = build_playback_timeline(stops, route_path, story, stop_pois)
+        playback = build_playback_timeline(
+            stops, route_path, story, stop_pois, cache, token, refresh, stats
+        )
         featured = is_featured_trip(trip, miles, len(stops))
         style = TRIP_OVERVIEW_STYLES[i % len(TRIP_OVERVIEW_STYLES)]
         prepared.append({
@@ -697,19 +802,32 @@ def render_html(trips: list[dict], dashboard: dict, timeline: list[dict], mapbox
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build 3D Tesla travel map")
     parser.add_argument("--public", action="store_true", help="Build without embedded Mapbox token (for GitHub Pages)")
+    parser.add_argument(
+        "--refresh-routes",
+        action="store_true",
+        help="Re-fetch driving routes from Mapbox Directions API (requires MAPBOX_TOKEN)",
+    )
     args = parser.parse_args()
 
     load_dotenv(ROOT / ".env")
     if not TRIPS_FILE.exists():
         raise FileNotFoundError(f"Run segment_trips.py first. Missing {TRIPS_FILE}")
 
-    mapbox_token = "" if args.public else os.getenv("MAPBOX_TOKEN", "").strip()
+    mapbox_token = os.getenv("MAPBOX_TOKEN", "").strip()
+    if args.refresh_routes and not mapbox_token:
+        raise SystemExit("--refresh-routes requires MAPBOX_TOKEN in .env or environment")
+    embed_token = "" if args.public else mapbox_token
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     GPX_DIR.mkdir(parents=True, exist_ok=True)
 
+    cache = load_routes_cache()
+    stats = {"fetched": 0, "cache_hits": 0, "fallback": 0, "fetch_failed": 0, "session_keys": set()}
+
     trips_data = load_trips()
-    prepared = prepare_trips(trips_data)
+    prepared = prepare_trips(trips_data, cache, mapbox_token, args.refresh_routes, stats)
+    if stats["fetched"] or args.refresh_routes:
+        save_routes_cache(cache)
     dashboard = build_dashboard(prepared)
     timeline = build_timeline(prepared)
 
@@ -725,7 +843,7 @@ def main() -> None:
     for trip in trips_data["trips"]:
         write_gpx(trip, GPX_DIR / f"{trip['id']}.gpx")
 
-    HTML_OUTPUT.write_text(render_html(prepared, dashboard, timeline, mapbox_token), encoding="utf-8")
+    HTML_OUTPUT.write_text(render_html(prepared, dashboard, timeline, embed_token), encoding="utf-8")
     if args.public:
         pages_index = OUTPUT_DIR / "index.html"
         pages_index.write_text(HTML_OUTPUT.read_text(encoding="utf-8"), encoding="utf-8")
@@ -733,7 +851,11 @@ def main() -> None:
 
     print(f"Built 3D map — {len(prepared)} trips")
     print(f"  Dashboard: {dashboard['total_kwh']} kWh · {dashboard['total_miles']:,} mi")
-    print(f"  Mapbox token: {'loaded from .env' if mapbox_token else 'MISSING'}")
+    print(
+        f"  Routes: {stats['fetched']} fetched, {stats['cache_hits']} cached, "
+        f"{stats['fallback']} arc fallback, {stats['fetch_failed']} failed"
+    )
+    print(f"  Mapbox token: {'loaded' if mapbox_token else 'MISSING (using cache/fallback)'}")
     print(f"  HTML: {HTML_OUTPUT}")
 
 
