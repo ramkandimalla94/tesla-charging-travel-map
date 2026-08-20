@@ -324,6 +324,24 @@
     .beacon-label.visible { opacity: 1; transform: translateY(0); }
     .beacon-label.active { border-color: rgba(251,191,36,0.5); color: var(--gold); }
 
+    .beacon.milestone .beacon-core { width: 36px; height: 36px; font-size: 12px; }
+    .beacon.milestone.start .beacon-core {
+      background: linear-gradient(145deg, #34d399, #059669) !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 28px rgba(52,211,153,0.55);
+    }
+    .beacon.milestone.end .beacon-core {
+      background: linear-gradient(145deg, #fbbf24, #d97706) !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 28px rgba(251,191,36,0.5);
+    }
+    .beacon.waypoint { width: 14px; height: 14px; }
+    .beacon.waypoint .beacon-ring { display: none; }
+    .beacon.waypoint .beacon-core {
+      inset: 0; font-size: 0; border-width: 1.5px;
+      box-shadow: 0 0 10px var(--beacon-glow, rgba(94,234,212,0.45));
+    }
+    .beacon.waypoint.revealed { width: 28px; height: 28px; }
+    .beacon.waypoint.revealed .beacon-core { font-size: 10px; }
+
     .stop-dot {
       width: 5px; height: 5px; border-radius: 50%;
       border: 1px solid rgba(255,255,255,0.7);
@@ -927,24 +945,49 @@
     }
 
     // ── Beacon markers ──
+    function applyIdleStopVisuals() {
+      if (!isSingleTrip() || isPlaying) return;
+      const stops = activeStops();
+      const lastIdx = stops.length - 1;
+      stopMarkers.forEach(m => {
+        const isStart = m._idx === 0;
+        const isEnd = m._idx === lastIdx;
+        const show = isStart || isEnd;
+        m._el.classList.toggle('visible', show);
+        m._el.classList.remove('active', 'revealed');
+        if (m._lbl) {
+          m._lbl.classList.toggle('visible', show);
+          m._lbl.classList.remove('active');
+        }
+        if (m._waypointCore && !show) m._waypointCore.textContent = '';
+      });
+    }
+
     function drawStops() {
       stopMarkers.forEach(m => m.remove()); stopMarkers = [];
       const single = isSingleTrip();
       activeTrips().forEach(trip => {
+        const lastIdx = trip.stops.length - 1;
         trip.stops.forEach((s, i) => {
           const wrap = document.createElement('div');
           wrap.className = 'beacon-wrap';
+          const isStart = i === 0;
+          const isEnd = i === lastIdx;
+          const isMilestone = isStart || isEnd;
           if (single) {
             const beacon = document.createElement('div');
-            beacon.className = 'beacon';
+            beacon.className = 'beacon' + (isMilestone ? ` milestone ${isStart ? 'start' : 'end'}` : ' waypoint');
             beacon.style.setProperty('--beacon-glow', trip.color + '88');
-            beacon.innerHTML = `<div class="beacon-ring"></div><div class="beacon-core" style="background:${trip.color}">${i + 1}</div>`;
+            const coreText = isStart ? '▶' : (isEnd ? '◆' : '');
+            beacon.innerHTML = `<div class="beacon-ring"></div><div class="beacon-core" style="background:${trip.color}">${coreText}</div>`;
+            const coreEl = beacon.querySelector('.beacon-core');
             const lbl = document.createElement('div');
             lbl.className = 'beacon-label';
-            lbl.textContent = shortLabel(s.location);
+            lbl.textContent = isStart ? `Start · ${shortLabel(s.location)}` : (isEnd ? `Finish · ${shortLabel(s.location)}` : shortLabel(s.location));
             wrap.appendChild(beacon);
-            wrap.appendChild(lbl);
-            var el = beacon, lblRef = lbl;
+            if (isMilestone) wrap.appendChild(lbl);
+            var el = beacon, lblRef = isMilestone ? lbl : null;
+            if (!isMilestone) el._waypointCore = coreEl;
           } else {
             const dot = document.createElement('div');
             dot.className = 'stop-dot';
@@ -958,10 +1001,12 @@
             .setPopup(new mapboxgl.Popup({ offset: 14, maxWidth: '280px' }).setHTML(popupHtml(s)))
             .addTo(map);
           m._idx = i; m._el = el; m._lbl = lblRef; m._stop = s;
-          if (single) { el.classList.add('visible'); if (lblRef) lblRef.classList.add('visible'); }
+          m._waypointCore = el._waypointCore || null;
+          m._isMilestone = isMilestone;
           stopMarkers.push(m);
         });
       });
+      applyIdleStopVisuals();
     }
 
     // ── Hero card ──
@@ -1005,15 +1050,19 @@
     // ── Fit trip — frame route in continental US ──
     function fitTrip(animate=true) {
       const bounds = new mapboxgl.LngLatBounds();
-      activeTrips().forEach(t => t.stops.forEach(s => bounds.extend([s.lng,s.lat])));
+      activeTrips().forEach(t => {
+        (t.route_path || []).forEach(p => bounds.extend([p[1], p[0]]));
+        if (!t.route_path?.length) t.stops.forEach(s => bounds.extend([s.lng, s.lat]));
+      });
       if (bounds.isEmpty()) return;
-      setMapLabelsVisible(true);
+      const stopCount = activeTrips().reduce((sum, t) => sum + t.stop_count, 0);
+      setMapLabelsVisible(!isSingleTrip());
       map.fitBounds(bounds, {
         padding:{top:88,bottom:200,left:360,right:48},
-        pitch: isSingleTrip() ? 42 : 0,
-        bearing: isSingleTrip() ? -12 : 0,
+        pitch: isSingleTrip() ? 38 : 0,
+        bearing: isSingleTrip() ? -8 : 0,
         duration: animate ? 1600 : 0,
-        maxZoom: isSingleTrip() ? 6.2 : 5,
+        maxZoom: isSingleTrip() ? Math.min(6.8, Math.max(4.6, 7.4 - Math.log2(Math.max(stopCount, 2)))) : 5,
         minZoom: 3,
       });
     }
@@ -1092,11 +1141,17 @@
       }
 
       stopMarkers.forEach(m => {
-        const show = m._idx <= animStopIdx;
-        m._el.classList.toggle('visible', show);
-        if (m._lbl) m._lbl.classList.toggle('visible', show);
-        m._el.classList.toggle('active', m._idx === animStopIdx);
-        if (m._lbl) m._lbl.classList.toggle('active', m._idx === animStopIdx);
+        const reached = m._idx <= animStopIdx;
+        const isActive = m._idx === animStopIdx;
+        m._el.classList.toggle('visible', reached || m._isMilestone);
+        m._el.classList.toggle('active', isActive);
+        m._el.classList.toggle('revealed', reached && !m._isMilestone);
+        if (m._waypointCore && reached && !m._isMilestone) m._waypointCore.textContent = String(m._idx + 1);
+        if (m._lbl) {
+          m._lbl.classList.toggle('visible', isActive);
+          m._lbl.classList.toggle('active', isActive);
+          if (isActive) m._lbl.textContent = shortLabel(m._stop.location);
+        }
       });
 
       document.getElementById('scrubber').value = Math.round(animProg * 1000);
@@ -1132,7 +1187,7 @@
         if (isRecording) finishRecording();
         if (loopTrip) {
           animTimeMs = 0; animStopIdx = 0;
-          stopMarkers.forEach(m => { m._el.classList.remove('visible','active'); if (m._lbl) m._lbl.classList.remove('visible','active'); });
+          applyIdleStopVisuals();
           lastTs = 0;
           if (!isRecording) { animFrame = requestAnimationFrame(animate); }
           return;
@@ -1169,7 +1224,7 @@
       smoothBearing = 0; camBearing = 0; lastTravelBearing = 0;
       if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
       if (map.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
-      stopMarkers.forEach(m=>{m._el.classList.remove('visible','active'); if (m._lbl) m._lbl.classList.remove('visible','active');});
+      applyIdleStopVisuals();
       document.getElementById('scrubber').value=0;
       document.getElementById('scrub-fill').style.width='0%';
       document.getElementById('timeline-scrub').style.left='0%';
@@ -1240,7 +1295,7 @@
       document.querySelectorAll('.trip-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       document.querySelectorAll('.tl-seg').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       resetVisuals(); drawRoutes(); drawStops(); updateHero(); fitTrip();
-      setMapLabelsVisible(true);
+      setMapLabelsVisible(!isSingleTrip());
       document.getElementById('btn-play').disabled = !isSingleTrip();
       document.getElementById('btn-export').disabled = !isSingleTrip();
     }
