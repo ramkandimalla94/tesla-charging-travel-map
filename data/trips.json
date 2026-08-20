@@ -61,7 +61,7 @@
         "Seattle, WA",
         "Seattle, WA - NE Northgate Way (Floor 2)"
       ],
-      "canonical_location": "Kirkland, WA"
+      "canonical_location": "Issaquah, WA"
     }
   ],
   "owners": [
@@ -70,24 +70,25 @@
   ],
   "trips": [
     {
-      "id": "trip_001_2023-06-02_MAA_Market_Center_to_MAA_Market_Center",
+      "id": "trip_001_2023-06-02_Addison_to_Addison",
       "name": "Jun 2023 — Addison → Houston",
       "start": "2023-06-02 17:50:48+00:00",
       "end": "2023-06-04 13:44:57+00:00",
       "stops": [
         {
           "datetime": "2023-06-02 17:50:48+00:00",
-          "location": "MAA Market Center",
-          "lat": 33.0033458,
-          "lng": -96.7644015,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 46.0,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8e99a62f-ad74-4ca2-b77e-1b0198dd2fb2",
-          "dist_home": 4.835231309858007,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEF8PF768326",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2023-06-03 17:30:09+00:00",
@@ -131,17 +132,18 @@
         },
         {
           "datetime": "2023-06-04 13:44:57+00:00",
-          "location": "MAA Market Center",
-          "lat": 33.0033458,
-          "lng": -96.7644015,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 56.0,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ec9b6d67-cdbf-4130-9184-9414b3d88a89",
-          "dist_home": 4.835231309858007,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEF8PF768326",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -165,7 +167,7 @@
       "is_shared": false
     },
     {
-      "id": "trip_002_2023-08-19_Addison_to_Red_Oak",
+      "id": "trip_002_2023-08-19_Addison_to_Addison",
       "name": "Aug 2023 — Addison → Austin",
       "start": "2023-08-19T19:56:13+00:00",
       "end": "2023-08-20 23:22:15+00:00",
@@ -175,15 +177,15 @@
           "location": "Addison, TX",
           "lat": 32.9601193,
           "lng": -96.8300029,
-          "kwh": 0.0,
-          "invoice_url": "",
+          "kwh": 50.0,
+          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/74521482-f895-4a96-a489-b0a8a6849dc5",
           "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEF8PF768326",
           "is_home_anchor": true,
-          "synthetic": false
+          "synthetic": true
         },
         {
           "datetime": "2023-08-19 21:56:13+00:00",
@@ -226,17 +228,18 @@
         },
         {
           "datetime": "2023-08-20 23:22:15+00:00",
-          "location": "Red Oak, TX",
-          "lat": 32.5143898,
-          "lng": -96.8066615,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 29.0,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8152955e-d3ba-4df0-9d1e-0e07b6f2dad9",
-          "dist_home": 30.82869663206138,
-          "region": "TX",
+          "dist_home": 0.0,
+          "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEF8PF768326",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -260,24 +263,25 @@
       "is_shared": false
     },
     {
-      "id": "trip_003_2023-09-03_Red_Oak_to_MAA_Market_Center",
+      "id": "trip_003_2023-09-03_Addison_to_Addison",
       "name": "Sep 2023 — Addison → San Antonio",
       "start": "2023-09-03 17:18:05+00:00",
       "end": "2023-09-12 02:24:10+00:00",
       "stops": [
         {
           "datetime": "2023-09-03 17:18:05+00:00",
-          "location": "Red Oak, TX",
-          "lat": 32.5143898,
-          "lng": -96.8066615,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 69.0,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ff738b00-8a97-4402-908c-957052c02716",
-          "dist_home": 30.82869663206138,
-          "region": "TX",
+          "dist_home": 0.0,
+          "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEF8PF768326",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2023-09-03 20:17:37+00:00",
@@ -320,17 +324,18 @@
         },
         {
           "datetime": "2023-09-12 02:24:10+00:00",
-          "location": "MAA Market Center",
-          "lat": 33.0033458,
-          "lng": -96.7644015,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 24.0,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6f444474-b91f-4c3d-905f-79544e7cd555",
-          "dist_home": 4.835231309858007,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEF8PF768326",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -371,7 +376,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2024-04-13 20:09:35+00:00",
@@ -411,7 +417,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": false
         }
       ],
       "has_colorado": false,
@@ -452,7 +459,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2024-06-01 20:05:23+00:00",
@@ -480,7 +488,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": false
         }
       ],
       "has_colorado": false,
@@ -521,7 +530,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2024-06-30 01:18:54+00:00",
@@ -757,7 +767,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": false
         }
       ],
       "has_colorado": true,
@@ -800,7 +811,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2024-10-12 15:34:24+00:00",
@@ -919,7 +931,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": false
         }
       ],
       "has_colorado": false,
@@ -944,7 +957,7 @@
       "is_shared": false
     },
     {
-      "id": "trip_008_2024-11-17_Addison_to_Kirkland",
+      "id": "trip_008_2024-11-17_Addison_to_Bellevue",
       "name": "Nov 2024 — Addison → Bellevue (via TX, NM, AZ, UT, ID, OR, WA)",
       "start": "2024-11-17 12:29:14+00:00",
       "end": "2024-11-29 02:38:28+00:00",
@@ -961,7 +974,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2024-11-19 19:43:54+00:00",
@@ -1186,17 +1200,18 @@
         },
         {
           "datetime": "2024-11-29 02:38:28+00:00",
-          "location": "Kirkland, WA",
-          "lat": 47.6765382,
-          "lng": -122.2070775,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 3.395,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/0b9bdfcd-4497-4256-a5cd-c9dc5b0b615b",
-          "dist_home": 6.066633223809422,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -1226,24 +1241,25 @@
       "is_shared": false
     },
     {
-      "id": "trip_009_2024-12-22_Monroe_to_Seattle",
+      "id": "trip_009_2024-12-22_Bellevue_to_Bellevue",
       "name": "Dec 2024 — Bellevue → Leavenworth",
       "start": "2024-12-22 22:59:37+00:00",
       "end": "2024-12-25 02:12:35+00:00",
       "stops": [
         {
           "datetime": "2024-12-22 22:59:37+00:00",
-          "location": "Monroe, WA",
-          "lat": 47.8552259,
-          "lng": -121.971335,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 33.493,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/fc77da6c-b815-45ca-a784-7ec98a105156",
-          "dist_home": 17.71751603524882,
-          "region": "PNW",
+          "dist_home": 0.0,
+          "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2024-12-23 02:32:22+00:00",
@@ -1260,17 +1276,18 @@
         },
         {
           "datetime": "2024-12-25 02:12:35+00:00",
-          "location": "Seattle, WA - NE Northgate Way (Floor 2)",
-          "lat": 47.7085558,
-          "lng": -122.323959,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 49.247,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/43679dcf-eff5-4b8d-bb83-3e7a9f46a1bd",
-          "dist_home": 11.742352447321307,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -1304,15 +1321,15 @@
           "location": "Bellevue, WA - Northeast 8th Street",
           "lat": 47.6167921,
           "lng": -122.1115836,
-          "kwh": 0.0,
-          "invoice_url": "",
+          "kwh": 49.247,
+          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/43679dcf-eff5-4b8d-bb83-3e7a9f46a1bd",
           "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
           "is_home_anchor": true,
-          "synthetic": false
+          "synthetic": true
         },
         {
           "datetime": "2025-01-19 00:52:19+00:00",
@@ -1363,7 +1380,7 @@
       "is_shared": false
     },
     {
-      "id": "trip_011_2025-03-27_Bellevue_to_North_Bend",
+      "id": "trip_011_2025-03-27_Bellevue_to_Bellevue",
       "name": "Mar 2025 — Bellevue → Las Vegas (via WA, OR, ID, NV, UT)",
       "start": "2025-03-27T21:02:21+00:00",
       "end": "2025-04-27 02:26:00+00:00",
@@ -1373,15 +1390,15 @@
           "location": "Bellevue, WA - Northeast 8th Street",
           "lat": 47.6167921,
           "lng": -122.1115836,
-          "kwh": 0.0,
-          "invoice_url": "",
+          "kwh": 49.247,
+          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/43679dcf-eff5-4b8d-bb83-3e7a9f46a1bd",
           "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
           "is_home_anchor": true,
-          "synthetic": false
+          "synthetic": true
         },
         {
           "datetime": "2025-03-27 23:02:21+00:00",
@@ -1637,17 +1654,18 @@
         },
         {
           "datetime": "2025-04-27 02:26:00+00:00",
-          "location": "North Bend, WA - South Fork Avenue Southwest",
-          "lat": 47.4891197,
-          "lng": -121.7907812,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 22.016,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/28822afb-76ad-4b91-8b75-b49b54fbe9dd",
-          "dist_home": 17.36779118430893,
-          "region": "PNW",
+          "dist_home": 0.0,
+          "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -1675,24 +1693,25 @@
       "is_shared": false
     },
     {
-      "id": "trip_012_2025-06-06_Seattle_to_Everett",
+      "id": "trip_012_2025-06-06_Bellevue_to_Bellevue",
       "name": "Jun 2025 — Bellevue → Olympic Peninsula",
       "start": "2025-06-06 18:04:13+00:00",
       "end": "2025-06-10 20:09:37+00:00",
       "stops": [
         {
           "datetime": "2025-06-06 18:04:13+00:00",
-          "location": "Seattle, WA",
-          "lat": 47.6038321,
-          "lng": -122.330062,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 38.7659,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/73c49193-9af7-45c4-bd0a-def6fbaf7610",
-          "dist_home": 10.216802457776534,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2025-06-07 20:44:38+00:00",
@@ -1735,17 +1754,18 @@
         },
         {
           "datetime": "2025-06-10 20:09:37+00:00",
-          "location": "Everett, WA",
-          "lat": 47.9793437,
-          "lng": -122.2127011,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 63.8252,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/cc85899e-fec3-4da7-90b5-6567a50a1ad4",
-          "dist_home": 25.487309765832766,
-          "region": "PNW",
+          "dist_home": 0.0,
+          "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -1769,24 +1789,25 @@
       "is_shared": false
     },
     {
-      "id": "trip_013_2025-06-15_Kirkland_to_Chehalis",
+      "id": "trip_013_2025-06-15_Bellevue_to_Chehalis",
       "name": "Jun 2025 — Bellevue → Olympic Peninsula",
       "start": "2025-06-15 19:39:09+00:00",
       "end": "2025-06-29 03:32:20+00:00",
       "stops": [
         {
           "datetime": "2025-06-15 19:39:09+00:00",
-          "location": "Kirkland, WA",
-          "lat": 47.6765382,
-          "lng": -122.2070775,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 65.769,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/05f5b42c-c948-4992-af40-330fe2180206",
-          "dist_home": 6.066633223809422,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2025-06-16 23:17:54+00:00",
@@ -1889,24 +1910,25 @@
       "is_shared": false
     },
     {
-      "id": "trip_014_2025-07-03_Plano_to_Frisco",
+      "id": "trip_014_2025-07-03_Addison_to_Addison",
       "name": "Jul 2025 — Addison → Colorado (Round Trip) · Rama + Akash (Akash's car)",
       "start": "2025-07-03 01:08:02+00:00",
       "end": "2025-07-07 18:40:27+00:00",
       "stops": [
         {
           "datetime": "2025-07-03 01:08:02+00:00",
-          "location": "Plano, TX - West Spring Creek Parkway",
-          "lat": 33.0564399,
-          "lng": -96.781536,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 63.399,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/91604653-e1ff-4067-b617-c94d7c0ebf6b",
-          "dist_home": 7.223784073513365,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Akash deep Konda",
           "vin": "7SAYGDED1TA438386",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2025-07-03 05:03:42+00:00",
@@ -2067,17 +2089,18 @@
         },
         {
           "datetime": "2025-07-07 18:40:27+00:00",
-          "location": "Frisco, TX - Preston Road",
-          "lat": 33.0978049,
-          "lng": -96.8056078,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 30.1003,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/e9b9af4a-466f-4b8b-a97a-562d387586d2",
-          "dist_home": 9.618135224037056,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Akash deep Konda",
           "vin": "7SAYGDED1TA438386",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": true,
@@ -2104,24 +2127,25 @@
       "is_shared": true
     },
     {
-      "id": "trip_015_2025-07-12_Melissa_to_Frisco",
+      "id": "trip_015_2025-07-12_Addison_to_Addison",
       "name": "Jul 2025 — Addison → New Boston · Akash",
       "start": "2025-07-12 17:05:11+00:00",
       "end": "2025-07-13 19:44:31+00:00",
       "stops": [
         {
           "datetime": "2025-07-12 17:05:11+00:00",
-          "location": "Melissa, TX",
-          "lat": 33.2862455,
-          "lng": -96.5722411,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 10.4006,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8d5dbd9c-10bb-4c2b-970d-8beae2071551",
-          "dist_home": 27.02413231275499,
-          "region": "TX",
+          "dist_home": 0.0,
+          "region": "HOME",
           "in_colorado": false,
           "owner": "Akash deep Konda",
           "vin": "7SAYGDED1TA438386",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2025-07-13 05:10:45+00:00",
@@ -2138,17 +2162,18 @@
         },
         {
           "datetime": "2025-07-13 19:44:31+00:00",
-          "location": "Frisco, TX - Preston Road",
-          "lat": 33.0978049,
-          "lng": -96.8056078,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 19.9389,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/e0aec98c-6272-4d22-96d2-c83a40a79235",
-          "dist_home": 9.618135224037056,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Akash deep Konda",
           "vin": "7SAYGDED1TA438386",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -2172,24 +2197,25 @@
       "is_shared": false
     },
     {
-      "id": "trip_016_2025-09-25_Frisco_to_MAA_Las_Colinas",
+      "id": "trip_016_2025-09-25_Addison_to_Addison",
       "name": "Sep 2025 — Addison → Colorado (Round Trip) · Rama + Akash (Akash's car)",
       "start": "2025-09-25 05:23:51+00:00",
       "end": "2025-10-02 15:59:38+00:00",
       "stops": [
         {
           "datetime": "2025-09-25 05:23:51+00:00",
-          "location": "Frisco, TX - Preston Road",
-          "lat": 33.0978049,
-          "lng": -96.8056078,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 11.5041,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/63ccb70d-59b3-460d-98fe-8a92da60f34c",
-          "dist_home": 9.618135224037056,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Akash deep Konda",
           "vin": "7SAYGDED1TA438386",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2025-09-25 07:19:29+00:00",
@@ -2375,17 +2401,18 @@
         },
         {
           "datetime": "2025-10-02 15:59:38+00:00",
-          "location": "MAA Las Colinas",
-          "lat": 32.8745,
-          "lng": -96.955,
+          "location": "Addison, TX",
+          "lat": 32.9601193,
+          "lng": -96.8300029,
           "kwh": 16.325,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6aa9e322-ba8b-4898-8e1d-00dd3aadb5c3",
-          "dist_home": 9.357778881435177,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Akash deep Konda",
           "vin": "7SAYGDED1TA438386",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": true,
@@ -2422,15 +2449,15 @@
           "location": "Bellevue, WA - Northeast 8th Street",
           "lat": 47.6167921,
           "lng": -122.1115836,
-          "kwh": 0.0,
-          "invoice_url": "",
+          "kwh": 48.2732,
+          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d7805d6b-b980-40c1-9ce3-94695679c8e5",
           "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
           "is_home_anchor": true,
-          "synthetic": false
+          "synthetic": true
         },
         {
           "datetime": "2025-10-26 17:20:17+00:00",
@@ -2485,7 +2512,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2025-12-13 21:30:40+00:00",
@@ -3000,24 +3028,25 @@
       "is_shared": false
     },
     {
-      "id": "trip_019_2026-02-11_North_Bend_to_Bellevue",
+      "id": "trip_019_2026-02-11_Bellevue_to_Bellevue",
       "name": "Feb 2026 — Bellevue → Leavenworth",
       "start": "2026-02-11 17:59:58+00:00",
       "end": "2026-02-12 23:09:06+00:00",
       "stops": [
         {
           "datetime": "2026-02-11 17:59:58+00:00",
-          "location": "North Bend, WA",
-          "lat": 47.4957757,
-          "lng": -121.784889,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 45.8233,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a8211f7c-082a-4b5c-bc25-2afe610dc098",
-          "dist_home": 17.378285856720208,
-          "region": "PNW",
+          "dist_home": 0.0,
+          "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2026-02-12 03:45:51+00:00",
@@ -3044,7 +3073,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": false
         }
       ],
       "has_colorado": false,
@@ -3068,7 +3098,7 @@
       "is_shared": false
     },
     {
-      "id": "trip_020_2026-02-20_Bellevue_to_Suquamish",
+      "id": "trip_020_2026-02-20_Bellevue_to_Bellevue",
       "name": "Feb 2026 — Bellevue → Olympic Peninsula",
       "start": "2026-02-20 02:08:12+00:00",
       "end": "2026-02-22 06:40:15+00:00",
@@ -3085,7 +3115,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2026-02-21 18:12:10+00:00",
@@ -3128,17 +3159,18 @@
         },
         {
           "datetime": "2026-02-22 06:40:15+00:00",
-          "location": "Suquamish, WA",
-          "lat": 47.717948,
-          "lng": -122.5844878,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 21.6139,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d06619d0-59e9-4b54-b41d-657679c8ab59",
-          "dist_home": 23.088827440909366,
-          "region": "PNW",
+          "dist_home": 0.0,
+          "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -3162,24 +3194,25 @@
       "is_shared": false
     },
     {
-      "id": "trip_021_2026-04-19_Kirkland_to_Bellevue",
+      "id": "trip_021_2026-04-19_Bellevue_to_Bellevue",
       "name": "Apr 2026 — Bellevue → Leavenworth",
       "start": "2026-04-19 14:42:56+00:00",
       "end": "2026-04-29 15:55:13+00:00",
       "stops": [
         {
           "datetime": "2026-04-19 14:42:56+00:00",
-          "location": "Kirkland, WA",
-          "lat": 47.6765382,
-          "lng": -122.2070775,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 54.2339,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/4535fbf3-98f3-4d4f-9ef1-a8de7cfe2cee",
-          "dist_home": 6.066633223809422,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2026-04-25 16:26:28+00:00",
@@ -3232,7 +3265,8 @@
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": false
         }
       ],
       "has_colorado": false,
@@ -3266,15 +3300,15 @@
           "location": "Bellevue, WA - Northeast 8th Street",
           "lat": 47.6167921,
           "lng": -122.1115836,
-          "kwh": 0.0,
-          "invoice_url": "",
+          "kwh": 18.4693,
+          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/5f3ae925-0dfd-49a3-8753-4ac20cdcfcea",
           "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
           "is_home_anchor": true,
-          "synthetic": false
+          "synthetic": true
         },
         {
           "datetime": "2026-05-25 19:35:20+00:00",
@@ -3668,24 +3702,25 @@
       "is_shared": false
     },
     {
-      "id": "trip_023_2026-07-06_Auburn_to_Auburn",
+      "id": "trip_023_2026-07-06_Bellevue_to_Bellevue",
       "name": "Jul 2026 — Bellevue → Olympic Peninsula",
       "start": "2026-07-06 06:10:45+00:00",
       "end": "2026-07-18 09:44:12+00:00",
       "stops": [
         {
           "datetime": "2026-07-06 06:10:45+00:00",
-          "location": "Auburn, WA",
-          "lat": 47.3075369,
-          "lng": -122.2301808,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 13.787,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f0824212-db8d-407d-85ae-63c915f858ee",
-          "dist_home": 22.07531826170404,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         },
         {
           "datetime": "2026-07-11 03:42:25+00:00",
@@ -3783,17 +3818,18 @@
         },
         {
           "datetime": "2026-07-18 09:44:12+00:00",
-          "location": "Auburn, WA - Auburn Way North",
-          "lat": 47.3301528,
-          "lng": -122.2215547,
+          "location": "Bellevue, WA - Northeast 8th Street",
+          "lat": 47.6167921,
+          "lng": -122.1115836,
           "kwh": 63.4881,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/057716ed-4aa7-4600-84f0-c3f19e9fbf9a",
-          "dist_home": 20.4612194527012,
+          "dist_home": 0.0,
           "region": "HOME",
           "in_colorado": false,
           "owner": "Rama Kandimalla",
           "vin": "7SAYGDEEXRA255182",
-          "is_home_anchor": true
+          "is_home_anchor": true,
+          "synthetic": true
         }
       ],
       "has_colorado": false,
@@ -4155,20 +4191,6 @@
       "in_colorado": false,
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEF8PF768326"
-    },
-    {
-      "datetime": "2023-11-01 22:42:34+00:00",
-      "location": "MAA Market Center",
-      "lat": 33.0033458,
-      "lng": -96.7644015,
-      "kwh": 27.0,
-      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/779eeb45-41dc-4214-837f-fe3ebddb762a",
-      "dist_home": 4.835231309858007,
-      "region": "HOME",
-      "in_colorado": false,
-      "owner": "Rama Kandimalla",
-      "vin": "7SAYGDEF8PF768326",
-      "is_home_anchor": true
     },
     {
       "datetime": "2023-11-05 20:26:13+00:00",
@@ -4743,20 +4765,6 @@
       "vin": "7SAYGDEEXRA255182"
     },
     {
-      "datetime": "2024-12-25 02:12:35+00:00",
-      "location": "Seattle, WA - NE Northgate Way (Floor 2)",
-      "lat": 47.7085558,
-      "lng": -122.323959,
-      "kwh": 49.247,
-      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/43679dcf-eff5-4b8d-bb83-3e7a9f46a1bd",
-      "dist_home": 11.742352447321307,
-      "region": "HOME",
-      "in_colorado": false,
-      "owner": "Rama Kandimalla",
-      "vin": "7SAYGDEEXRA255182",
-      "is_home_anchor": true
-    },
-    {
       "datetime": "2024-12-29 03:08:27+00:00",
       "location": "Tulalip Bay, WA",
       "lat": 48.0656302,
@@ -4809,20 +4817,6 @@
       "vin": "7SAYGDEEXRA255182"
     },
     {
-      "datetime": "2025-06-10 20:09:37+00:00",
-      "location": "Everett, WA",
-      "lat": 47.9793437,
-      "lng": -122.2127011,
-      "kwh": 63.8252,
-      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/cc85899e-fec3-4da7-90b5-6567a50a1ad4",
-      "dist_home": 25.487309765832766,
-      "region": "PNW",
-      "in_colorado": false,
-      "owner": "Rama Kandimalla",
-      "vin": "7SAYGDEEXRA255182",
-      "is_home_anchor": true
-    },
-    {
       "datetime": "2025-06-13 20:29:52+00:00",
       "location": "Arlington, WA",
       "lat": 48.1896827,
@@ -4834,20 +4828,6 @@
       "in_colorado": false,
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182"
-    },
-    {
-      "datetime": "2025-06-15 19:39:09+00:00",
-      "location": "Kirkland, WA",
-      "lat": 47.6765382,
-      "lng": -122.2070775,
-      "kwh": 65.769,
-      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/05f5b42c-c948-4992-af40-330fe2180206",
-      "dist_home": 6.066633223809422,
-      "region": "HOME",
-      "in_colorado": false,
-      "owner": "Rama Kandimalla",
-      "vin": "7SAYGDEEXRA255182",
-      "is_home_anchor": true
     },
     {
       "datetime": "2025-08-10 18:16:08+00:00",
@@ -4939,21 +4919,6 @@
       "in_colorado": false,
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182"
-    },
-    {
-      "datetime": "2026-01-15T03:52:16+00:00",
-      "location": "Bellevue, WA - Northeast 8th Street",
-      "lat": 47.6167921,
-      "lng": -122.1115836,
-      "kwh": 0.0,
-      "invoice_url": "",
-      "dist_home": 0.0,
-      "region": "HOME",
-      "in_colorado": false,
-      "owner": "Rama Kandimalla",
-      "vin": "7SAYGDEEXRA255182",
-      "is_home_anchor": true,
-      "synthetic": false
     },
     {
       "datetime": "2026-01-15 05:52:16+00:00",
@@ -5701,7 +5666,7 @@
   "stats": {
     "total_charges": 375,
     "trip_count": 23,
-    "local_count": 144,
+    "local_count": 139,
     "total_stops_in_trips": 233,
     "home_detection": "config",
     "vehicle_count": 3,

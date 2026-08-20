@@ -638,68 +638,61 @@ def nearest_home_region(lat: float | None, lng: float | None) -> dict | None:
 
 def synthesize_home_anchor(near_charge: dict, last_home: dict | None) -> dict | None:
     """
-    Build a trip start stop at the nearest home (Addison / Bellevue).
-    Prefer the real last home Supercharge when it is recent; otherwise synthesize
-    a canonical home pin so the route still begins at home.
+    Build a trip start stop at the canonical home pin (Addison / Bellevue).
+    Timing comes from the last real home Supercharge when recent; otherwise
+    a short synthetic departure before the first away stop.
     """
-    if last_home is not None:
-        gap = pd.Timestamp(near_charge["datetime"]) - pd.Timestamp(last_home["datetime"])
-        if gap <= timedelta(days=HOME_ANCHOR_LOOKBACK_DAYS):
-            anchor = last_home.copy()
-            anchor["is_home_anchor"] = True
-            return anchor
-
     region = nearest_home_region(near_charge.get("lat"), near_charge.get("lng"))
     if region is None and HOME_REGIONS:
-        region = HOME_REGIONS[0]
+        # Prefer the region matching the last home charge when available
+        if last_home is not None:
+            region = nearest_home_region(last_home.get("lat"), last_home.get("lng"))
+        if region is None:
+            region = HOME_REGIONS[0]
     if region is None:
         return None
 
-    # Prefer the region whose label matches geography of the first away stop
-    # (Bellevue for PNW departures, Addison for Texas corridor).
-    if near_charge.get("lat") is not None:
-        region = nearest_home_region(near_charge["lat"], near_charge["lng"]) or region
-
-    label = region.get("canonical_location") or next(
-        iter(region.get("bases") or []),
-        region.get("label", HOME_LABEL),
-    )
     bases = set(region.get("bases") or [])
     region_label = region.get("label") or ""
+    label = region.get("canonical_location") or next(iter(bases), region_label)
     preferred_candidates = [
+        "Addison, TX" if "Addison" in region_label else "",
+        "Bellevue, WA - Northeast 8th Street" if "Bellevue" in region_label else "",
         f"{region_label}, TX",
         f"{region_label}, WA",
-        "Addison, TX",
-        "Bellevue, WA - Northeast 8th Street",
     ]
     for preferred in preferred_candidates:
-        if preferred in bases:
+        if preferred and (preferred in bases or preferred.startswith(region_label)):
             label = preferred
             break
-    else:
-        if "Bellevue" in region_label:
-            for b in bases:
-                if "Bellevue" in b:
-                    label = b
-                    break
-        elif "Addison" in region_label:
-            label = "Addison, TX"
+    if "Addison" in region_label:
+        label = "Addison, TX"
+    elif "Bellevue" in region_label:
+        label = "Bellevue, WA - Northeast 8th Street"
 
-    dt = pd.Timestamp(near_charge["datetime"]) - timedelta(hours=2)
+    if last_home is not None:
+        gap = pd.Timestamp(near_charge["datetime"]) - pd.Timestamp(last_home["datetime"])
+        if gap <= timedelta(days=HOME_ANCHOR_LOOKBACK_DAYS):
+            dt = last_home["datetime"]
+        else:
+            dt = (pd.Timestamp(near_charge["datetime"]) - timedelta(hours=2)).isoformat()
+    else:
+        dt = (pd.Timestamp(near_charge["datetime"]) - timedelta(hours=2)).isoformat()
+
     return {
-        "datetime": dt.isoformat(),
+        "datetime": dt,
         "location": label,
         "lat": region["lat"],
         "lng": region["lng"],
-        "kwh": 0.0,
-        "invoice_url": "",
+        "kwh": float(last_home.get("kwh", 0)) if last_home else 0.0,
+        "invoice_url": (last_home or {}).get("invoice_url", ""),
         "dist_home": 0.0,
         "region": "HOME",
         "in_colorado": False,
         "owner": near_charge.get("owner", ""),
         "vin": near_charge.get("vin", ""),
         "is_home_anchor": True,
-        "synthetic": last_home is None,
+        "synthetic": True,
     }
 
 
@@ -757,7 +750,16 @@ def segment_trips(
                     flush_trip(end_dt=prev["datetime"])
                     local.append(charge)
                 else:
-                    current_stops.append({**charge, "is_home_anchor": True})
+                    # Snap the return pin to the canonical home for that region
+                    end_home = synthesize_home_anchor(charge, charge)
+                    if end_home is not None:
+                        end_home["datetime"] = charge["datetime"]
+                        end_home["kwh"] = float(charge.get("kwh", 0))
+                        end_home["invoice_url"] = charge.get("invoice_url", "")
+                        end_home["synthetic"] = charge.get("location") != end_home.get("location")
+                        current_stops.append(end_home)
+                    else:
+                        current_stops.append({**charge, "is_home_anchor": True})
                     flush_trip(end_dt=charge["datetime"])
             else:
                 local.append(charge)
