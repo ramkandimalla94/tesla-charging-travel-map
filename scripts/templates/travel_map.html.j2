@@ -343,7 +343,21 @@
     .beacon-label.active { border-color: rgba(251,191,36,0.5); color: var(--gold); }
     .beacon-wrap.split-start .beacon-label { border-color: rgba(52,211,153,0.45); }
     .beacon-wrap.split-end .beacon-label { border-color: rgba(251,191,36,0.45); }
-    .beacon-wrap.split-start .beacon-label::before { content: none; }
+    /* Push round-trip home labels outward so they never sit on top of each other */
+    .beacon-wrap.split-start {
+      align-items: flex-end;
+    }
+    .beacon-wrap.split-start .beacon-label {
+      text-align: right;
+      margin-right: 2px;
+    }
+    .beacon-wrap.split-end {
+      align-items: flex-start;
+    }
+    .beacon-wrap.split-end .beacon-label {
+      text-align: left;
+      margin-left: 2px;
+    }
 
     .beacon.milestone .beacon-core { width: 36px; height: 36px; font-size: 12px; }
     .beacon.milestone.start .beacon-core {
@@ -1162,8 +1176,9 @@
     /** Pixel offsets so round-trip home start/return stay readable at any zoom. */
     function milestoneMarkerOffset(sameHome, isStart, isEnd) {
       if (!sameHome) return [0, 0];
-      if (isStart) return [-56, -6];
-      if (isEnd) return [56, -6];
+      // Large enough that ~150px labels do not collide between the pair.
+      if (isStart) return [-118, -10];
+      if (isEnd) return [118, -10];
       return [0, 0];
     }
 
