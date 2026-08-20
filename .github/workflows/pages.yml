@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -30,11 +34,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # build_map.py may rewrite routes_cache / trips.geojson in the worktree.
+          # Preserve the built site, then reset so checkout to gh-pages can proceed.
+          mkdir -p /tmp/pages-deploy
+          cp output/index.html /tmp/pages-deploy/index.html
+          test -s /tmp/pages-deploy/index.html
+
+          git reset --hard HEAD
+          git clean -fd
           git fetch origin gh-pages
           git checkout gh-pages
-          cp output/index.html index.html
+
+          cp /tmp/pages-deploy/index.html index.html
           git add index.html
-          git diff --staged --quiet || git commit -m "Deploy from ${GITHUB_SHA::7}"
-          git push origin gh-pages
+          if git diff --staged --quiet; then
+            echo "No site changes to deploy"
+          else
+            git commit -m "Deploy from ${GITHUB_SHA::7}"
+            git push origin gh-pages
+          fi
