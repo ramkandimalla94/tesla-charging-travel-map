@@ -25,6 +25,8 @@ HOME_BASE_HINTS = {
     "MAA Market Center": "3825 Mapleshade Lane, Plano, TX, US",
     "Addison, TX": "Addison, TX, US",
     "Mansion Grove": "Mansion Grove, Santa Clara, CA, US",
+    "MAA Las Colinas": "MAA Las Colinas, Irving, TX, US",
+    "Gutter Chaos": "Melissa, TX, US",
 }
 
 # Fallback coordinates when Nominatim cannot resolve a site
@@ -49,6 +51,27 @@ MANUAL_OVERRIDES = {
         "display_name": "Kingswood Drive, Tumwater, WA 98512",
         "source": "manual",
         "query": "Kingswood Drive, Tumwater, WA, US",
+    },
+    "MAA Las Colinas": {
+        "lat": 32.8745,
+        "lng": -96.9550,
+        "display_name": "MAA Las Colinas, Irving, TX",
+        "source": "manual",
+        "query": "MAA Las Colinas, Irving, TX, US",
+    },
+    "Gutter Chaos": {
+        "lat": 33.2859,
+        "lng": -96.5728,
+        "display_name": "Gutter Chaos (Destination Charger near Melissa, TX)",
+        "source": "manual",
+        "query": "Melissa, TX, US",
+    },
+    "Frisco, CO - Summit Boulevard": {
+        "lat": 39.5744,
+        "lng": -106.0965,
+        "display_name": "Summit Boulevard, Frisco, CO 80443",
+        "source": "manual",
+        "query": "Summit Boulevard, Frisco, CO, US",
     },
 }
 

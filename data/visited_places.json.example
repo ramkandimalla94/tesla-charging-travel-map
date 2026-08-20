@@ -1,0 +1,25 @@
+{
+  "_comment": "Copy to visited_places.json and set visited: true for places you actually went to. Keys are trip ids from data/trips.json.",
+  "visited": {
+    "trip_001_2024-06-30_Henrietta_to_Vernon": {
+      "garden-of-the-gods": true,
+      "aspen-mountain": true,
+      "maroon-bells": true,
+      "mesa-verde": true
+    },
+    "trip_003_2024-11-19_Henrietta_to_Yakima": {
+      "multnomah-falls": true,
+      "crater-lake": true
+    },
+    "trip_005_2025-07-03_Quanah_to_Henrietta": {
+      "garden-of-the-gods": true,
+      "frisco-co-marina": true,
+      "pueblo-reservoir": true
+    },
+    "trip_006_2025-09-25_Henrietta_to_Henrietta": {
+      "aspen-mountain": true,
+      "glenwood-springs": true,
+      "maroon-bells": true
+    }
+  }
+}

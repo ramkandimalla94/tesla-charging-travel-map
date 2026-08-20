@@ -348,21 +348,76 @@
       box-shadow: 0 0 8px currentColor;
     }
 
-    /* ── Vehicle ── */
-    .vehicle-wrap { position: relative; width: 52px; height: 52px; }
+    /* ── Vehicle (red Tesla) ── */
+    .vehicle-wrap { position: relative; width: 56px; height: 56px; }
     .vehicle-glow {
-      position: absolute; inset: -12px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(94,234,212,0.55) 0%, transparent 68%);
+      position: absolute; inset: -14px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(220,38,38,0.65) 0%, rgba(220,38,38,0.15) 45%, transparent 70%);
       animation: vglow 2s ease-in-out infinite;
     }
-    @keyframes vglow { 0%,100%{transform:scale(1);opacity:0.9} 50%{transform:scale(1.25);opacity:0.35} }
+    @keyframes vglow { 0%,100%{transform:scale(1);opacity:0.95} 50%{transform:scale(1.28);opacity:0.4} }
     .vehicle-body {
-      position: absolute; inset: 6px; display: flex; align-items: center; justify-content: center;
-      background: rgba(8,10,16,0.92); border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.9);
-      box-shadow: 0 0 24px rgba(94,234,212,0.5), 0 4px 16px rgba(0,0,0,0.5);
+      position: absolute; inset: 4px; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(155deg, #ef4444 0%, #dc2626 45%, #991b1b 100%);
+      border-radius: 50%;
+      border: 2.5px solid rgba(255,255,255,0.92);
+      box-shadow: 0 0 28px rgba(220,38,38,0.55), 0 4px 18px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
     }
-    .vehicle-body svg { width: 22px; height: 22px; fill: #fff; }
+    .vehicle-body svg { width: 30px; height: 30px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+    .vehicle-body .tesla-body { fill: #fff; }
+    .vehicle-body .tesla-accent { fill: rgba(255,255,255,0.85); }
+
+    /* ── Nearby place pins ── */
+    .poi-wrap {
+      display: flex; flex-direction: column; align-items: center; pointer-events: none;
+      opacity: 0; transform: scale(0.5) translateY(8px);
+      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.34,1.4,.64,1);
+    }
+    .poi-wrap.visible { opacity: 1; transform: scale(1) translateY(0); }
+    .poi-pin {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; background: rgba(8,10,16,0.88);
+      border: 2px solid rgba(251,191,36,0.75);
+      box-shadow: 0 0 20px rgba(251,191,36,0.35), 0 4px 14px rgba(0,0,0,0.5);
+      animation: poi-pulse 2.2s ease-in-out infinite;
+    }
+    .poi-pin.visited { border-color: rgba(52,211,153,0.85); box-shadow: 0 0 20px rgba(52,211,153,0.4), 0 4px 14px rgba(0,0,0,0.5); }
+    @keyframes poi-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+    .poi-label {
+      margin-top: 5px; padding: 3px 9px; border-radius: 999px;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.02em; color: #fff;
+      background: rgba(8,10,16,0.85); border: 1px solid rgba(251,191,36,0.35);
+      backdrop-filter: blur(8px); white-space: nowrap; max-width: 130px;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .poi-label.visited { border-color: rgba(52,211,153,0.45); color: #6ee7b7; }
+
+    /* ── Story overlay (cinema captions) ── */
+    .story-overlay {
+      position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 14;
+      width: min(92vw, 640px); text-align: center; pointer-events: none;
+      opacity: 0; transition: opacity 0.6s ease;
+    }
+    .story-overlay.visible { opacity: 1; }
+    .story-caption {
+      font-family: var(--font-display); font-size: clamp(16px, 2.8vw, 22px); font-weight: 800;
+      letter-spacing: -0.02em; line-height: 1.35;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.95), 0 0 40px rgba(0,0,0,0.8);
+    }
+    .story-sub {
+      font-size: 12px; color: #cbd5e1; margin-top: 8px; letter-spacing: 0.04em;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.9);
+    }
+    .story-pois {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px;
+    }
+    .story-poi-chip {
+      font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+      background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.35); color: var(--gold);
+    }
+    .story-poi-chip.visited { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.4); color: #6ee7b7; }
+    body.cinema-mode .story-overlay { bottom: 80px; }
 
     /* ── Cinema / export ── */
     body.cinema-mode .trip-panel,
@@ -373,6 +428,7 @@
     body.cinema-mode #onboarding,
     body.cinema-mode .mapboxgl-ctrl-group,
     body.cinema-mode .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
+    body.cinema-mode .location-hud { opacity: 0 !important; }
     body.cinema-mode .beacon-ring { animation: none !important; }
     body.cinema-mode.portrait-export #map-wrap {
       display: flex; align-items: center; justify-content: center; background: #000;
@@ -390,6 +446,13 @@
       text-shadow: 0 4px 24px rgba(0,0,0,0.95);
     }
     .cinema-title p { font-size: 12px; color: #cbd5e1; margin-top: 6px; letter-spacing: 0.06em; }
+    .cinema-title .cinema-highlights {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 14px;
+    }
+    .cinema-title .cinema-highlights span {
+      font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 999px;
+      background: rgba(220,38,38,0.2); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5;
+    }
 
     .export-status {
       position: fixed; bottom: 24px; right: 24px; z-index: 10001;
@@ -509,7 +572,17 @@
     </div>
   </div>
 
-  <div class="cinema-title" id="cinema-title"><h2 id="cinema-title-text"></h2><p id="cinema-subtitle"></p></div>
+  <div class="story-overlay" id="story-overlay">
+    <div class="story-caption" id="story-caption"></div>
+    <div class="story-sub" id="story-sub"></div>
+    <div class="story-pois" id="story-pois"></div>
+  </div>
+
+  <div class="cinema-title" id="cinema-title">
+    <h2 id="cinema-title-text"></h2>
+    <p id="cinema-subtitle"></p>
+    <div class="cinema-highlights" id="cinema-highlights"></div>
+  </div>
   <div class="export-status" id="export-status">Recording…</div>
 
   <button class="panel-toggle" id="sidebar-toggle" title="Toggle trips panel" aria-label="Toggle panel">
@@ -546,7 +619,10 @@
       {% for trip in featured_trips %}
       <div class="trip-item featured" data-id="{{ trip.id }}">
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
-        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d</div></div>
+        <div>
+          <div class="trip-name">{{ trip.name }}</div>
+          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
+        </div>
       </div>
       {% endfor %}
       {% endif %}
@@ -554,7 +630,10 @@
       {% for trip in trips if not trip.featured %}
       <div class="trip-item" data-id="{{ trip.id }}">
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
-        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi</div></div>
+        <div>
+          <div class="trip-name">{{ trip.name }}</div>
+          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
+        </div>
       </div>
       {% endfor %}
     </div>
@@ -622,11 +701,11 @@
     let isPlaying = false, animFrame = null, lastTs = 0;
     let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
-    let vehicleMarker = null, stopMarkers = [];
+    let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
     let smoothBearing = 0, camBearing = 0, lastTravelBearing = 0;
     const MAX_PITCH = 45;
 
-    const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div></div>`;
+    const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 64 28" aria-hidden="true"><path class="tesla-body" d="M2 18 Q8 9 16 8 L48 8 Q56 9 62 18 L60 22 L4 22 Z"/><path class="tesla-accent" d="M18 8 L26 4 L34 8"/><circle cx="14" cy="21" r="3.2" fill="#111"/><circle cx="50" cy="21" r="3.2" fill="#111"/><path class="tesla-accent" d="M28 8 L32 6 L36 8" opacity="0.6"/></svg></div></div>`;
 
     // ── Splash progress ──
     function setSplash(pct) { document.getElementById('splash-fill').style.width = pct + '%'; }
@@ -680,6 +759,10 @@
       const coords = [];
       for (const seg of pb.segments) {
         const segEnd = t + seg.duration_ms;
+        if (seg.type === 'intro' || seg.type === 'outro') {
+          if (elapsedMs >= segEnd) t = segEnd;
+          continue;
+        }
         if (elapsedMs >= segEnd) {
           if (seg.type === 'travel' && seg.path?.length >= 2) {
             const leg = seg.path.map(p => [p[1], p[0]]);
@@ -709,10 +792,27 @@
         const end = cursor + seg.duration_ms;
         if (elapsedMs < end) {
           const frac = Math.max(0, Math.min(1, (elapsedMs - cursor) / seg.duration_ms));
+          if (seg.type === 'intro') {
+            return {
+              phase: 'intro', label: seg.title || activeTrip()?.name || '',
+              caption: seg.caption || '', highlights: seg.highlights || [],
+              frac, stopIndex: 0, bearing: lastTravelBearing, seg,
+            };
+          }
+          if (seg.type === 'outro') {
+            return {
+              phase: 'outro', label: 'Journey Complete',
+              caption: seg.caption || '', visitedCount: seg.visited_count || 0,
+              nearbyCount: seg.nearby_count || 0, frac, stopIndex: activeStops().length - 1,
+              bearing: lastTravelBearing, seg,
+            };
+          }
           if (seg.type === 'dwell') {
             return {
               lat: seg.lat, lng: seg.lng, phase: 'dwell', label: seg.label,
-              stopIndex: seg.stop_index, frac, bearing: lastTravelBearing, seg,
+              caption: seg.caption || '', subcaption: seg.subcaption || '',
+              pois: seg.pois || [], stopIndex: seg.stop_index, frac,
+              bearing: lastTravelBearing, seg,
             };
           }
           const path = seg.path || [];
@@ -729,8 +829,16 @@
         cursor = end;
       }
       const last = pb.segments[pb.segments.length - 1];
+      if (last.type === 'outro') {
+        return {
+          phase: 'outro', label: 'Journey Complete', caption: last.caption || '',
+          visitedCount: last.visited_count || 0, nearbyCount: last.nearby_count || 0,
+          frac: 1, stopIndex: activeStops().length - 1, bearing: lastTravelBearing, seg: last,
+        };
+      }
       return {
         lat: last.lat, lng: last.lng, phase: 'dwell', label: last.label || last.to_label,
+        caption: last.caption || '', pois: last.pois || [],
         stopIndex: last.stop_index, frac: 1, bearing: lastTravelBearing, seg: last,
       };
     }
@@ -1028,8 +1136,13 @@
         const t = trips[0];
         panelTitle.textContent = t.name.split('—').pop()?.trim() || t.name;
         document.getElementById('hero-name').textContent = t.name;
-        if (t.via_summary) viaEl.innerHTML = `Route via <em>${t.via_summary}</em> · ${t.state_names?.join(' → ') || ''}`;
-        else viaEl.innerHTML = t.states.length ? `Through <em>${t.states.join(', ')}</em>` : '';
+        const ownerBit = t.is_shared
+          ? ` · <em>${t.trip_crew} in ${t.vehicle_label || "shared car"}</em>`
+          : (t.vehicle_label === 'your Tesla'
+            ? ` · <em>your Tesla</em>`
+            : (t.trip_crew ? ` · <em>${t.trip_crew}</em>` : ''));
+        if (t.via_summary) viaEl.innerHTML = `Route via <em>${t.via_summary}</em>${ownerBit}`;
+        else viaEl.innerHTML = (t.states.length ? `Through <em>${t.states.join(', ')}</em>` : '') + ownerBit;
         document.getElementById('hero-miles').textContent = t.miles.toLocaleString();
         document.getElementById('hero-kwh').textContent = t.total_kwh;
         document.getElementById('hero-days').textContent = t.duration_days;
@@ -1070,13 +1183,93 @@
     function updateLocationHud(state) {
       const hud = document.getElementById('location-hud');
       const icon = document.getElementById('hud-icon');
-      if (!state || !isSingleTrip()) { hud.classList.remove('visible'); return; }
+      if (!state || !isSingleTrip() || state.phase === 'intro' || state.phase === 'outro') {
+        hud.classList.remove('visible');
+        return;
+      }
       hud.classList.add('visible');
       const charging = state.phase === 'dwell';
-      icon.textContent = charging ? '⚡' : '→';
+      icon.textContent = charging ? '⚡' : '🚗';
       icon.classList.toggle('charging', charging);
       document.getElementById('hud-phase').textContent = charging ? 'Charging' : 'En Route';
       document.getElementById('hud-text').textContent = state.label || '';
+    }
+
+    function updateStoryOverlay(state) {
+      const overlay = document.getElementById('story-overlay');
+      const captionEl = document.getElementById('story-caption');
+      const subEl = document.getElementById('story-sub');
+      const poisEl = document.getElementById('story-pois');
+      if (!state || !isSingleTrip()) {
+        overlay.classList.remove('visible');
+        return;
+      }
+      const show = isPlaying || isRecording;
+      if (!show) { overlay.classList.remove('visible'); return; }
+
+      if (state.phase === 'intro') {
+        overlay.classList.add('visible');
+        captionEl.textContent = state.label || activeTrip()?.name || '';
+        subEl.textContent = state.caption || '';
+        poisEl.innerHTML = (state.highlights || []).map(h =>
+          `<span class="story-poi-chip">${h}</span>`
+        ).join('');
+        return;
+      }
+      if (state.phase === 'outro') {
+        overlay.classList.add('visible');
+        captionEl.textContent = 'Journey Complete';
+        subEl.textContent = state.caption || '';
+        const vc = state.visitedCount || 0;
+        const nc = state.nearbyCount || 0;
+        poisEl.innerHTML = nc
+          ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
+          : '';
+        return;
+      }
+      if (state.phase === 'dwell' && (state.caption || state.pois?.length)) {
+        overlay.classList.add('visible');
+        captionEl.textContent = state.caption || `Charging · ${state.label}`;
+        subEl.textContent = state.subcaption || '';
+        poisEl.innerHTML = (state.pois || []).map(p =>
+          `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
+        ).join('');
+        return;
+      }
+      if (state.phase === 'travel') {
+        overlay.classList.add('visible');
+        captionEl.textContent = `Driving to ${state.label || 'next stop'}`;
+        subEl.textContent = '';
+        poisEl.innerHTML = '';
+        return;
+      }
+      overlay.classList.remove('visible');
+    }
+
+    function clearPoiMarkers() {
+      poiMarkers.forEach(m => m.remove());
+      poiMarkers = [];
+    }
+
+    function updatePoiMarkers(pois, visible) {
+      clearPoiMarkers();
+      if (!visible || !pois?.length || !map) return;
+      pois.forEach(poi => {
+        const wrap = document.createElement('div');
+        wrap.className = 'poi-wrap visible';
+        const pin = document.createElement('div');
+        pin.className = 'poi-pin' + (poi.visited ? ' visited' : '');
+        pin.textContent = poi.emoji || '📍';
+        const lbl = document.createElement('div');
+        lbl.className = 'poi-label' + (poi.visited ? ' visited' : '');
+        lbl.textContent = poi.name;
+        wrap.appendChild(pin);
+        wrap.appendChild(lbl);
+        const m = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+          .setLngLat([poi.lng, poi.lat])
+          .addTo(map);
+        poiMarkers.push(m);
+      });
     }
 
     function setPlaybackVisuals(playing) {
@@ -1090,9 +1283,35 @@
       if (!state) return;
       animStopIdx = state.stopIndex ?? 0;
       animProg = playbackProgress();
+      const color = stops[Math.min(animStopIdx, stops.length - 1)]?.tripColor || '#ef4444';
+
+      if (state.phase === 'intro') {
+        if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker = null; }
+        clearPoiMarkers();
+        ensureTrailLayers(color);
+        map.getSource('active-trail').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+        updateStoryOverlay(state);
+        updateLocationHud(state);
+        document.getElementById('scrubber').value = Math.round(animProg * 1000);
+        document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
+        document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
+        document.getElementById('prog-text').textContent = state.label || 'Opening…';
+        return;
+      }
+      if (state.phase === 'outro') {
+        if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker = null; }
+        clearPoiMarkers();
+        updateStoryOverlay(state);
+        updateLocationHud(state);
+        document.getElementById('scrubber').value = Math.round(animProg * 1000);
+        document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
+        document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
+        document.getElementById('prog-text').textContent = 'Journey complete';
+        return;
+      }
+
       const pos = { lat: state.lat, lng: state.lng };
       const trailCoords = trailCoordsAtTime(animTimeMs);
-      const color = stops[Math.min(animStopIdx, stops.length - 1)]?.tripColor || '#5eead4';
 
       if (state.phase === 'travel') {
         lastTravelBearing = smoothAngle(lastTravelBearing, state.bearing || 0, 0.18);
@@ -1121,7 +1340,6 @@
         }
         if (directorMode) {
           const lookAhead = 0.04;
-          const pb = activePlayback();
           let lookPos = pos;
           if (state.phase === 'travel' && state.path?.length >= 2) {
             lookPos = pointOnPath(state.path, Math.min(state.frac + lookAhead, 1)) || pos;
@@ -1129,16 +1347,19 @@
           camBearing = state.phase === 'travel'
             ? smoothAngle(camBearing, bearing, 0.06)
             : camBearing;
+          const zoom = state.phase === 'dwell' && state.pois?.length ? 7.2 : Math.min(6.8, Math.max(5.2, map.getZoom()));
           const cam = {
             center: [lookPos.lng, lookPos.lat],
-            zoom: Math.min(6.8, Math.max(5.2, map.getZoom())),
-            pitch: Math.min(MAX_PITCH, 42),
+            zoom,
+            pitch: Math.min(MAX_PITCH, state.phase === 'dwell' ? 38 : 42),
             bearing: camBearing,
           };
           if (isRecording) map.jumpTo(cam);
           else map.easeTo({ ...cam, duration: 500, essential: true });
         }
       }
+
+      updatePoiMarkers(state.pois, state.phase === 'dwell');
 
       stopMarkers.forEach(m => {
         const reached = m._idx <= animStopIdx;
@@ -1166,6 +1387,7 @@
         document.getElementById('prog-end').textContent = cur.datetime?.slice(0, 10) || '';
       }
       updateLocationHud(state);
+      updateStoryOverlay(state);
     }
 
     function updateTrail(prog) {
@@ -1223,21 +1445,26 @@
       stopPlayback(); animTimeMs=0; animProg=0; animStopIdx=0;
       smoothBearing = 0; camBearing = 0; lastTravelBearing = 0;
       if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
-      if (map.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
+      clearPoiMarkers();
+      if (map?.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
       applyIdleStopVisuals();
       document.getElementById('scrubber').value=0;
       document.getElementById('scrub-fill').style.width='0%';
       document.getElementById('timeline-scrub').style.left='0%';
       document.getElementById('prog-text').textContent = isSingleTrip() ? 'Ready to replay' : 'Select a trip to replay';
-      if (clearHud) document.getElementById('location-hud').classList.remove('visible');
+      if (clearHud) {
+        document.getElementById('location-hud').classList.remove('visible');
+        document.getElementById('story-overlay').classList.remove('visible');
+      }
       setPlaybackVisuals(false);
     }
 
     async function exportTripVideo() {
       if (!isSingleTrip() || !map) return;
       const trip = activeTrip();
+      const story = trip.story || {};
       const status = document.getElementById('export-status');
-      status.textContent = 'Preparing recording…';
+      status.textContent = 'Preparing cinematic recording…';
       status.classList.add('visible');
       resetVisuals();
       drawStops();
@@ -1249,6 +1476,8 @@
       document.getElementById('cinema-title-text').textContent = trip.name;
       document.getElementById('cinema-subtitle').textContent =
         `${trip.miles.toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days} days`;
+      const hlEl = document.getElementById('cinema-highlights');
+      hlEl.innerHTML = (story.highlights || []).slice(0, 4).map(h => `<span>${h}</span>`).join('');
       title.classList.add('visible');
       map.resize();
       await new Promise(r => setTimeout(r, 500));
@@ -1256,26 +1485,30 @@
       const canvas = map.getCanvas();
       const stream = canvas.captureStream(30);
       recordedChunks = [];
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8_000_000 });
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9' : 'video/webm';
+      mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
       mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
       mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${trip.id}_instagram.webm`;
+        a.download = `${trip.id}_road_trip.webm`;
         a.click();
         URL.revokeObjectURL(url);
         isRecording = false;
         document.body.classList.remove('cinema-mode', 'portrait-export');
         title.classList.remove('visible');
+        hlEl.innerHTML = '';
         status.classList.remove('visible');
+        document.getElementById('story-overlay').classList.remove('visible');
         map.resize();
         fitTrip(false);
       };
 
       isRecording = true;
-      status.textContent = 'Recording trip…';
+      status.textContent = 'Recording road trip story…';
       mediaRecorder.start(250);
       startPlayback(true);
     }

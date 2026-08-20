@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from home_config import extract_city, haversine_miles, resolve_home_config
+from home_config import extract_city, haversine_miles, load_owner_config, resolve_home_config
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -419,18 +419,128 @@ def charge_to_stop(row: pd.Series, cache: dict) -> dict:
         "dist_home": dist_to_nearest_home(lat, lng),
         "region": get_region(lat, lng, loc),
         "in_colorado": is_colorado(lat, lng, loc),
+        "owner": str(row.get("Name", "") or "").strip(),
+        "vin": str(row.get("Vin", "") or "").strip(),
     }
 
 
-def finalize_trip(stops: list[dict], trip_index: int, end_dt: str | None = None) -> dict:
+def owner_short_name(name: str) -> str:
+    """First name (or first token) for trip labels."""
+    if not name:
+        return ""
+    return name.strip().split()[0]
+
+
+def trip_base_name(name: str, owner_short: str = "") -> str:
+    """Strip trailing driver suffix added during finalize_trip."""
+    if owner_short and name.endswith(f" · {owner_short}"):
+        return name[: -len(f" · {owner_short}")]
+    return name
+
+
+def trip_matches_shared_rule(trip: dict, rule: dict) -> bool:
+    match = rule.get("match", {})
+    owner = trip.get("owner", "")
+    if match.get("owner") and owner != match["owner"]:
+        return False
+    if match.get("owner_contains") and match["owner_contains"].lower() not in owner.lower():
+        return False
+    if match.get("vin") and trip.get("vin") != match["vin"]:
+        return False
+    if match.get("has_colorado") and not trip.get("has_colorado"):
+        return False
+    return True
+
+
+def default_shared_trip_rules(profile_name: str) -> list[dict]:
+    """Built-in rules when owner_config.json has no shared_trips section."""
+    return [
+        {
+            "match": {"owner_contains": "Akash", "has_colorado": True},
+            "travelers": [profile_name, "Akash"],
+            "driver": "Akash",
+            "vehicle_label": "Akash's car",
+        }
+    ]
+
+
+def apply_trip_crew_labels(trips: list[dict]) -> None:
+    """
+    Label who was on each trip. Charging CSV shows the car account holder (driver);
+    shared_trips config marks when you rode in someone else's car.
+    """
+    cfg = load_owner_config()
+    profile = cfg.get("profile_name", "Rama")
+    rules = cfg.get("shared_trips") or default_shared_trip_rules(profile)
+
+    for trip in trips:
+        matched = False
+        for rule in rules:
+            if not trip_matches_shared_rule(trip, rule):
+                continue
+            travelers = rule.get("travelers") or [profile, trip.get("owner_short", "")]
+            driver = rule.get("driver") or trip.get("owner_short", "")
+            vehicle = rule.get("vehicle_label") or f"{driver}'s car"
+            crew = " + ".join(travelers)
+            base = trip_base_name(trip["name"], trip.get("owner_short", ""))
+            trip.update({
+                "name": f"{base} · {crew} ({vehicle})",
+                "travelers": travelers,
+                "trip_crew": crew,
+                "driver": driver,
+                "driver_short": driver,
+                "vehicle_label": vehicle,
+                "is_shared": True,
+            })
+            matched = True
+            break
+
+        if matched:
+            continue
+
+        driver = trip.get("owner_short") or profile
+        base = trip_base_name(trip["name"], trip.get("owner_short", ""))
+        if driver.lower() == profile.lower():
+            trip.update({
+                "name": base,
+                "travelers": [profile],
+                "trip_crew": profile,
+                "driver": profile,
+                "driver_short": profile,
+                "vehicle_label": "your Tesla",
+                "is_shared": False,
+            })
+        else:
+            trip.update({
+                "travelers": [driver],
+                "trip_crew": driver,
+                "driver": driver,
+                "driver_short": driver,
+                "vehicle_label": f"{driver}'s car",
+                "is_shared": False,
+            })
+
+
+def finalize_trip(
+    stops: list[dict],
+    trip_index: int,
+    end_dt: str | None = None,
+    *,
+    owner: str = "",
+    vin: str = "",
+) -> dict:
     merged = merge_consecutive_stops(stops)
     start = merged[0]["datetime"]
     end = end_dt or merged[-1]["datetime"]
     co_stops = [s for s in merged if s.get("in_colorado")]
     via = ordered_via_states(merged)
+    name = make_trip_name(start, merged)
+    short = owner_short_name(owner)
+    if short:
+        name = f"{name} · {short}"
     return {
         "id": make_trip_id(trip_index, start, merged),
-        "name": make_trip_name(start, merged),
+        "name": name,
         "start": start,
         "end": end,
         "stops": merged,
@@ -440,14 +550,23 @@ def finalize_trip(stops: list[dict], trip_index: int, end_dt: str | None = None)
         "via_summary": format_via_summary(merged),
         "origin_label": origin_label(merged),
         "dest_label": dest_label(merged),
+        "owner": owner,
+        "vin": vin,
+        "owner_short": short,
     }
 
 
-def segment_trips(charges: list[dict]) -> tuple[list[dict], list[dict]]:
+def segment_trips(
+    charges: list[dict],
+    *,
+    owner: str = "",
+    vin: str = "",
+    trip_index_start: int = 0,
+) -> tuple[list[dict], list[dict], int]:
     trips: list[dict] = []
     local: list[dict] = []
     current_stops: list[dict] = []
-    trip_index = 0
+    trip_index = trip_index_start
 
     def flush_trip(end_dt: str | None = None) -> None:
         nonlocal trip_index, current_stops
@@ -455,7 +574,11 @@ def segment_trips(charges: list[dict]) -> tuple[list[dict], list[dict]]:
             return
         if is_real_trip(current_stops, end_dt):
             trip_index += 1
-            trips.append(finalize_trip(current_stops, trip_index, end_dt))
+            trips.append(
+                finalize_trip(
+                    current_stops, trip_index, end_dt, owner=owner, vin=vin
+                )
+            )
         else:
             local.extend(current_stops)
         current_stops = []
@@ -476,7 +599,7 @@ def segment_trips(charges: list[dict]) -> tuple[list[dict], list[dict]]:
         current_stops.append(charge)
 
     flush_trip()
-    return trips, local
+    return trips, local, trip_index
 
 
 def init_home_config(locations: list[str], cache: dict) -> None:
@@ -501,14 +624,53 @@ def main() -> None:
     df = pd.read_csv(MERGED)
     df["ChargeStartDateTime"] = pd.to_datetime(df["ChargeStartDateTime"], utc=True)
     df = df.sort_values("ChargeStartDateTime")
+    if "Vin" not in df.columns:
+        df["Vin"] = ""
+    if "Name" not in df.columns:
+        df["Name"] = ""
+    df["Vin"] = df["Vin"].fillna("").astype(str).str.strip()
+    df["Name"] = df["Name"].fillna("").astype(str).str.strip()
 
     cache = load_cache()
+
+    # Detect home from ALL charges so multi-owner DFW homes cluster together,
+    # then segment each vehicle independently so routes never cross cars.
     init_home_config(df["SiteLocationName"].tolist(), cache)
     detection_source = "config" if (DATA_DIR / "owner_config.json").exists() else "auto"
-    charges = [charge_to_stop(row, cache) for _, row in df.iterrows()]
 
-    trips, local = segment_trips(charges)
+    all_trips: list[dict] = []
+    all_local: list[dict] = []
+    trip_index = 0
+    vehicle_groups = df.groupby(["Vin", "Name"], dropna=False, sort=False)
 
+    for (vin, owner), group in vehicle_groups:
+        owner_s = str(owner or "").strip()
+        vin_s = str(vin or "").strip() or "unknown"
+        # Re-init home using this vehicle's charge locations so friend's Frisco
+        # home and owner's home are both respected when flushing "near home".
+        init_home_config(group["SiteLocationName"].tolist(), cache)
+        charges = [charge_to_stop(row, cache) for _, row in group.iterrows()]
+        trips, local, trip_index = segment_trips(
+            charges, owner=owner_s, vin=vin_s, trip_index_start=trip_index
+        )
+        all_trips.extend(trips)
+        all_local.extend(local)
+        label = owner_s or vin_s[-6:]
+        print(f"  Vehicle {label}: {len(trips)} trips · {len(local)} local from {len(charges)} charges")
+
+    all_trips.sort(key=lambda t: str(t["start"]))
+    apply_trip_crew_labels(all_trips)
+    # Re-number trip ids in chronological order after multi-vehicle merge
+    for i, trip in enumerate(all_trips, start=1):
+        date_part = pd.Timestamp(trip["start"]).strftime("%Y-%m-%d")
+        first_city = extract_city(trip["stops"][0]["location"]).replace(" ", "_")[:20]
+        last_city = extract_city(trip["stops"][-1]["location"]).replace(" ", "_")[:20]
+        trip["id"] = f"trip_{i:03d}_{date_part}_{first_city}_to_{last_city}"
+
+    # Restore global home summary from all locations for metadata
+    init_home_config(df["SiteLocationName"].tolist(), cache)
+
+    owners = sorted({t.get("owner", "") for t in all_trips if t.get("owner")})
     output = {
         "home_bases": sorted(HOME_BASES),
         "home_label": HOME_LABEL,
@@ -525,14 +687,17 @@ def main() -> None:
             }
             for r in HOME_REGIONS
         ],
-        "trips": trips,
-        "local_charges": local,
+        "owners": owners,
+        "trips": all_trips,
+        "local_charges": all_local,
         "stats": {
-            "total_charges": len(charges),
-            "trip_count": len(trips),
-            "local_count": len(local),
-            "total_stops_in_trips": sum(len(t["stops"]) for t in trips),
+            "total_charges": len(df),
+            "trip_count": len(all_trips),
+            "local_count": len(all_local),
+            "total_stops_in_trips": sum(len(t["stops"]) for t in all_trips),
             "home_detection": detection_source,
+            "vehicle_count": len(vehicle_groups),
+            "owner_count": len(owners),
         },
     }
 
@@ -540,10 +705,11 @@ def main() -> None:
     with open(OUTPUT, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False, default=str)
 
-    print(f"Segmented {len(trips)} trips from {len(charges)} charges")
-    print(f"Local (home-only) charges: {len(local)}")
-    for t in trips:
-        print(f"  {t['id']}: {len(t['stops'])} stops — {t['name']}")
+    print(f"Segmented {len(all_trips)} trips from {len(df)} charges across {len(vehicle_groups)} vehicle(s)")
+    print(f"Local (home-only) charges: {len(all_local)}")
+    for t in all_trips:
+        co = " 🏔" if t.get("has_colorado") else ""
+        print(f"  {t['id']}: {len(t['stops'])} stops — {t['name']}{co}")
     print(f"Wrote {OUTPUT}")
 
 
