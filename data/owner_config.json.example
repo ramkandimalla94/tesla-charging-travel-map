@@ -3,9 +3,18 @@
   "home_bases": ["Addison, TX", "MAA Market Center"],
   "home_lat": 32.96,
   "home_lng": -96.83,
-  "home_label": "Dallas",
-  "home_radius_miles": 120,
+  "home_label": "Addison",
+  "home_radius_miles": 55,
   "far_from_home_miles": 350,
+  "secondary_regions": [
+    {
+      "label": "Bellevue",
+      "lat": 47.6168,
+      "lng": -122.1116,
+      "radius_miles": 26,
+      "bases": ["Bellevue, WA - Northeast 8th Street", "Kirkland, WA", "Seattle, WA"]
+    }
+  ],
   "shared_trips": [
     {
       "match": { "owner_contains": "Akash", "has_colorado": true },

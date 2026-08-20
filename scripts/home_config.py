@@ -154,20 +154,29 @@ def resolve_home_config(
             "label": cfg.get("home_label") or extract_city(next(iter(cfg["home_bases"]))),
             "bases": set(cfg["home_bases"]),
             "charge_count": sum(1 for loc in locations if loc in cfg["home_bases"]),
+            "canonical_location": cfg.get("home_canonical") or next(
+                (b for b in cfg["home_bases"] if cfg.get("home_label", "") in b),
+                next(iter(cfg["home_bases"])),
+            ),
         }
         extra_regions = []
+        all_bases = set(cfg["home_bases"])
         if cfg.get("secondary_regions"):
             for sr in cfg["secondary_regions"]:
+                bases = set(sr.get("bases", []))
+                all_bases.update(bases)
                 extra_regions.append({
                     "lat": float(sr["lat"]),
                     "lng": float(sr["lng"]),
                     "radius_miles": float(sr.get("radius_miles", 55)),
                     "label": sr.get("label", "Home"),
-                    "bases": set(sr.get("bases", [])),
-                    "charge_count": 0,
+                    "bases": bases,
+                    "charge_count": sum(1 for loc in locations if loc in bases),
+                    "canonical_location": sr.get("canonical_location")
+                    or next(iter(bases), sr.get("label", "Home")),
                 })
         return {
-            "home_bases": set(cfg["home_bases"]),
+            "home_bases": all_bases,
             "home_lat": float(cfg["home_lat"]),
             "home_lng": float(cfg["home_lng"]),
             "home_label": region["label"],
