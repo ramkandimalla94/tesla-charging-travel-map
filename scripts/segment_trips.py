@@ -26,22 +26,33 @@ from pathlib import Path
 
 import pandas as pd
 
+from home_config import extract_city, haversine_miles, resolve_home_config
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 MERGED = DATA_DIR / "merged_charges.csv"
 CACHE_FILE = DATA_DIR / "locations_cache.json"
 OUTPUT = DATA_DIR / "trips.json"
 
-HOME_BASES = {"MAA Market Center", "Addison, TX"}
 MERGE_WINDOW = timedelta(hours=24)
+HOME_BASES: set[str] = set()
+HOME_REGIONS: list[dict] = []
+HOME_LAT, HOME_LNG = 39.0, -98.0
+HOME_LABEL = "Home"
+HOME_RADIUS_MILES = 120
+FAR_FROM_HOME_MILES = 350
+
+# Trip quality — filter local metro charging mistaken as road trips
+MIN_TRIP_SPAN_MILES = 120
+MIN_TRIP_STATES = 2
+LOCAL_METRO_SPAN_MILES = 85
+LOCAL_HOME_DISTANCE_MILES = 75
+EXTENDED_HOME_RADIUS_MILES = 110
+MIN_STOPS_PER_WEEK = 0.5
 
 # Colorado state bounding box
 CO_BBOX = {"lat_min": 37.0, "lat_max": 41.0, "lng_min": -109.1, "lng_max": -102.0}
 
-# DFW home center (Addison / Plano)
-HOME_LAT, HOME_LNG = 32.96, -96.83
-HOME_RADIUS_MILES = 120
-FAR_FROM_HOME_MILES = 350
 TIME_GAP_DAYS = 14
 BIG_JUMP_MILES = 700
 
@@ -49,16 +60,6 @@ BIG_JUMP_MILES = 700
 def load_cache() -> dict:
     with open(CACHE_FILE, encoding="utf-8") as f:
         return json.load(f)
-
-
-def haversine_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    r = 3959.0
-    p = math.pi / 180
-    a = (
-        math.sin((lat2 - lat1) * p / 2) ** 2
-        + math.cos(lat1 * p) * math.cos(lat2 * p) * math.sin((lng2 - lng1) * p / 2) ** 2
-    )
-    return 2 * r * math.asin(math.sqrt(a))
 
 
 def dist_from_home(lat: float | None, lng: float | None) -> float | None:
@@ -100,13 +101,149 @@ def get_region(lat: float | None, lng: float | None, location: str) -> str:
     return "CA-S"
 
 
-def is_home(location: str) -> bool:
-    return location in HOME_BASES
+def dist_to_nearest_home(lat: float | None, lng: float | None) -> float | None:
+    if lat is None or lng is None or not HOME_REGIONS:
+        return dist_from_home(lat, lng)
+    return min(haversine_miles(lat, lng, r["lat"], r["lng"]) for r in HOME_REGIONS)
 
 
-def extract_city(location: str) -> str:
-    m = re.match(r"^([^,]+)", location)
-    return m.group(1).strip() if m else location
+def is_near_any_home(charge: dict) -> bool:
+    if charge["location"] in HOME_BASES:
+        return True
+    lat, lng = charge.get("lat"), charge.get("lng")
+    if lat is None or lng is None:
+        return False
+    for region in HOME_REGIONS:
+        if haversine_miles(lat, lng, region["lat"], region["lng"]) <= region.get("radius_miles", 55):
+            return True
+    return False
+
+
+def nearest_home_label(lat: float | None, lng: float | None) -> str:
+    if lat is None or lng is None or not HOME_REGIONS:
+        return HOME_LABEL
+    best = min(HOME_REGIONS, key=lambda r: haversine_miles(lat, lng, r["lat"], r["lng"]))
+    if haversine_miles(lat, lng, best["lat"], best["lng"]) <= best.get("radius_miles", 55) + 20:
+        return best["label"]
+    return "Away"
+
+
+def trip_span_miles(stops: list[dict]) -> float:
+    coords = [(s["lat"], s["lng"]) for s in stops if s.get("lat") is not None and s.get("lng") is not None]
+    if len(coords) < 2:
+        return 0.0
+    return max(
+        haversine_miles(a[0], a[1], b[0], b[1])
+        for i, a in enumerate(coords)
+        for b in coords[i + 1 :]
+    )
+
+
+def trip_duration_days(stops: list[dict], end_dt: str | None = None) -> int:
+    if not stops:
+        return 0
+    start = pd.Timestamp(stops[0]["datetime"])
+    if end_dt:
+        end = pd.Timestamp(end_dt)
+    else:
+        end = pd.Timestamp(stops[-1].get("end_datetime") or stops[-1]["datetime"])
+    return max(1, (end - start).days + 1)
+
+
+def all_stops_within_extended_home(stops: list[dict], radius_miles: float = EXTENDED_HOME_RADIUS_MILES) -> bool:
+    """True when every stop stays inside a home metro bubble (e.g. Seattle suburbs)."""
+    if not HOME_REGIONS:
+        return False
+    for stop in stops:
+        lat, lng = stop.get("lat"), stop.get("lng")
+        if lat is None or lng is None:
+            continue
+        if not any(
+            haversine_miles(lat, lng, region["lat"], region["lng"]) <= radius_miles
+            for region in HOME_REGIONS
+        ):
+            return False
+    return True
+
+
+def charging_pace(stops: list[dict], end_dt: str | None = None) -> float:
+    """Average merged stops per week over the trip timeline."""
+    merged = merge_consecutive_stops(stops)
+    weeks = max(1.0, trip_duration_days(merged, end_dt) / 7.0)
+    return len(merged) / weeks
+
+
+def is_real_trip(stops: list[dict], end_dt: str | None = None) -> bool:
+    """
+    Return True only for genuine road trips — not local metro Supercharging patterns.
+    """
+    if len(stops) < 2:
+        return False
+
+    merged = merge_consecutive_stops(stops)
+    states = ordered_via_states(merged)
+    span = trip_span_miles(merged)
+    duration = trip_duration_days(merged, end_dt)
+    home_dists = [dist_to_nearest_home(s.get("lat"), s.get("lng")) for s in merged]
+    home_dists = [d for d in home_dists if d is not None]
+    max_home_dist = max(home_dists) if home_dists else 0.0
+    min_home_dist = min(home_dists) if home_dists else 0.0
+
+    pace = charging_pace(stops, end_dt)
+
+    # Every stop inside a home metro bubble = routine local Supercharging
+    if all_stops_within_extended_home(merged):
+        return False
+
+    # Too few stops over a small area — not a road trip (e.g. Portland → Chehalis overnight)
+    if len(merged) < 3 and span < MIN_TRIP_SPAN_MILES:
+        return False
+
+    # Must leave the local home bubble meaningfully
+    if max_home_dist < LOCAL_HOME_DISTANCE_MILES:
+        return False
+
+    # Single-state blob that never spans far = routine local charging
+    if span < LOCAL_METRO_SPAN_MILES and len(states) <= 1:
+        return False
+
+    # Long timeline, tiny geography = sporadic local Supercharging (e.g. 32d in Seattle suburbs)
+    if duration >= 10 and span < MIN_TRIP_SPAN_MILES and len(states) <= 1:
+        return False
+
+    # Sparse charging over weeks near a secondary home (e.g. 2 stops / 43d Portland ↔ Chehalis)
+    if duration >= 7 and pace < MIN_STOPS_PER_WEEK and max_home_dist < EXTENDED_HOME_RADIUS_MILES + 25:
+        return False
+
+    if duration >= 7 and len(merged) <= 3 and span < 200 and max_home_dist < EXTENDED_HOME_RADIUS_MILES + 25:
+        return False
+
+    # Single-state regional hops near a secondary home (weekend errands)
+    if len(states) == 1 and span < MIN_TRIP_SPAN_MILES and min_home_dist < LOCAL_HOME_DISTANCE_MILES + 15:
+        return False
+
+    # OR/WA hops that never leave the Puget Sound home footprint
+    if set(states) <= {"OR", "WA"} and max_home_dist < EXTENDED_HOME_RADIUS_MILES + 20:
+        if duration >= 4 or len(merged) <= 4 or pace < MIN_STOPS_PER_WEEK:
+            return False
+
+    # Multi-state journeys with sustained travel pace are real road trips
+    if len(states) >= MIN_TRIP_STATES and pace >= MIN_STOPS_PER_WEEK:
+        return True
+
+    # Multi-state but sparse + still near home = errand charging split by time gap
+    if len(states) >= MIN_TRIP_STATES and max_home_dist < EXTENDED_HOME_RADIUS_MILES + 25:
+        return False
+
+    # Clear road trip: large geographic span in one state (e.g. cross-Texas)
+    if span >= MIN_TRIP_SPAN_MILES:
+        return True
+
+    # Left home region by a lot even if one state
+    if max_home_dist >= FAR_FROM_HOME_MILES:
+        return True
+
+    return False
 
 
 def extract_state_code(location: str) -> str | None:
@@ -114,43 +251,24 @@ def extract_state_code(location: str) -> str | None:
     return m.group(1) if m else None
 
 
-# Map suburb/end-city labels to a recognizable destination name
-DEST_ALIASES = {
-    "Kirkland": "Seattle",
-    "Bellevue": "Seattle",
-    "Redmond": "Seattle",
-    "Renton": "Seattle",
-    "North Bend": "Seattle",
-    "Tulalip Bay": "Seattle",
-    "Auburn": "Seattle",
-    "Suquamish": "Seattle",
-    "Silverdale": "Seattle",
-    "Puyallup": "Seattle",
-    "Georgetown": "San Antonio",
-    "Henrietta": "Dallas",
-    "Childress": "Dallas",
-    "Addison": "Dallas",
-    "Plano": "Dallas",
-    "Irving": "Dallas",
-    "Red Oak": "Dallas",
-    "Vernon": "Dallas",
-}
-
-
 def origin_label(stops: list[dict]) -> str:
     first = stops[0]
-    if first.get("dist_home") is not None and first["dist_home"] < 200:
-        return "Dallas"
-    city = extract_city(first["location"])
-    return DEST_ALIASES.get(city, city)
+    lbl = nearest_home_label(first.get("lat"), first.get("lng"))
+    if lbl != "Away" and first.get("dist_home") is not None:
+        dh = dist_to_nearest_home(first.get("lat"), first.get("lng"))
+        if dh is not None and dh < HOME_RADIUS_MILES:
+            return lbl
+    return extract_city(first["location"])
 
 
 def dest_label(stops: list[dict]) -> str:
     last = stops[-1]
-    if last.get("dist_home") is not None and last["dist_home"] < 200:
-        return "Dallas"
-    city = extract_city(last["location"])
-    return DEST_ALIASES.get(city, city)
+    lbl = nearest_home_label(last.get("lat"), last.get("lng"))
+    if lbl != "Away" and last.get("dist_home") is not None:
+        dh = dist_to_nearest_home(last.get("lat"), last.get("lng"))
+        if dh is not None and dh < HOME_RADIUS_MILES:
+            return lbl
+    return extract_city(last["location"])
 
 
 def ordered_via_states(stops: list[dict]) -> list[str]:
@@ -213,7 +331,7 @@ def should_split_trip(prev: dict, curr: dict) -> tuple[bool, str]:
         and prev_dh > FAR_FROM_HOME_MILES
         and curr_dh < HOME_RADIUS_MILES
     ):
-        return True, "return_to_dfw"
+        return True, "return_to_home"
 
     prev_reg = prev.get("region", "UNK")
     curr_reg = curr.get("region", "UNK")
@@ -245,13 +363,11 @@ def make_trip_name(start_dt: str, stops: list[dict]) -> str:
     co_stops = [s for s in stops if is_colorado(s.get("lat"), s.get("lng"), s["location"])]
     if co_stops:
         first, last = stops[0], stops[-1]
-        if first.get("region") == "TX" or (
-            first.get("dist_home") and first["dist_home"] < 200
-        ):
-            origin = "Dallas"
+        if first.get("dist_home") and first["dist_home"] < HOME_RADIUS_MILES:
+            origin = HOME_LABEL
         else:
             origin = extract_city(first["location"])
-        if last.get("region") == "TX" and len(co_stops) >= 2:
+        if last.get("dist_home") is not None and last["dist_home"] < HOME_RADIUS_MILES and len(co_stops) >= 2:
             dest = "Colorado (Round Trip)"
         else:
             co_cities = list(dict.fromkeys(extract_city(s["location"]) for s in co_stops))
@@ -300,7 +416,7 @@ def charge_to_stop(row: pd.Series, cache: dict) -> dict:
         "lng": lng,
         "kwh": float(row.get("kwh", 0)),
         "invoice_url": row.get("Invoice", ""),
-        "dist_home": dist_from_home(lat, lng),
+        "dist_home": dist_to_nearest_home(lat, lng),
         "region": get_region(lat, lng, loc),
         "in_colorado": is_colorado(lat, lng, loc),
     }
@@ -337,12 +453,15 @@ def segment_trips(charges: list[dict]) -> tuple[list[dict], list[dict]]:
         nonlocal trip_index, current_stops
         if not current_stops:
             return
-        trip_index += 1
-        trips.append(finalize_trip(current_stops, trip_index, end_dt))
+        if is_real_trip(current_stops, end_dt):
+            trip_index += 1
+            trips.append(finalize_trip(current_stops, trip_index, end_dt))
+        else:
+            local.extend(current_stops)
         current_stops = []
 
     for charge in charges:
-        if is_home(charge["location"]):
+        if is_near_any_home(charge):
             flush_trip(end_dt=charge["datetime"])
             local.append(charge)
             continue
@@ -360,6 +479,19 @@ def segment_trips(charges: list[dict]) -> tuple[list[dict], list[dict]]:
     return trips, local
 
 
+def init_home_config(locations: list[str], cache: dict) -> None:
+    global HOME_BASES, HOME_REGIONS, HOME_LAT, HOME_LNG, HOME_LABEL
+    global HOME_RADIUS_MILES, FAR_FROM_HOME_MILES
+    cfg = resolve_home_config(locations, cache)
+    HOME_BASES = cfg["home_bases"]
+    HOME_REGIONS = cfg.get("home_regions", [])
+    HOME_LAT = cfg["home_lat"]
+    HOME_LNG = cfg["home_lng"]
+    HOME_LABEL = cfg["home_label"]
+    HOME_RADIUS_MILES = cfg["home_radius_miles"]
+    FAR_FROM_HOME_MILES = cfg["far_from_home_miles"]
+
+
 def main() -> None:
     if not MERGED.exists():
         raise FileNotFoundError(f"Run merge_csvs.py first. Missing {MERGED}")
@@ -371,12 +503,28 @@ def main() -> None:
     df = df.sort_values("ChargeStartDateTime")
 
     cache = load_cache()
+    init_home_config(df["SiteLocationName"].tolist(), cache)
+    detection_source = "config" if (DATA_DIR / "owner_config.json").exists() else "auto"
     charges = [charge_to_stop(row, cache) for _, row in df.iterrows()]
 
     trips, local = segment_trips(charges)
 
     output = {
         "home_bases": sorted(HOME_BASES),
+        "home_label": HOME_LABEL,
+        "home_lat": HOME_LAT,
+        "home_lng": HOME_LNG,
+        "home_regions": [
+            {
+                "label": r["label"],
+                "lat": r["lat"],
+                "lng": r["lng"],
+                "radius_miles": r.get("radius_miles", 55),
+                "charge_count": r.get("charge_count", 0),
+                "bases": sorted(r.get("bases", [])),
+            }
+            for r in HOME_REGIONS
+        ],
         "trips": trips,
         "local_charges": local,
         "stats": {
@@ -384,6 +532,7 @@ def main() -> None:
             "trip_count": len(trips),
             "local_count": len(local),
             "total_stops_in_trips": sum(len(t["stops"]) for t in trips),
+            "home_detection": detection_source,
         },
     }
 

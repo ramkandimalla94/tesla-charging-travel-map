@@ -43,8 +43,8 @@ def main() -> int:
         return 1
 
     SCREENSHOTS.mkdir(parents=True, exist_ok=True)
-    trip_co = load_trip_id("trip_009")
-    trip_sea = load_trip_id("trip_011")
+    trip_co = load_trip_id("Henrietta_to_Vernon")
+    trip_sea = load_trip_id("Henrietta_to_Yakima")
 
     console_errors: list[str] = []
     base_url = "http://127.0.0.1:8765/output/travel_map.html"

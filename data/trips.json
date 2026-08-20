@@ -1,341 +1,94 @@
 {
   "home_bases": [
     "Addison, TX",
-    "MAA Market Center"
+    "Arlington, WA",
+    "Auburn, WA",
+    "Auburn, WA - Auburn Way North",
+    "Bellevue, WA - Northeast 8th Street",
+    "Everett, WA",
+    "Federal Way, WA",
+    "Irving, TX",
+    "Issaquah, WA",
+    "Kirkland, WA",
+    "MAA Market Center",
+    "Monroe, WA",
+    "North Bend, WA",
+    "North Bend, WA - South Fork Avenue Southwest",
+    "Plano, TX - Windhaven Parkway",
+    "Puyallup, WA",
+    "Red Oak, TX",
+    "Renton, WA - Southwest 41st Street",
+    "Seattle, WA",
+    "Seattle, WA - NE Northgate Way (Floor 2)",
+    "Sequim, WA",
+    "Silverdale, WA",
+    "Suquamish, WA",
+    "Tacoma, WA - S 40th Street",
+    "Tacoma, WA - South Hosmer Street",
+    "Tulalip Bay, WA"
+  ],
+  "home_label": "Addison",
+  "home_lat": 32.96288869859155,
+  "home_lng": -96.80696401971831,
+  "home_regions": [
+    {
+      "label": "Addison",
+      "lat": 32.96288869859155,
+      "lng": -96.80696401971831,
+      "radius_miles": 55,
+      "charge_count": 71,
+      "bases": [
+        "Addison, TX",
+        "Irving, TX",
+        "MAA Market Center",
+        "Plano, TX - Windhaven Parkway",
+        "Red Oak, TX"
+      ]
+    },
+    {
+      "label": "Bellevue",
+      "lat": 47.46351384,
+      "lng": -122.18291602666666,
+      "radius_miles": 55,
+      "charge_count": 30,
+      "bases": [
+        "Auburn, WA",
+        "Auburn, WA - Auburn Way North",
+        "Bellevue, WA - Northeast 8th Street",
+        "Federal Way, WA",
+        "Kirkland, WA",
+        "North Bend, WA",
+        "North Bend, WA - South Fork Avenue Southwest",
+        "Puyallup, WA",
+        "Renton, WA - Southwest 41st Street",
+        "Tacoma, WA - S 40th Street",
+        "Tacoma, WA - South Hosmer Street"
+      ]
+    },
+    {
+      "label": "Sequim",
+      "lat": 47.94995044545454,
+      "lng": -122.66176201363636,
+      "radius_miles": 55,
+      "charge_count": 22,
+      "bases": [
+        "Arlington, WA",
+        "Everett, WA",
+        "Issaquah, WA",
+        "Monroe, WA",
+        "Seattle, WA",
+        "Seattle, WA - NE Northgate Way (Floor 2)",
+        "Sequim, WA",
+        "Silverdale, WA",
+        "Suquamish, WA",
+        "Tulalip Bay, WA"
+      ]
+    }
   ],
   "trips": [
     {
-      "id": "trip_001_2023-05-12_Plano_to_Plano",
-      "name": "May 2023 — Plano",
-      "start": "2023-05-12 05:37:20+00:00",
-      "end": "2023-05-14 18:14:36+00:00",
-      "stops": [
-        {
-          "datetime": "2023-05-12 05:37:20+00:00",
-          "location": "Plano, TX - Windhaven Parkway",
-          "lat": 33.0549176,
-          "lng": -96.8323468,
-          "kwh": 57.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/54db406f-e845-4a44-a89f-f7159f1af617",
-          "dist_home": 6.559986557986824,
-          "region": "TX",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "TX"
-      ],
-      "via_summary": "TX",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
-    },
-    {
-      "id": "trip_002_2023-06-03_Madisonville_to_Centerville",
-      "name": "Jun 2023 — Madisonville",
-      "start": "2023-06-03 17:30:09+00:00",
-      "end": "2023-06-04 13:44:57+00:00",
-      "stops": [
-        {
-          "datetime": "2023-06-03 17:30:09+00:00",
-          "location": "Madisonville, TX",
-          "lat": 30.9498688,
-          "lng": -95.9127773,
-          "kwh": 55.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2591229d-0256-4c7f-8515-cc450387d2df",
-          "dist_home": 148.9390825851326,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2023-06-04 00:45:03+00:00",
-          "location": "Houston, TX - West Alabama Street",
-          "lat": 29.7382821,
-          "lng": -95.4353438,
-          "kwh": 62.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3d44cd73-961f-49da-831e-b3e4da9671c8",
-          "dist_home": 237.33051970121713,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2023-06-04 03:06:58+00:00",
-          "location": "Centerville, TX",
-          "lat": 31.2578221,
-          "lng": -95.9785301,
-          "kwh": 43.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/0097b61f-7019-4dba-91bb-2adf1aa29f35",
-          "dist_home": 127.73700914829969,
-          "region": "TX",
-          "in_colorado": false,
-          "end_datetime": "2023-06-04 03:16:54+00:00"
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "TX"
-      ],
-      "via_summary": "TX",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
-    },
-    {
-      "id": "trip_003_2023-07-09_Irving_to_Irving",
-      "name": "Jul 2023 — Irving",
-      "start": "2023-07-09 18:19:48+00:00",
-      "end": "2023-07-11 13:49:36+00:00",
-      "stops": [
-        {
-          "datetime": "2023-07-09 18:19:48+00:00",
-          "location": "Irving, TX",
-          "lat": 32.8295183,
-          "lng": -96.9442177,
-          "kwh": 59.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2de317db-93f8-42af-9255-a8f278af33e5",
-          "dist_home": 11.189384176223077,
-          "region": "TX",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "TX"
-      ],
-      "via_summary": "TX",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
-    },
-    {
-      "id": "trip_004_2023-08-19_Waco_to_Red_Oak",
-      "name": "Aug 2023 — Waco",
-      "start": "2023-08-19 21:56:13+00:00",
-      "end": "2023-09-02 14:34:01+00:00",
-      "stops": [
-        {
-          "datetime": "2023-08-19 21:56:13+00:00",
-          "location": "Waco, TX",
-          "lat": 31.5491899,
-          "lng": -97.1474628,
-          "kwh": 65.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/21f25faf-cd86-4763-ab7e-7038ede1252f",
-          "dist_home": 99.23277218715252,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2023-08-20 02:26:04+00:00",
-          "location": "Austin, TX - South Congress Avenue (Pay to Park, Floor B1)",
-          "lat": 30.2069947,
-          "lng": -97.7739001,
-          "kwh": 64.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9340dfe4-3720-4ad8-a040-5b9ec9d306b0",
-          "dist_home": 198.17068736857044,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2023-08-20 20:01:35+00:00",
-          "location": "Georgetown, TX",
-          "lat": 30.6370152,
-          "lng": -97.6775634,
-          "kwh": 71.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/e3527a06-dc38-456d-9b0b-500686711b0a",
-          "dist_home": 168.05075633830083,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2023-08-20 23:22:15+00:00",
-          "location": "Red Oak, TX",
-          "lat": 32.5143898,
-          "lng": -96.8066615,
-          "kwh": 29.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8152955e-d3ba-4df0-9d1e-0e07b6f2dad9",
-          "dist_home": 30.820453899137828,
-          "region": "TX",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "TX"
-      ],
-      "via_summary": "TX",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
-    },
-    {
-      "id": "trip_005_2023-09-03_Red_Oak_to_Georgetown",
-      "name": "Sep 2023 — Red Oak",
-      "start": "2023-09-03 17:18:05+00:00",
-      "end": "2023-09-12 02:24:10+00:00",
-      "stops": [
-        {
-          "datetime": "2023-09-03 17:18:05+00:00",
-          "location": "Red Oak, TX",
-          "lat": 32.5143898,
-          "lng": -96.8066615,
-          "kwh": 69.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ff738b00-8a97-4402-908c-957052c02716",
-          "dist_home": 30.820453899137828,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2023-09-03 20:17:37+00:00",
-          "location": "Georgetown, TX",
-          "lat": 30.6370152,
-          "lng": -97.6775634,
-          "kwh": 57.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/54ee74fe-85af-4391-8e7e-511f8270839b",
-          "dist_home": 168.05075633830083,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2023-09-04 02:44:02+00:00",
-          "location": "San Antonio, TX - North Loop 1604 East",
-          "lat": 29.6046366,
-          "lng": -98.4504734,
-          "kwh": 42.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/cd1b7bfc-ab43-4c68-a536-cb568cdc765d",
-          "dist_home": 250.8079315461365,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2023-09-04 23:03:49+00:00",
-          "location": "Georgetown, TX",
-          "lat": 30.6370152,
-          "lng": -97.6775634,
-          "kwh": 57.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/28d512d1-894e-4eff-8348-cc35ab92d0cf",
-          "dist_home": 168.05075633830083,
-          "region": "TX",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "TX"
-      ],
-      "via_summary": "TX",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
-    },
-    {
-      "id": "trip_006_2023-11-05_Denison_to_Denison",
-      "name": "Nov 2023 — Denison",
-      "start": "2023-11-05 20:26:13+00:00",
-      "end": "2023-12-12 14:47:41+00:00",
-      "stops": [
-        {
-          "datetime": "2023-11-05 20:26:13+00:00",
-          "location": "Denison, TX",
-          "lat": 33.7556593,
-          "lng": -96.536658,
-          "kwh": 58.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3cfeb630-8c83-43eb-9afd-44113357203e",
-          "dist_home": 57.52570785301807,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2023-11-13 22:23:27+00:00",
-          "location": "Denison, TX",
-          "lat": 33.7556593,
-          "lng": -96.536658,
-          "kwh": 61.0,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/39ca859f-8ab6-49b7-b127-8435dd33e457",
-          "dist_home": 57.52570785301807,
-          "region": "TX",
-          "in_colorado": false,
-          "end_datetime": "2023-11-14 14:45:19+00:00"
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "TX"
-      ],
-      "via_summary": "TX",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
-    },
-    {
-      "id": "trip_007_2024-04-13_New_Boston_to_Sulphur_Springs",
-      "name": "Apr 2024 — New Boston",
-      "start": "2024-04-13 20:09:35+00:00",
-      "end": "2024-04-15 03:30:31+00:00",
-      "stops": [
-        {
-          "datetime": "2024-04-13 20:09:35+00:00",
-          "location": "New Boston, TX",
-          "lat": 33.4598415,
-          "lng": -94.4154787,
-          "kwh": 11.0,
-          "invoice_url": NaN,
-          "dist_home": 143.79326441153518,
-          "region": "TX",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2024-04-14 20:47:55+00:00",
-          "location": "Sulphur Springs, TX",
-          "lat": 33.1384886,
-          "lng": -95.6010143,
-          "kwh": 45.0,
-          "invoice_url": NaN,
-          "dist_home": 72.24017466649127,
-          "region": "TX",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "TX"
-      ],
-      "via_summary": "TX",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
-    },
-    {
-      "id": "trip_008_2024-06-01_Temple_to_Temple",
-      "name": "Jun 2024 — Temple",
-      "start": "2024-06-01 20:05:23+00:00",
-      "end": "2024-06-03 03:19:33+00:00",
-      "stops": [
-        {
-          "datetime": "2024-06-01 20:05:23+00:00",
-          "location": "Temple, TX",
-          "lat": 31.0983747,
-          "lng": -97.3429563,
-          "kwh": 116.0,
-          "invoice_url": NaN,
-          "dist_home": 132.09620170569696,
-          "region": "TX",
-          "in_colorado": false,
-          "end_datetime": "2024-06-02 19:22:46+00:00"
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "TX"
-      ],
-      "via_summary": "TX",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
-    },
-    {
-      "id": "trip_009_2024-06-30_Henrietta_to_Vernon",
-      "name": "Jun 2024 — Dallas → Colorado (Round Trip)",
+      "id": "trip_001_2024-06-30_Henrietta_to_Vernon",
+      "name": "Jun 2024 — Henrietta → Colorado",
       "start": "2024-06-30 01:18:54+00:00",
       "end": "2024-07-08 02:26:14+00:00",
       "stops": [
@@ -346,7 +99,7 @@
           "lng": -98.194682,
           "kwh": 28.0,
           "invoice_url": NaN,
-          "dist_home": 98.49960263791516,
+          "dist_home": 99.44546838638296,
           "region": "TX",
           "in_colorado": false
         },
@@ -357,7 +110,7 @@
           "lng": -99.7423674,
           "kwh": 51.0,
           "invoice_url": NaN,
-          "dist_home": 191.2208899385959,
+          "dist_home": 192.28508079718483,
           "region": "TX",
           "in_colorado": false
         },
@@ -368,7 +121,7 @@
           "lng": -101.8371192,
           "kwh": 54.0,
           "invoice_url": NaN,
-          "dist_home": 325.85377560592633,
+          "dist_home": 326.913882393427,
           "region": "CO/NM",
           "in_colorado": false,
           "end_datetime": "2024-06-30 13:30:22+00:00"
@@ -380,7 +133,7 @@
           "lng": -103.184797,
           "kwh": 36.0,
           "invoice_url": NaN,
-          "dist_home": 433.98757303791666,
+          "dist_home": 434.9593385820068,
           "region": "CO/NM",
           "in_colorado": false
         },
@@ -391,7 +144,7 @@
           "lng": -104.500541,
           "kwh": 47.0,
           "invoice_url": NaN,
-          "dist_home": 522.0116184388733,
+          "dist_home": 522.9754729727002,
           "region": "CO",
           "in_colorado": true
         },
@@ -402,7 +155,7 @@
           "lng": -104.825348,
           "kwh": 41.0,
           "invoice_url": NaN,
-          "dist_home": 603.7029041404332,
+          "dist_home": 604.516468440041,
           "region": "CO",
           "in_colorado": true
         },
@@ -413,7 +166,7 @@
           "lng": -104.825348,
           "kwh": 33.0,
           "invoice_url": NaN,
-          "dist_home": 603.7029041404332,
+          "dist_home": 604.516468440041,
           "region": "CO",
           "in_colorado": true
         },
@@ -424,7 +177,7 @@
           "lng": -106.0737176,
           "kwh": 35.0,
           "invoice_url": NaN,
-          "dist_home": 644.4591218447002,
+          "dist_home": 645.369531968225,
           "region": "CO",
           "in_colorado": true
         },
@@ -435,7 +188,7 @@
           "lng": -106.82356,
           "kwh": 32.0,
           "invoice_url": NaN,
-          "dist_home": 704.1302730975201,
+          "dist_home": 705.0165170061232,
           "region": "CO",
           "in_colorado": true
         },
@@ -446,7 +199,7 @@
           "lng": -108.0522672,
           "kwh": 36.0,
           "invoice_url": NaN,
-          "dist_home": 768.682205269713,
+          "dist_home": 769.5978067762592,
           "region": "CO",
           "in_colorado": true
         },
@@ -457,7 +210,7 @@
           "lng": -108.2403855,
           "kwh": 32.0,
           "invoice_url": NaN,
-          "dist_home": 742.9343671217339,
+          "dist_home": 743.9330070169433,
           "region": "CO",
           "in_colorado": true
         },
@@ -468,7 +221,7 @@
           "lng": -107.856453,
           "kwh": 26.0,
           "invoice_url": NaN,
-          "dist_home": 708.6967628642544,
+          "dist_home": 709.7227052994052,
           "region": "CO",
           "in_colorado": true
         },
@@ -479,7 +232,7 @@
           "lng": -108.205445,
           "kwh": 41.0,
           "invoice_url": NaN,
-          "dist_home": 695.0892397785656,
+          "dist_home": 696.2133153655777,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -490,7 +243,7 @@
           "lng": -106.5889238,
           "kwh": 53.0,
           "invoice_url": NaN,
-          "dist_home": 578.8655059252518,
+          "dist_home": 580.0740998421523,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -501,7 +254,7 @@
           "lng": -104.682489,
           "kwh": 38.0,
           "invoice_url": NaN,
-          "dist_home": 470.2454512922574,
+          "dist_home": 471.442847772451,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -512,7 +265,7 @@
           "lng": -101.8286328,
           "kwh": 59.0,
           "invoice_url": NaN,
-          "dist_home": 324.94740517650143,
+          "dist_home": 326.00937381990656,
           "region": "CO/NM",
           "in_colorado": false
         },
@@ -523,7 +276,7 @@
           "lng": -99.2860857,
           "kwh": 49.0,
           "invoice_url": NaN,
-          "dist_home": 163.6310737528023,
+          "dist_home": 164.67702839649348,
           "region": "TX",
           "in_colorado": false
         }
@@ -536,11 +289,11 @@
         "CO"
       ],
       "via_summary": "TX, NM, CO (×8 stops)",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
+      "origin_label": "Henrietta",
+      "dest_label": "Vernon"
     },
     {
-      "id": "trip_010_2024-10-12_Vernon_to_Vernon",
+      "id": "trip_002_2024-10-12_Vernon_to_Vernon",
       "name": "Oct 2024 — Vernon",
       "start": "2024-10-12 15:34:24+00:00",
       "end": "2024-10-16 13:24:19+00:00",
@@ -552,7 +305,7 @@
           "lng": -99.2860857,
           "kwh": 51.47,
           "invoice_url": NaN,
-          "dist_home": 163.6310737528023,
+          "dist_home": 164.67702839649348,
           "region": "TX",
           "in_colorado": false
         },
@@ -563,7 +316,7 @@
           "lng": -101.8286328,
           "kwh": 60.431,
           "invoice_url": NaN,
-          "dist_home": 324.94740517650143,
+          "dist_home": 326.00937381990656,
           "region": "CO/NM",
           "in_colorado": false
         },
@@ -574,7 +327,7 @@
           "lng": -104.682489,
           "kwh": 49.103,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/830b1bc4-5ac0-49a3-aa7c-8a78deee47af",
-          "dist_home": 470.2454512922574,
+          "dist_home": 471.442847772451,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -585,7 +338,7 @@
           "lng": -105.938456,
           "kwh": 107.13,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/bdbc5f4a-5849-48c5-b02c-5ecb8aab8c13",
-          "dist_home": 552.6164065788198,
+          "dist_home": 553.7746923485521,
           "region": "UT/AZ/NV",
           "in_colorado": false,
           "end_datetime": "2024-10-13 21:32:04+00:00"
@@ -597,7 +350,7 @@
           "lng": -105.938456,
           "kwh": 44.449,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8874c6c3-2770-4bbe-9db5-66ccb53f502a",
-          "dist_home": 552.6164065788198,
+          "dist_home": 553.7746923485521,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -608,7 +361,7 @@
           "lng": -103.72504,
           "kwh": 47.852,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/b0150b6f-e4cb-4865-84e8-635ed2037e7d",
-          "dist_home": 423.10871149004464,
+          "dist_home": 424.25962373091085,
           "region": "CO/NM",
           "in_colorado": false
         },
@@ -619,7 +372,7 @@
           "lng": -101.8286328,
           "kwh": 52.232,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/eba2bff5-78fa-430a-83e6-44225f6ebd4c",
-          "dist_home": 324.94740517650143,
+          "dist_home": 326.00937381990656,
           "region": "CO/NM",
           "in_colorado": false
         },
@@ -630,7 +383,7 @@
           "lng": -99.2860857,
           "kwh": 65.121,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/0ed5831c-99f3-4481-bb5d-a793ddb3acac",
-          "dist_home": 163.6310737528023,
+          "dist_home": 164.67702839649348,
           "region": "TX",
           "in_colorado": false
         }
@@ -642,14 +395,14 @@
         "NM"
       ],
       "via_summary": "TX, NM",
-      "origin_label": "Dallas",
-      "dest_label": "Dallas"
+      "origin_label": "Vernon",
+      "dest_label": "Vernon"
     },
     {
-      "id": "trip_011_2024-11-19_Henrietta_to_Kirkland",
-      "name": "Nov 2024 — Dallas → Seattle (via TX, NM, AZ, UT, ID, OR, WA)",
+      "id": "trip_003_2024-11-19_Henrietta_to_Yakima",
+      "name": "Nov 2024 — Henrietta → Yakima (via TX, NM, AZ, UT, ID, OR, WA)",
       "start": "2024-11-19 19:43:54+00:00",
-      "end": "2024-11-29 02:42:10+00:00",
+      "end": "2024-11-29 02:38:28+00:00",
       "stops": [
         {
           "datetime": "2024-11-19 19:43:54+00:00",
@@ -658,7 +411,7 @@
           "lng": -98.194682,
           "kwh": 30.016,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6fe6d579-82f7-4299-8110-154c5591a824",
-          "dist_home": 98.49960263791516,
+          "dist_home": 99.44546838638296,
           "region": "TX",
           "in_colorado": false
         },
@@ -669,7 +422,7 @@
           "lng": -100.2067656,
           "kwh": 52.292,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d7603b28-8e23-4136-9b34-b2cfb8bfc759",
-          "dist_home": 221.92712110745282,
+          "dist_home": 222.98570688790588,
           "region": "CO/NM",
           "in_colorado": false
         },
@@ -680,7 +433,7 @@
           "lng": -101.8286328,
           "kwh": 41.462,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/e9460f60-0260-4b21-be8a-b3b05a9d9c57",
-          "dist_home": 324.94740517650143,
+          "dist_home": 326.00937381990656,
           "region": "CO/NM",
           "in_colorado": false
         },
@@ -691,7 +444,7 @@
           "lng": -103.72504,
           "kwh": 53.498,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ed06fa39-625e-40cb-b6bc-18ad76391987",
-          "dist_home": 423.10871149004464,
+          "dist_home": 424.25962373091085,
           "region": "CO/NM",
           "in_colorado": false
         },
@@ -702,7 +455,7 @@
           "lng": -106.5687024,
           "kwh": 58.621,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/96804fce-ffb4-4087-a76f-b8ce131f82d3",
-          "dist_home": 577.8562761554879,
+          "dist_home": 579.0641165837884,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -713,7 +466,7 @@
           "lng": -107.8908919,
           "kwh": 39.18,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d59b6cd8-1cd5-4130-9c22-d249799d3a53",
-          "dist_home": 650.8929421840503,
+          "dist_home": 652.1157438293782,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -724,7 +477,7 @@
           "lng": -110.1593261,
           "kwh": 56.229,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/de2f4ff9-57ad-4852-a7be-8d5e52a4224e",
-          "dist_home": 775.2722946777003,
+          "dist_home": 776.5230470086522,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -735,7 +488,7 @@
           "lng": -111.6289385,
           "kwh": 29.86,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/153d547e-aa14-4291-b55b-ee460c30a13e",
-          "dist_home": 860.0835813730021,
+          "dist_home": 861.3272465570416,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -746,7 +499,7 @@
           "lng": -111.457294,
           "kwh": 33.478,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d534c324-b6eb-4584-97e7-a3f6fe92499e",
-          "dist_home": 871.3699605508313,
+          "dist_home": 872.529286544604,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -757,7 +510,7 @@
           "lng": -112.640278,
           "kwh": 66.043,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f2ea0ee1-ce9b-4862-a602-e3a7b513da2c",
-          "dist_home": 959.4161518393055,
+          "dist_home": 796.5278582174082,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -768,7 +521,7 @@
           "lng": -111.886797,
           "kwh": 1.069,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2fae5ff6-7bdd-468c-88c7-739140e25727",
-          "dist_home": 989.4724318202808,
+          "dist_home": 688.4877870941526,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -779,7 +532,7 @@
           "lng": -111.8997545,
           "kwh": 51.898,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/800add57-c8d0-4270-9efd-f4d05e3bb7c8",
-          "dist_home": 989.8690461422458,
+          "dist_home": 688.319451958063,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -790,7 +543,7 @@
           "lng": -113.792794,
           "kwh": 57.529,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8eb3871f-94b2-4457-9ec6-273e62bf56e2",
-          "dist_home": 1135.2339743253176,
+          "dist_home": 532.375154749406,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -801,7 +554,7 @@
           "lng": -116.2434129,
           "kwh": 58.234,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/bce2cb40-ad70-4158-bbe5-640cebef7210",
-          "dist_home": 1279.7768423259174,
+          "dist_home": 391.1047696154042,
           "region": "PNW",
           "in_colorado": false
         },
@@ -812,7 +565,7 @@
           "lng": -117.834384,
           "kwh": 28.915,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/1702c680-dc13-439d-bf30-77db67a59297",
-          "dist_home": 1387.2186323738983,
+          "dist_home": 279.012432648817,
           "region": "PNW",
           "in_colorado": false
         },
@@ -823,7 +576,7 @@
           "lng": -118.7885967,
           "kwh": 54.795,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6530b95b-9292-4156-bfc1-bc80c424090e",
-          "dist_home": 1457.945441210157,
+          "dist_home": 203.2465448461299,
           "region": "PNW",
           "in_colorado": false
         },
@@ -834,21 +587,9 @@
           "lng": -120.5027063,
           "kwh": 49.557,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f8fe0a57-0e9f-46a8-abb0-d9df8e04b5a1",
-          "dist_home": 1560.9212562745724,
+          "dist_home": 98.97507264322948,
           "region": "PNW",
           "in_colorado": false
-        },
-        {
-          "datetime": "2024-11-29 02:38:28+00:00",
-          "location": "Kirkland, WA",
-          "lat": 47.6765382,
-          "lng": -122.2070775,
-          "kwh": 47.46,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/4368b324-1235-47f7-abc4-06ca01423309",
-          "dist_home": 1666.7356429917054,
-          "region": "PNW",
-          "in_colorado": false,
-          "end_datetime": "2024-11-29 02:42:10+00:00"
         }
       ],
       "has_colorado": false,
@@ -863,123 +604,12 @@
         "WA"
       ],
       "via_summary": "TX, NM, AZ, UT, ID, OR, WA",
-      "origin_label": "Dallas",
-      "dest_label": "Seattle"
+      "origin_label": "Henrietta",
+      "dest_label": "Yakima"
     },
     {
-      "id": "trip_012_2024-12-15_North_Bend_to_Tulalip_Bay",
-      "name": "Dec 2024 — North Bend",
-      "start": "2024-12-15 22:14:27+00:00",
-      "end": "2024-12-29 03:08:27+00:00",
-      "stops": [
-        {
-          "datetime": "2024-12-15 22:14:27+00:00",
-          "location": "North Bend, WA - South Fork Avenue Southwest",
-          "lat": 47.4891197,
-          "lng": -121.7907812,
-          "kwh": 49.115,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d9a57af6-5156-4f6c-8b66-588f9cf1af87",
-          "dist_home": 1643.505421294997,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_16d"
-        },
-        {
-          "datetime": "2024-12-22 22:59:37+00:00",
-          "location": "Monroe, WA",
-          "lat": 47.8552259,
-          "lng": -121.971335,
-          "kwh": 33.493,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/fc77da6c-b815-45ca-a784-7ec98a105156",
-          "dist_home": 1663.0655056576377,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2024-12-23 02:32:22+00:00",
-          "location": "Leavenworth, WA",
-          "lat": 47.5969138,
-          "lng": -120.661081,
-          "kwh": 40.893,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2a2d87ef-44ee-4031-96fc-4e986fa3e9ca",
-          "dist_home": 1601.345990937882,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2024-12-25 02:12:35+00:00",
-          "location": "Seattle, WA - NE Northgate Way (Floor 2)",
-          "lat": 47.7085558,
-          "lng": -122.323959,
-          "kwh": 49.247,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/43679dcf-eff5-4b8d-bb83-3e7a9f46a1bd",
-          "dist_home": 1672.5707535293918,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2024-12-29 03:08:27+00:00",
-          "location": "Tulalip Bay, WA",
-          "lat": 48.0656302,
-          "lng": -122.286878,
-          "kwh": 42.048,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/48eb2319-8b88-494e-baa3-76a7589ef6d9",
-          "dist_home": 1682.887331167921,
-          "region": "PNW",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA"
-      ],
-      "via_summary": "WA",
-      "origin_label": "Seattle",
-      "dest_label": "Seattle"
-    },
-    {
-      "id": "trip_013_2025-01-19_Leavenworth_to_Leavenworth",
-      "name": "Jan 2025 — Leavenworth",
-      "start": "2025-01-19 00:52:19+00:00",
-      "end": "2025-01-20 01:34:11+00:00",
-      "stops": [
-        {
-          "datetime": "2025-01-19 00:52:19+00:00",
-          "location": "Leavenworth, WA - US-2",
-          "lat": 47.5957449,
-          "lng": -120.6622886,
-          "kwh": 56.515,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6b5361ff-7c52-46ed-a166-18a83adf7e12",
-          "dist_home": 1601.35344709048,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_20d"
-        },
-        {
-          "datetime": "2025-01-20 01:34:11+00:00",
-          "location": "Leavenworth, WA",
-          "lat": 47.5969138,
-          "lng": -120.661081,
-          "kwh": 64.763,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/0c6bb3fc-d06a-4b09-b3e6-7346ba29272e",
-          "dist_home": 1601.345990937882,
-          "region": "PNW",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA"
-      ],
-      "via_summary": "WA",
-      "origin_label": "Leavenworth",
-      "dest_label": "Leavenworth"
-    },
-    {
-      "id": "trip_014_2025-03-27_Yakima_to_North_Bend",
-      "name": "Mar 2025 — Yakima → Seattle (via WA, OR, ID, NV, UT)",
+      "id": "trip_004_2025-03-27_Yakima_to_Leavenworth",
+      "name": "Mar 2025 — Yakima → Leavenworth (via WA, OR, ID, NV, UT)",
       "start": "2025-03-27 23:02:21+00:00",
       "end": "2025-04-27 02:26:00+00:00",
       "stops": [
@@ -990,7 +620,7 @@
           "lng": -120.510842,
           "kwh": 31.234,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2fe0a565-1bde-487e-8abb-d5c8d4906c0c",
-          "dist_home": 1561.2117394527802,
+          "dist_home": 98.73049871244697,
           "region": "PNW",
           "in_colorado": false,
           "_split_reason": "time_gap_66d"
@@ -1002,7 +632,7 @@
           "lng": -118.7885967,
           "kwh": 46.066,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/57db319f-b182-47b2-8a09-ccae9070910b",
-          "dist_home": 1457.945441210157,
+          "dist_home": 203.2465448461299,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1013,7 +643,7 @@
           "lng": -117.834384,
           "kwh": 50.385,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/413231bc-cd52-4635-97e4-15294adfd2d4",
-          "dist_home": 1387.2186323738983,
+          "dist_home": 279.012432648817,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1024,7 +654,7 @@
           "lng": -116.2434129,
           "kwh": 44.012,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/aa65859d-d26c-4e23-98e2-5223a240c2d5",
-          "dist_home": 1279.7768423259174,
+          "dist_home": 391.1047696154042,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1035,7 +665,7 @@
           "lng": -114.4700684,
           "kwh": 41.458,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a09eed49-92f2-4bf5-89d6-fd3fc6e81b19",
-          "dist_home": 1165.9406074837161,
+          "dist_home": 506.46139226073416,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1046,7 +676,7 @@
           "lng": -114.963144,
           "kwh": 45.218,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ede34c48-ef00-469a-bb31-de274bcb9fc9",
-          "dist_home": 1144.5292436074499,
+          "dist_home": 565.3607828927036,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1057,7 +687,7 @@
           "lng": -114.891718,
           "kwh": 61.349,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/596ad171-ee0a-46da-b3c4-bac1df76b43c",
-          "dist_home": 1095.414061550462,
+          "dist_home": 674.9110734890107,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1068,7 +698,7 @@
           "lng": -115.1214745,
           "kwh": 39.033,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2d19998d-d6f8-46d7-b859-faac6d895c80",
-          "dist_home": 1062.6936080365365,
+          "dist_home": 858.0871803276909,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1079,7 +709,7 @@
           "lng": -115.1533529,
           "kwh": 54.123,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/521fd1b3-b741-4b26-a384-d7938fb1bf89",
-          "dist_home": 1064.034849242273,
+          "dist_home": 860.757507779908,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1090,7 +720,7 @@
           "lng": -113.5832063,
           "kwh": 56.71,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/463d1d60-abd9-4c5a-aa5d-12225741f814",
-          "dist_home": 988.71180869184,
+          "dist_home": 838.4860600866836,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1101,7 +731,7 @@
           "lng": -114.891718,
           "kwh": 57.69,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/21077582-79b3-41dd-8a7d-b1ee58f27632",
-          "dist_home": 1095.414061550462,
+          "dist_home": 674.9110734890107,
           "region": "ID/UT",
           "in_colorado": false,
           "end_datetime": "2025-03-31 04:38:29+00:00"
@@ -1113,7 +743,7 @@
           "lng": -114.963144,
           "kwh": 41.53,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/e7c77174-d738-4ad6-a158-35cf0d69c00a",
-          "dist_home": 1144.5292436074499,
+          "dist_home": 565.3607828927036,
           "region": "ID/UT",
           "in_colorado": false,
           "end_datetime": "2025-03-31 07:24:50+00:00"
@@ -1125,7 +755,7 @@
           "lng": -114.4700684,
           "kwh": 52.443,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/72dab9ea-ce74-42b0-a568-faf173239bc7",
-          "dist_home": 1165.9406074837161,
+          "dist_home": 506.46139226073416,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1136,7 +766,7 @@
           "lng": -116.2434129,
           "kwh": 49.58,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f3e26545-cb3b-4a13-ad85-33bb8b962497",
-          "dist_home": 1279.7768423259174,
+          "dist_home": 391.1047696154042,
           "region": "PNW",
           "in_colorado": false,
           "end_datetime": "2025-03-31 21:37:15+00:00"
@@ -1148,7 +778,7 @@
           "lng": -117.834384,
           "kwh": 48.279,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/23a0864c-8922-41a2-a6a8-3952eb15e4d9",
-          "dist_home": 1387.2186323738983,
+          "dist_home": 279.012432648817,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1159,7 +789,7 @@
           "lng": -119.275205,
           "kwh": 42.988,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/0feb14d6-2887-4447-8533-617a8b2ec37e",
-          "dist_home": 1499.0480381019192,
+          "dist_home": 159.82270878883614,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1170,7 +800,7 @@
           "lng": -120.5412264,
           "kwh": 54.04,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2a88fda2-c63a-437a-9396-e7292bd14fbf",
-          "dist_home": 1574.9916212660805,
+          "dist_home": 84.12506758266308,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1181,7 +811,7 @@
           "lng": -120.940063,
           "kwh": 63.66,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a6ffa5cc-e355-450d-992d-31f921cb578b",
-          "dist_home": 1598.8216403790918,
+          "dist_home": 61.08634642447833,
           "region": "PNW",
           "in_colorado": false,
           "end_datetime": "2025-04-14 01:54:26+00:00"
@@ -1193,18 +823,7 @@
           "lng": -120.6622886,
           "kwh": 37.739,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/5dd402ec-9f7a-4a80-86d6-b8149c811085",
-          "dist_home": 1601.35344709048,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-04-27 02:26:00+00:00",
-          "location": "North Bend, WA - South Fork Avenue Southwest",
-          "lat": 47.4891197,
-          "lng": -121.7907812,
-          "kwh": 22.016,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/28822afb-76ad-4b91-8b75-b49b54fbe9dd",
-          "dist_home": 1643.505421294997,
+          "dist_home": 71.53006961611374,
           "region": "PNW",
           "in_colorado": false
         }
@@ -1220,338 +839,14 @@
       ],
       "via_summary": "WA, OR, ID, NV, UT",
       "origin_label": "Yakima",
-      "dest_label": "Seattle"
-    },
-    {
-      "id": "trip_015_2025-05-23_Renton_to_Chehalis",
-      "name": "May 2025 — Seattle → Chehalis",
-      "start": "2025-05-23 00:57:12+00:00",
-      "end": "2025-06-29 03:32:20+00:00",
-      "stops": [
-        {
-          "datetime": "2025-05-23 00:57:12+00:00",
-          "location": "Renton, WA - Southwest 41st Street",
-          "lat": 47.4438439,
-          "lng": -122.2212097,
-          "kwh": 4.752,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/fcdb180e-a708-4f91-9bb4-c3e66b79361d",
-          "dist_home": 1659.7364167540807,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_25d"
-        },
-        {
-          "datetime": "2025-06-04 20:47:27+00:00",
-          "location": "Seattle, WA",
-          "lat": 47.6038321,
-          "lng": -122.330062,
-          "kwh": 40.0464,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3fa77d35-a8ca-47a9-af36-88c5696eb1a4",
-          "dist_home": 1669.4068028975453,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-06 18:04:13+00:00",
-          "location": "Seattle, WA",
-          "lat": 47.6038321,
-          "lng": -122.330062,
-          "kwh": 38.7659,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/73c49193-9af7-45c4-bd0a-def6fbaf7610",
-          "dist_home": 1669.4068028975453,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-07 20:44:38+00:00",
-          "location": "Sequim, WA",
-          "lat": 48.0849312,
-          "lng": -123.1096706,
-          "kwh": 48.7678,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/595f0988-97c6-4542-b999-b1179374397d",
-          "dist_home": 1716.925790500253,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-08 19:04:32+00:00",
-          "location": "Forks, WA",
-          "lat": 47.950222,
-          "lng": -124.386165,
-          "kwh": 41.0506,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c03e524d-6940-41c7-9527-fab3d3536337",
-          "dist_home": 1765.361329648779,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-09 21:49:55+00:00",
-          "location": "Aberdeen, WA",
-          "lat": 46.975371,
-          "lng": -123.815722,
-          "kwh": 23.0106,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3d0291bf-399d-4400-9a0d-1c276111446f",
-          "dist_home": 1712.4884628297532,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-10 20:09:37+00:00",
-          "location": "Everett, WA",
-          "lat": 47.9793437,
-          "lng": -122.2127011,
-          "kwh": 63.8252,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/cc85899e-fec3-4da7-90b5-6567a50a1ad4",
-          "dist_home": 1676.999698158099,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-13 20:29:52+00:00",
-          "location": "Arlington, WA",
-          "lat": 48.1896827,
-          "lng": -122.1288887,
-          "kwh": 39.475,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7b1c506f-83da-4e38-b6c0-bdcc1e0a1354",
-          "dist_home": 1680.717312169895,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-15 19:39:09+00:00",
-          "location": "Kirkland, WA",
-          "lat": 47.6765382,
-          "lng": -122.2070775,
-          "kwh": 65.769,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/05f5b42c-c948-4992-af40-330fe2180206",
-          "dist_home": 1666.7356429917054,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-16 23:17:54+00:00",
-          "location": "Tulalip Bay, WA",
-          "lat": 48.0656302,
-          "lng": -122.286878,
-          "kwh": 63.6109,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/57c590a7-9301-49e1-a5df-4bf0fba6f82f",
-          "dist_home": 1682.887331167921,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-21 20:40:37+00:00",
-          "location": "Sequim, WA",
-          "lat": 48.0849312,
-          "lng": -123.1096706,
-          "kwh": 22.6748,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a9e4e1c3-7859-48f1-bb82-b1b39fce59e3",
-          "dist_home": 1716.925790500253,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-23 01:13:34+00:00",
-          "location": "Forks, WA",
-          "lat": 47.950222,
-          "lng": -124.386165,
-          "kwh": 46.8888,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7867aa3a-bfcf-4717-be43-467c6e7c4e5f",
-          "dist_home": 1765.361329648779,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-23 07:29:59+00:00",
-          "location": "Tacoma, WA - South Hosmer Street",
-          "lat": 47.1748283,
-          "lng": -122.4631366,
-          "kwh": 11.3322,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/b871e34d-3d80-42df-a886-dd101a427e3f",
-          "dist_home": 1661.227168646116,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-28 21:09:40+00:00",
-          "location": "Portland, OR - North Pavilion Avenue",
-          "lat": 45.6135685,
-          "lng": -122.6837959,
-          "kwh": 31.8258,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/299d70a4-bf25-4e18-ac41-f93bd6c5019c",
-          "dist_home": 1624.7041315258766,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-06-29 03:32:20+00:00",
-          "location": "Chehalis, WA",
-          "lat": 46.6599653,
-          "lng": -122.963432,
-          "kwh": 38.2076,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/46c28687-7844-4f58-920f-d5b4d459224f",
-          "dist_home": 1666.7535610410418,
-          "region": "PNW",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA",
-        "OR"
-      ],
-      "via_summary": "WA, OR",
-      "origin_label": "Seattle",
-      "dest_label": "Chehalis"
-    },
-    {
-      "id": "trip_016_2025-08-10_Renton_to_Bellevue",
-      "name": "Aug 2025 — Renton",
-      "start": "2025-08-10 18:16:08+00:00",
-      "end": "2025-09-11 01:53:07+00:00",
-      "stops": [
-        {
-          "datetime": "2025-08-10 18:16:08+00:00",
-          "location": "Renton, WA - Southwest 41st Street",
-          "lat": 47.4438439,
-          "lng": -122.2212097,
-          "kwh": 56.3398,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f4838e61-29e7-4ec6-af5e-0f4e78b36044",
-          "dist_home": 1659.7364167540807,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_42d"
-        },
-        {
-          "datetime": "2025-08-22 19:51:37+00:00",
-          "location": "Issaquah, WA",
-          "lat": 47.5348778,
-          "lng": -122.043297,
-          "kwh": 24.0634,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3b20c70b-5f1f-4ef6-a60e-a7f94cf5bbd2",
-          "dist_home": 1655.3727227144454,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-08-30 20:01:59+00:00",
-          "location": "Auburn, WA",
-          "lat": 47.3075369,
-          "lng": -122.2301808,
-          "kwh": 31.6879,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/00e52bde-4e8f-409f-90a7-60ceafab4815",
-          "dist_home": 1655.7230203253243,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-09-07 19:10:56+00:00",
-          "location": "Kirkland, WA",
-          "lat": 47.6765382,
-          "lng": -122.2070775,
-          "kwh": 32.4481,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f07d4784-f591-4491-9413-a7445e838ba3",
-          "dist_home": 1666.7356429917054,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2025-09-11 01:53:07+00:00",
-          "location": "Bellevue, WA - Northeast 8th Street",
-          "lat": 47.6167921,
-          "lng": -122.1115836,
-          "kwh": 48.2732,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d7805d6b-b980-40c1-9ce3-94695679c8e5",
-          "dist_home": 1660.8623278564062,
-          "region": "PNW",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA"
-      ],
-      "via_summary": "WA",
-      "origin_label": "Seattle",
-      "dest_label": "Seattle"
-    },
-    {
-      "id": "trip_017_2025-10-26_Leavenworth_to_Leavenworth",
-      "name": "Oct 2025 — Leavenworth",
-      "start": "2025-10-26 17:20:17+00:00",
-      "end": "2025-10-27 04:54:41+00:00",
-      "stops": [
-        {
-          "datetime": "2025-10-26 17:20:17+00:00",
-          "location": "Leavenworth, WA - US-2",
-          "lat": 47.5957449,
-          "lng": -120.6622886,
-          "kwh": 64.02,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c6535175-d1b6-4702-a154-55148a303fb4",
-          "dist_home": 1601.35344709048,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_45d",
-          "end_datetime": "2025-10-27 04:54:41+00:00"
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA"
-      ],
-      "via_summary": "WA",
-      "origin_label": "Leavenworth",
       "dest_label": "Leavenworth"
     },
     {
-      "id": "trip_018_2025-11-22_Bellevue_to_Bellevue",
-      "name": "Nov 2025 — Bellevue",
-      "start": "2025-11-22 00:31:21+00:00",
-      "end": "2025-11-22 00:31:21+00:00",
+      "id": "trip_005_2025-12-13_Yakima_to_Rochester",
+      "name": "Dec 2025 — Yakima → Rochester (via WA, OR, ID, NV, UT, AZ, CA)",
+      "start": "2025-12-13 21:30:40+00:00",
+      "end": "2026-01-15 05:52:16+00:00",
       "stops": [
-        {
-          "datetime": "2025-11-22 00:31:21+00:00",
-          "location": "Bellevue, WA - Northeast 8th Street",
-          "lat": 47.6167921,
-          "lng": -122.1115836,
-          "kwh": 16.613,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/1342f389-a752-4bb9-8a7f-20fd218929bf",
-          "dist_home": 1660.8623278564062,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_25d"
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA"
-      ],
-      "via_summary": "WA",
-      "origin_label": "Seattle",
-      "dest_label": "Seattle"
-    },
-    {
-      "id": "trip_019_2025-12-11_Bellevue_to_Rochester",
-      "name": "Dec 2025 — Seattle → Rochester (via WA, OR, ID, NV, UT, AZ, CA)",
-      "start": "2025-12-11 23:04:12+00:00",
-      "end": "2025-12-29 04:32:33+00:00",
-      "stops": [
-        {
-          "datetime": "2025-12-11 23:04:12+00:00",
-          "location": "Bellevue, WA - Northeast 8th Street",
-          "lat": 47.6167921,
-          "lng": -122.1115836,
-          "kwh": 13.7916,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/de1e9725-7719-4936-9e2d-5fec6beb3e67",
-          "dist_home": 1660.8623278564062,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_19d"
-        },
         {
           "datetime": "2025-12-13 21:30:40+00:00",
           "location": "Yakima, WA - East Yakima Avenue",
@@ -1559,7 +854,7 @@
           "lng": -120.5027063,
           "kwh": 49.6953,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/030d7f72-7c58-41e4-8dcf-fa20af478d04",
-          "dist_home": 1560.9212562745724,
+          "dist_home": 98.97507264322948,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1570,7 +865,7 @@
           "lng": -118.7885967,
           "kwh": 45.9144,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3987c743-7e9e-4065-8731-46baf4ef41ab",
-          "dist_home": 1457.945441210157,
+          "dist_home": 203.2465448461299,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1581,7 +876,7 @@
           "lng": -117.834384,
           "kwh": 24.0635,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d72485d5-68f6-4b22-86f3-794a7508a908",
-          "dist_home": 1387.2186323738983,
+          "dist_home": 279.012432648817,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1592,7 +887,7 @@
           "lng": -116.9629378,
           "kwh": 23.6881,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a2a730ff-e5e5-4737-a85b-2c964e3b5ef4",
-          "dist_home": 1324.6826832727893,
+          "dist_home": 345.910871743348,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1603,7 +898,7 @@
           "lng": -116.9504158,
           "kwh": 19.2916,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6715c069-4131-4f9e-8570-725afd49d2d1",
-          "dist_home": 1323.9685048731515,
+          "dist_home": 346.59835340857734,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1614,7 +909,7 @@
           "lng": -115.6939827,
           "kwh": 43.7702,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7ceb57a2-234a-4be0-ab26-7ea115e93020",
-          "dist_home": 1239.4293411018484,
+          "dist_home": 434.5227369259522,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1625,7 +920,7 @@
           "lng": -114.4700684,
           "kwh": 43.982,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2da11e35-bdf0-4a93-a5e0-02545e15b400",
-          "dist_home": 1165.9406074837161,
+          "dist_home": 506.46139226073416,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1636,7 +931,7 @@
           "lng": -114.963144,
           "kwh": 50.3365,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/dfbe09ef-1c60-4305-80ee-16c694a0b583",
-          "dist_home": 1144.5292436074499,
+          "dist_home": 565.3607828927036,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1647,7 +942,7 @@
           "lng": -114.891718,
           "kwh": 59.3107,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6f335b50-3575-48f7-aa79-afb3db06bad6",
-          "dist_home": 1095.414061550462,
+          "dist_home": 674.9110734890107,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1658,7 +953,7 @@
           "lng": -115.1377081,
           "kwh": 43.0471,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/dab8e35a-6617-4ed8-ac98-8badb4c6b75d",
-          "dist_home": 1063.553608397119,
+          "dist_home": 858.0400608284344,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1669,7 +964,7 @@
           "lng": -115.1360767,
           "kwh": 61.08,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/b32f035f-13aa-4a80-bc34-9688f37ac8a5",
-          "dist_home": 1063.1798338291337,
+          "dist_home": 860.3089012836115,
           "region": "ID/UT",
           "in_colorado": false,
           "end_datetime": "2025-12-17 02:02:05+00:00"
@@ -1681,7 +976,7 @@
           "lng": -113.525776,
           "kwh": 53.1628,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/90f57000-1ca9-46a5-a237-b61815b0b786",
-          "dist_home": 987.5059585551542,
+          "dist_home": 832.1904178012418,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1692,7 +987,7 @@
           "lng": -111.457294,
           "kwh": 41.2756,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c6319303-b608-4131-90a3-5c4858b17740",
-          "dist_home": 871.3699605508313,
+          "dist_home": 872.529286544604,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -1703,7 +998,7 @@
           "lng": -111.6289385,
           "kwh": 37.723,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/26b7beb9-3cc5-4f4f-91cf-0015b1d68c28",
-          "dist_home": 860.0835813730021,
+          "dist_home": 861.3272465570416,
           "region": "UT/AZ/NV",
           "in_colorado": false
         },
@@ -1714,7 +1009,7 @@
           "lng": -112.187294,
           "kwh": 49.52,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8a590b7e-ecdb-4504-92c5-f1ef10434f70",
-          "dist_home": 891.8315317815446,
+          "dist_home": 893.0748513434063,
           "region": "ID/UT",
           "in_colorado": false,
           "end_datetime": "2025-12-18 03:47:46+00:00"
@@ -1726,7 +1021,7 @@
           "lng": -114.4032833,
           "kwh": 38.2214,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/39f9e976-ac37-4cb4-81ab-892eb01fc148",
-          "dist_home": 1019.1289106304894,
+          "dist_home": 904.5758719046225,
           "region": "ID/UT",
           "in_colorado": false
         },
@@ -1737,7 +1032,7 @@
           "lng": -116.0260261,
           "kwh": 114.46,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/05a5e29b-4ff9-44ae-b64a-b92542e4d7a6",
-          "dist_home": 1112.8415722414088,
+          "dist_home": 839.4053523485369,
           "region": "CA-S",
           "in_colorado": false,
           "end_datetime": "2025-12-19 19:25:05+00:00"
@@ -1749,7 +1044,7 @@
           "lng": -116.0694137,
           "kwh": 60.9341,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c33e8d23-2680-4411-a1d3-d42c415f79ec",
-          "dist_home": 1110.3602337151217,
+          "dist_home": 899.1308413922119,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1760,7 +1055,7 @@
           "lng": -117.0025044,
           "kwh": 68.4539,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c772f011-73f5-4320-822e-e6882d6315fe",
-          "dist_home": 1162.2658497965085,
+          "dist_home": 908.8275300351861,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1771,7 +1066,7 @@
           "lng": -118.3418797,
           "kwh": 25.197,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8c90e9a2-d2fd-4492-bff9-82a11eb26d37",
-          "dist_home": 1239.3173797821914,
+          "dist_home": 945.2990678548367,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1782,7 +1077,7 @@
           "lng": -118.3845942,
           "kwh": 26.976,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f327f456-2dee-42e3-b46c-f8161f7f7288",
-          "dist_home": 1242.6159760932485,
+          "dist_home": 961.8764300321116,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1793,7 +1088,7 @@
           "lng": -118.6937959,
           "kwh": 32.0227,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/838078f4-8140-4e0f-8e26-28c91d933231",
-          "dist_home": 1259.6150913875733,
+          "dist_home": 945.4052940340315,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1804,7 +1099,7 @@
           "lng": -119.702667,
           "kwh": 26.8112,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/1ffaeff5-e0f5-4a8c-896f-0bb17a621bc2",
-          "dist_home": 1316.0802023772396,
+          "dist_home": 910.2484914131219,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1815,7 +1110,7 @@
           "lng": -120.6707255,
           "kwh": 31.308,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/42e64088-baf1-4089-a3f2-a6e2fd89a04c",
-          "dist_home": 1369.86723752143,
+          "dist_home": 831.0314870752459,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1826,7 +1121,7 @@
           "lng": -121.848285,
           "kwh": 58.5808,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/69671437-398e-413a-b6a5-1dd9d5c797af",
-          "dist_home": 1437.7916456599041,
+          "dist_home": 749.6500268488954,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1837,7 +1132,7 @@
           "lng": -121.9439508,
           "kwh": 7.735,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d012dfb4-714f-47e1-861d-a59addbe9bb1",
-          "dist_home": 1446.5483118031152,
+          "dist_home": 695.560516715625,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1848,7 +1143,7 @@
           "lng": -122.3473099,
           "kwh": 43.9326,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d41c47dc-5089-434a-940c-80febf5c65c3",
-          "dist_home": 1469.6168216594056,
+          "dist_home": 683.109322253697,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1859,7 +1154,7 @@
           "lng": -121.9439508,
           "kwh": 46.667,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/72134275-dbd0-4598-9414-1408ea7f13aa",
-          "dist_home": 1446.5483118031152,
+          "dist_home": 695.560516715625,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1870,7 +1165,7 @@
           "lng": -121.9439508,
           "kwh": 46.328,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/b20b29d1-4762-4e3e-94c2-47b58b4ba5f3",
-          "dist_home": 1446.5483118031152,
+          "dist_home": 695.560516715625,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -1881,7 +1176,7 @@
           "lng": -123.2101776,
           "kwh": 49.8093,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f4394697-91ec-4817-966e-61737d40ee75",
-          "dist_home": 1528.421601308934,
+          "dist_home": 575.7965570435753,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -1892,7 +1187,7 @@
           "lng": -124.1707558,
           "kwh": 48.8899,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/24169a85-2fef-4d68-a933-0e795d5a400f",
-          "dist_home": 1597.4052940933182,
+          "dist_home": 470.69669627752296,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -1903,7 +1198,7 @@
           "lng": -124.08284,
           "kwh": 12.9231,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/dcd8bdb9-1d0a-4bc7-b30f-1f18d6c8caa7",
-          "dist_home": 1593.7604380130633,
+          "dist_home": 465.42171766597016,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -1914,7 +1209,7 @@
           "lng": -124.1978539,
           "kwh": 37.5524,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c6e1c1e2-de2f-4392-bb27-188c98a87261",
-          "dist_home": 1612.5602669966468,
+          "dist_home": 406.8529542422245,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -1925,7 +1220,7 @@
           "lng": -124.2174647,
           "kwh": 47.9372,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/0aea4fdd-abc1-4181-96fb-a3f2132e907e",
-          "dist_home": 1642.3563914438753,
+          "dist_home": 299.68050417335445,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1936,7 +1231,7 @@
           "lng": -124.0159522,
           "kwh": 35.7671,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/efe55755-aee2-4d81-9524-70a08e91633c",
-          "dist_home": 1667.9585019956253,
+          "dist_home": 193.79830601794873,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1947,7 +1242,7 @@
           "lng": -122.3873133,
           "kwh": 50.1801,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a4f55818-07a9-4c65-aa51-9c0a5913d6a4",
-          "dist_home": 1609.5093839036272,
+          "dist_home": 133.3142740029916,
           "region": "PNW",
           "in_colorado": false
         },
@@ -1958,7 +1253,7 @@
           "lng": -123.095857,
           "kwh": 33.9,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/665a8a2e-365d-4b3e-922e-c5d2152f3a40",
-          "dist_home": 1677.2074186011214,
+          "dist_home": 61.70007973484033,
           "region": "PNW",
           "in_colorado": false,
           "end_datetime": "2025-12-29 04:32:33+00:00"
@@ -1976,274 +1271,14 @@
         "CA"
       ],
       "via_summary": "WA, OR, ID, NV, UT, AZ, CA",
-      "origin_label": "Seattle",
+      "origin_label": "Yakima",
       "dest_label": "Rochester"
     },
     {
-      "id": "trip_020_2026-01-15_Tulalip_Bay_to_Tulalip_Bay",
-      "name": "Jan 2026 — Tulalip Bay",
-      "start": "2026-01-15 05:52:16+00:00",
-      "end": "2026-01-15 05:52:16+00:00",
-      "stops": [
-        {
-          "datetime": "2026-01-15 05:52:16+00:00",
-          "location": "Tulalip Bay, WA",
-          "lat": 48.0656302,
-          "lng": -122.286878,
-          "kwh": 18.5867,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8eef30f9-0fcf-448e-95a4-7c5ce0beeadb",
-          "dist_home": 1682.887331167921,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_17d"
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA"
-      ],
-      "via_summary": "WA",
-      "origin_label": "Seattle",
-      "dest_label": "Seattle"
-    },
-    {
-      "id": "trip_021_2026-02-10_Auburn_to_Bellevue",
-      "name": "Feb 2026 — Auburn",
-      "start": "2026-02-10 16:41:26+00:00",
-      "end": "2026-02-25 04:38:53+00:00",
-      "stops": [
-        {
-          "datetime": "2026-02-10 16:41:26+00:00",
-          "location": "Auburn, WA - Auburn Way North",
-          "lat": 47.3301528,
-          "lng": -122.2215547,
-          "kwh": 47.8649,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9ca9ff51-1bb1-4861-9874-28fc7394946f",
-          "dist_home": 1656.0898440588835,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_26d"
-        },
-        {
-          "datetime": "2026-02-11 17:59:58+00:00",
-          "location": "North Bend, WA",
-          "lat": 47.4957757,
-          "lng": -121.784889,
-          "kwh": 45.8233,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a8211f7c-082a-4b5c-bc25-2afe610dc098",
-          "dist_home": 1643.4842109978272,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-12 03:45:51+00:00",
-          "location": "Leavenworth, WA - US-2",
-          "lat": 47.5957449,
-          "lng": -120.6622886,
-          "kwh": 30.4867,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2228fd2b-a5b6-4c98-b298-6fe75f6d109c",
-          "dist_home": 1601.35344709048,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-12 23:09:06+00:00",
-          "location": "Bellevue, WA - Northeast 8th Street",
-          "lat": 47.6167921,
-          "lng": -122.1115836,
-          "kwh": 11.9898,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9b1f0d65-495d-490c-9c14-95349f345ef0",
-          "dist_home": 1660.8623278564062,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-13 23:56:46+00:00",
-          "location": "Kirkland, WA",
-          "lat": 47.6765382,
-          "lng": -122.2070775,
-          "kwh": 26.3429,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/5c1d7532-bb85-48e0-9d9f-e3b38e43f753",
-          "dist_home": 1666.7356429917054,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-15 16:30:04+00:00",
-          "location": "Auburn, WA - Auburn Way North",
-          "lat": 47.3301528,
-          "lng": -122.2215547,
-          "kwh": 47.6871,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d9797595-90da-455e-af48-a7295017cd06",
-          "dist_home": 1656.0898440588835,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-16 02:23:42+00:00",
-          "location": "Federal Way, WA",
-          "lat": 47.313494,
-          "lng": -122.33931,
-          "kwh": 31.4301,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/38e2ba57-705b-499a-adc0-eb4fe14bc580",
-          "dist_home": 1660.4469810374057,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-20 02:08:12+00:00",
-          "location": "Bellevue, WA - Northeast 8th Street",
-          "lat": 47.6167921,
-          "lng": -122.1115836,
-          "kwh": 18.795,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9e59b9c7-24ef-4f72-aa83-251baea608d3",
-          "dist_home": 1660.8623278564062,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-21 18:12:10+00:00",
-          "location": "Tacoma, WA - S 40th Street",
-          "lat": 47.2209169,
-          "lng": -122.4499901,
-          "kwh": 33.1852,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/fd4b52c5-83c4-41fe-98bf-70b2abb03b2e",
-          "dist_home": 1662.1263297925407,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-21 19:50:13+00:00",
-          "location": "Aberdeen, WA",
-          "lat": 46.975371,
-          "lng": -123.815722,
-          "kwh": 61.4938,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7932bdc2-b2a1-4a97-8319-613db2b5d949",
-          "dist_home": 1712.4884628297532,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-22 03:03:45+00:00",
-          "location": "Forks, WA",
-          "lat": 47.950222,
-          "lng": -124.386165,
-          "kwh": 40.7843,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2c52a365-a475-477d-aed5-4ab57bdf54f6",
-          "dist_home": 1765.361329648779,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-22 06:40:15+00:00",
-          "location": "Suquamish, WA",
-          "lat": 47.717948,
-          "lng": -122.5844878,
-          "kwh": 21.6139,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d06619d0-59e9-4b54-b41d-657679c8ab59",
-          "dist_home": 1683.5626525455941,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-02-25 04:38:53+00:00",
-          "location": "Bellevue, WA - Northeast 8th Street",
-          "lat": 47.6167921,
-          "lng": -122.1115836,
-          "kwh": 25.0085,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d2f6e665-2543-47eb-94a6-3e3e61f8aedc",
-          "dist_home": 1660.8623278564062,
-          "region": "PNW",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA"
-      ],
-      "via_summary": "WA",
-      "origin_label": "Seattle",
-      "dest_label": "Seattle"
-    },
-    {
-      "id": "trip_022_2026-04-19_Kirkland_to_Bellevue",
-      "name": "Apr 2026 — Kirkland",
-      "start": "2026-04-19 14:42:56+00:00",
-      "end": "2026-04-29 15:55:13+00:00",
-      "stops": [
-        {
-          "datetime": "2026-04-19 14:42:56+00:00",
-          "location": "Kirkland, WA",
-          "lat": 47.6765382,
-          "lng": -122.2070775,
-          "kwh": 54.2339,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/4535fbf3-98f3-4d4f-9ef1-a8de7cfe2cee",
-          "dist_home": 1666.7356429917054,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_53d"
-        },
-        {
-          "datetime": "2026-04-25 16:26:28+00:00",
-          "location": "Cle Elum, WA - West Davis Street",
-          "lat": 47.1948356,
-          "lng": -120.9540582,
-          "kwh": 24.1363,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/4de6e9d1-a8e6-4404-8c40-7bba4e4405e1",
-          "dist_home": 1599.3811211328098,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-04-25 22:32:34+00:00",
-          "location": "Leavenworth, WA - US-2",
-          "lat": 47.5957449,
-          "lng": -120.6622886,
-          "kwh": 34.1701,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/87557d75-5871-4a3f-816b-9c519c51c210",
-          "dist_home": 1601.35344709048,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-04-27 00:35:15+00:00",
-          "location": "Cle Elum, WA - West Davis Street",
-          "lat": 47.1948356,
-          "lng": -120.9540582,
-          "kwh": 43.1168,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c847bcec-f0d7-4076-b663-389bea471150",
-          "dist_home": 1599.3811211328098,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-04-29 15:55:13+00:00",
-          "location": "Bellevue, WA - Northeast 8th Street",
-          "lat": 47.6167921,
-          "lng": -122.1115836,
-          "kwh": 18.4693,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/5f3ae925-0dfd-49a3-8753-4ac20cdcfcea",
-          "dist_home": 1660.8623278564062,
-          "region": "PNW",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA"
-      ],
-      "via_summary": "WA",
-      "origin_label": "Seattle",
-      "dest_label": "Seattle"
-    },
-    {
-      "id": "trip_023_2026-05-25_Kelso_to_Tumwater",
-      "name": "May 2026 — Kelso → Tumwater (via WA, OR, CA)",
+      "id": "trip_006_2026-05-25_Kelso_to_Ridgefield",
+      "name": "May 2026 — Kelso → Ridgefield (via WA, OR, CA)",
       "start": "2026-05-25 19:35:20+00:00",
-      "end": "2026-06-08 05:01:30+00:00",
+      "end": "2026-06-08 04:55:57+00:00",
       "stops": [
         {
           "datetime": "2026-05-25 19:35:20+00:00",
@@ -2252,10 +1287,9 @@
           "lng": -122.905299,
           "kwh": 27.1053,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c47f9b28-2041-4cd9-8882-043ccc388156",
-          "dist_home": 1649.2398547401394,
+          "dist_home": 97.4870946515251,
           "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_26d"
+          "in_colorado": false
         },
         {
           "datetime": "2026-05-25 23:16:06+00:00",
@@ -2264,7 +1298,7 @@
           "lng": -123.7266793,
           "kwh": 27.0562,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/e1ea8141-7501-4baa-aab0-590c465fd3fd",
-          "dist_home": 1667.2130901250318,
+          "dist_home": 156.70353066613657,
           "region": "PNW",
           "in_colorado": false
         },
@@ -2275,7 +1309,7 @@
           "lng": -124.053442,
           "kwh": 44.849,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/b3cfce2b-232a-4cab-8fd9-a492059ec3c0",
-          "dist_home": 1661.9968346114372,
+          "dist_home": 214.91861738518492,
           "region": "PNW",
           "in_colorado": false
         },
@@ -2286,7 +1320,7 @@
           "lng": -124.4094086,
           "kwh": 38.4985,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/77bd5555-3fcc-4c09-a848-edb3a706782b",
-          "dist_home": 1646.794142122096,
+          "dist_home": 319.0362434435582,
           "region": "PNW",
           "in_colorado": false
         },
@@ -2297,7 +1331,7 @@
           "lng": -124.1978539,
           "kwh": 61.13,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/bf632739-763b-4270-9570-b7cf6f68f035",
-          "dist_home": 1612.5602669966468,
+          "dist_home": 406.8529542422245,
           "region": "CA/NV",
           "in_colorado": false,
           "end_datetime": "2026-05-26 21:22:26+00:00"
@@ -2309,7 +1343,7 @@
           "lng": -124.1551778,
           "kwh": 19.23,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ddebfcc9-b63c-4931-a46c-f8e98fa5e413",
-          "dist_home": 1596.6435673297071,
+          "dist_home": 470.34207796116306,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -2320,7 +1354,7 @@
           "lng": -123.8057607,
           "kwh": 64.9738,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7008443d-6cd5-464d-bc5f-f2c07012a7db",
-          "dist_home": 1562.6842571539676,
+          "dist_home": 560.0636394674705,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -2331,7 +1365,7 @@
           "lng": -122.7880459,
           "kwh": 30.055,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/64e1576e-df58-4b9e-9b9d-fff984cdf4ac",
-          "dist_home": 1496.502364388955,
+          "dist_home": 651.8074750434185,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -2342,7 +1376,7 @@
           "lng": -122.4175684,
           "kwh": 26.5304,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/449b2cfc-ecdf-4dfe-aa62-fa3d76cc5968",
-          "dist_home": 1473.755003373417,
+          "dist_home": 679.5641941275919,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -2353,7 +1387,7 @@
           "lng": -121.816926,
           "kwh": 29.633,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2cf67590-4fc3-4ecb-800f-c381618e6c08",
-          "dist_home": 1436.0834200730221,
+          "dist_home": 749.0839054835045,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -2364,7 +1398,7 @@
           "lng": -120.641288,
           "kwh": 58.5608,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/73c07af7-81b2-4256-b993-be6cb87c7a14",
-          "dist_home": 1368.2236319747403,
+          "dist_home": 855.0400660212683,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -2375,7 +1409,7 @@
           "lng": -118.91183,
           "kwh": 29.79,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/be40e0e9-425c-4139-8ecb-cc2873d0b40d",
-          "dist_home": 1271.6154025908897,
+          "dist_home": 933.1795987174008,
           "region": "CA-S",
           "in_colorado": false,
           "end_datetime": "2026-05-31 23:36:53+00:00"
@@ -2387,7 +1421,7 @@
           "lng": -117.9752615,
           "kwh": 65.52,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2b9bc442-e423-429e-9e2a-e4b038abab63",
-          "dist_home": 1218.6176908234227,
+          "dist_home": 955.6164881683527,
           "region": "CA-S",
           "in_colorado": false,
           "end_datetime": "2026-06-02 03:39:16+00:00"
@@ -2399,7 +1433,7 @@
           "lng": -117.3525102,
           "kwh": 53.3937,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/559240bf-7e05-48ad-990e-dc26964f54e4",
-          "dist_home": 1186.54751243796,
+          "dist_home": 1018.9569384756298,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -2410,7 +1444,7 @@
           "lng": -117.6658467,
           "kwh": 43.4103,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/063557e2-bbcb-448c-996c-521fd4ba5769",
-          "dist_home": 1202.5421880353945,
+          "dist_home": 988.880316202235,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -2421,7 +1455,7 @@
           "lng": -119.702667,
           "kwh": 32.6455,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/21264675-bddf-46bd-aace-fad09895cdb2",
-          "dist_home": 1316.0802023772396,
+          "dist_home": 910.2484914131219,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -2432,7 +1466,7 @@
           "lng": -120.5833942,
           "kwh": 58.8134,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3a0cb71c-9fa7-4f1b-b75d-2f21cca69edf",
-          "dist_home": 1364.9651024159382,
+          "dist_home": 856.7275762243299,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -2443,7 +1477,7 @@
           "lng": -121.9650181,
           "kwh": 32.6576,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/434eabe3-58c0-4a7a-8839-1dd14d8cc9a9",
-          "dist_home": 1445.5997551548535,
+          "dist_home": 724.7646091326505,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -2454,7 +1488,7 @@
           "lng": -122.4995234,
           "kwh": 30.1912,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/dd289c93-0c64-4f9f-8558-150fa3346f6b",
-          "dist_home": 1478.0372615502415,
+          "dist_home": 681.869538059307,
           "region": "CA-S",
           "in_colorado": false
         },
@@ -2465,7 +1499,7 @@
           "lng": -122.636465,
           "kwh": 25.6351,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/84bf6a46-fdba-4395-86db-cfe1b808c198",
-          "dist_home": 1489.6857576852854,
+          "dist_home": 638.2455324546575,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -2476,7 +1510,7 @@
           "lng": -121.9701077,
           "kwh": 33.4678,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/b470def8-deab-4138-ab3e-bbad92015b0b",
-          "dist_home": 1459.7377488556383,
+          "dist_home": 593.0836183173814,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -2487,7 +1521,7 @@
           "lng": -122.3472743,
           "kwh": 33.0742,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/b97c409b-f87a-4b00-a0c2-5ff0f917aef1",
-          "dist_home": 1500.8674861507625,
+          "dist_home": 475.14541010978877,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -2498,7 +1532,7 @@
           "lng": -122.3847609,
           "kwh": 14.8037,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/99cda466-b460-40f7-8793-c2b03270c470",
-          "dist_home": 1516.1519121630981,
+          "dist_home": 417.4478606001567,
           "region": "CA/NV",
           "in_colorado": false
         },
@@ -2509,7 +1543,7 @@
           "lng": -122.8585926,
           "kwh": 57.1491,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9dbc02a7-a7f6-4977-b778-39f372de5c8e",
-          "dist_home": 1556.6719438502003,
+          "dist_home": 354.1546473593146,
           "region": "PNW",
           "in_colorado": false
         },
@@ -2520,7 +1554,7 @@
           "lng": -123.0398274,
           "kwh": 7.6295,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9c036274-89e6-427a-b6d0-acf7c24130fd",
-          "dist_home": 1601.948077938396,
+          "dist_home": 237.22937667876846,
           "region": "PNW",
           "in_colorado": false
         },
@@ -2531,7 +1565,7 @@
           "lng": -123.110065,
           "kwh": 40.0175,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/083678c0-cca8-4247-ae95-72074774876b",
-          "dist_home": 1612.2373426043682,
+          "dist_home": 217.69582935133218,
           "region": "PNW",
           "in_colorado": false
         },
@@ -2542,21 +1576,9 @@
           "lng": -122.7433775,
           "kwh": 29.9045,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/08d7926d-d330-472d-9cf1-439314d7ff8e",
-          "dist_home": 1632.9727144320796,
+          "dist_home": 116.85093041230381,
           "region": "PNW",
           "in_colorado": false
-        },
-        {
-          "datetime": "2026-06-08 04:55:57+00:00",
-          "location": "Tumwater, WA - Kingswood Drive Southwest",
-          "lat": 46.9932302,
-          "lng": -122.9200682,
-          "kwh": 47.4,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3aaef3ee-0f7e-462f-895d-0ef39264f1cf",
-          "dist_home": 1674.8677178513008,
-          "region": "PNW",
-          "in_colorado": false,
-          "end_datetime": "2026-06-08 05:01:30+00:00"
         }
       ],
       "has_colorado": false,
@@ -2568,142 +1590,21 @@
       ],
       "via_summary": "WA, OR, CA",
       "origin_label": "Kelso",
-      "dest_label": "Tumwater"
-    },
-    {
-      "id": "trip_024_2026-07-03_Puyallup_to_Auburn",
-      "name": "Jul 2026 — Puyallup",
-      "start": "2026-07-03 17:43:47+00:00",
-      "end": "2026-07-18 09:44:12+00:00",
-      "stops": [
-        {
-          "datetime": "2026-07-03 17:43:47+00:00",
-          "location": "Puyallup, WA",
-          "lat": 47.1849009,
-          "lng": -122.29214,
-          "kwh": 87.5,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ca41b6dc-313e-40d9-b767-89e69c1305b6",
-          "dist_home": 1654.3978125488652,
-          "region": "PNW",
-          "in_colorado": false,
-          "_split_reason": "time_gap_25d",
-          "end_datetime": "2026-07-04 14:19:25+00:00"
-        },
-        {
-          "datetime": "2026-07-06 06:02:21+00:00",
-          "location": "Auburn, WA",
-          "lat": 47.3075369,
-          "lng": -122.2301808,
-          "kwh": 32.82,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f0824212-db8d-407d-85ae-63c915f858ee",
-          "dist_home": 1655.7230203253243,
-          "region": "PNW",
-          "in_colorado": false,
-          "end_datetime": "2026-07-06 06:10:45+00:00"
-        },
-        {
-          "datetime": "2026-07-11 03:42:25+00:00",
-          "location": "Sequim, WA",
-          "lat": 48.0849312,
-          "lng": -123.1096706,
-          "kwh": 73.87,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7bbd68db-a7b2-404d-aab8-4e011935d5d2",
-          "dist_home": 1716.925790500253,
-          "region": "PNW",
-          "in_colorado": false,
-          "end_datetime": "2026-07-12 01:18:43+00:00"
-        },
-        {
-          "datetime": "2026-07-12 21:13:43+00:00",
-          "location": "Sequim, WA",
-          "lat": 48.0849312,
-          "lng": -123.1096706,
-          "kwh": 29.0227,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/807f22cc-a960-4e8a-a9f8-719346179aee",
-          "dist_home": 1716.925790500253,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-07-13 01:55:46+00:00",
-          "location": "Forks, WA",
-          "lat": 47.950222,
-          "lng": -124.386165,
-          "kwh": 26.8805,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3cec5a10-a99f-4194-8fa1-0a31b24049ac",
-          "dist_home": 1765.361329648779,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-07-13 06:51:12+00:00",
-          "location": "Aberdeen, WA",
-          "lat": 46.975371,
-          "lng": -123.815722,
-          "kwh": 47.99,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/88464433-6d39-4976-af25-4d136f7420ea",
-          "dist_home": 1712.4884628297532,
-          "region": "PNW",
-          "in_colorado": false,
-          "end_datetime": "2026-07-13 07:09:20+00:00"
-        },
-        {
-          "datetime": "2026-07-13 08:25:43+00:00",
-          "location": "Tacoma, WA - South Hosmer Street",
-          "lat": 47.1748283,
-          "lng": -122.4631366,
-          "kwh": 12.9011,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2e22af74-438e-4d30-9391-2be607dedf4d",
-          "dist_home": 1661.227168646116,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-07-18 01:47:35+00:00",
-          "location": "Silverdale, WA",
-          "lat": 47.6594091,
-          "lng": -122.6766317,
-          "kwh": 14.1026,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/4d14cca6-a871-4a5f-b6db-eb5c4019ef43",
-          "dist_home": 1685.4692528604883,
-          "region": "PNW",
-          "in_colorado": false
-        },
-        {
-          "datetime": "2026-07-18 03:51:29+00:00",
-          "location": "Sequim, WA",
-          "lat": 48.0849312,
-          "lng": -123.1096706,
-          "kwh": 39.37,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/144c3304-4273-45c9-bb55-29199e4c8cad",
-          "dist_home": 1716.925790500253,
-          "region": "PNW",
-          "in_colorado": false,
-          "end_datetime": "2026-07-18 07:30:44+00:00"
-        },
-        {
-          "datetime": "2026-07-18 09:44:12+00:00",
-          "location": "Auburn, WA - Auburn Way North",
-          "lat": 47.3301528,
-          "lng": -122.2215547,
-          "kwh": 63.4881,
-          "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/057716ed-4aa7-4600-84f0-c3f19e9fbf9a",
-          "dist_home": 1656.0898440588835,
-          "region": "PNW",
-          "in_colorado": false
-        }
-      ],
-      "has_colorado": false,
-      "colorado_stops": 0,
-      "via_states": [
-        "WA"
-      ],
-      "via_summary": "WA",
-      "origin_label": "Seattle",
-      "dest_label": "Seattle"
+      "dest_label": "Ridgefield"
     }
   ],
   "local_charges": [
+    {
+      "datetime": "2023-05-12 05:37:20+00:00",
+      "location": "Plano, TX - Windhaven Parkway",
+      "lat": 33.0549176,
+      "lng": -96.8323468,
+      "kwh": 57.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/54db406f-e845-4a44-a89f-f7159f1af617",
+      "dist_home": 6.526850151185876,
+      "region": "HOME",
+      "in_colorado": false
+    },
     {
       "datetime": "2023-05-14 18:14:36+00:00",
       "location": "MAA Market Center",
@@ -2711,7 +1612,7 @@
       "lng": -96.7644015,
       "kwh": 45.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/44f3e131-c38a-4734-90d6-120b1418ae92",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2722,7 +1623,7 @@
       "lng": -96.7644015,
       "kwh": 66.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/faf6f36c-e983-4d95-ba42-e92c88fef32f",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2733,7 +1634,7 @@
       "lng": -96.7644015,
       "kwh": 49.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9995f53b-9348-4443-8752-bf2363876271",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2744,7 +1645,7 @@
       "lng": -96.7644015,
       "kwh": 8.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/04e09fbc-6ed4-43fe-9f5e-e5a4445b717c",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2755,8 +1656,52 @@
       "lng": -96.7644015,
       "kwh": 46.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8e99a62f-ad74-4ca2-b77e-1b0198dd2fb2",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-06-03 17:30:09+00:00",
+      "location": "Madisonville, TX",
+      "lat": 30.9498688,
+      "lng": -95.9127773,
+      "kwh": 55.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2591229d-0256-4c7f-8515-cc450387d2df",
+      "dist_home": 148.64340149876347,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-06-04 00:45:03+00:00",
+      "location": "Houston, TX - West Alabama Street",
+      "lat": 29.7382821,
+      "lng": -95.4353438,
+      "kwh": 62.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3d44cd73-961f-49da-831e-b3e4da9671c8",
+      "dist_home": 237.05000565175305,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-06-04 03:06:58+00:00",
+      "location": "Centerville, TX",
+      "lat": 31.2578221,
+      "lng": -95.9785301,
+      "kwh": 3.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ea3574d5-ddad-40fb-9bea-74807d2f7f21",
+      "dist_home": 127.40141186371565,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-06-04 03:16:54+00:00",
+      "location": "Centerville, TX",
+      "lat": 31.2578221,
+      "lng": -95.9785301,
+      "kwh": 40.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/0097b61f-7019-4dba-91bb-2adf1aa29f35",
+      "dist_home": 127.40141186371565,
+      "region": "TX",
       "in_colorado": false
     },
     {
@@ -2766,7 +1711,7 @@
       "lng": -96.7644015,
       "kwh": 56.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ec9b6d67-cdbf-4130-9184-9414b3d88a89",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2777,7 +1722,7 @@
       "lng": -96.7644015,
       "kwh": 46.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/1ab88709-2ff3-4340-9b57-a44f1f9915c8",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2788,7 +1733,7 @@
       "lng": -96.7644015,
       "kwh": 52.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/928fd1e4-9fce-457b-a7e3-eb650c2f80c9",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2799,7 +1744,7 @@
       "lng": -96.7644015,
       "kwh": 32.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/309e88bf-f01e-4c08-83db-5470d76c49c6",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2810,7 +1755,7 @@
       "lng": -96.7644015,
       "kwh": 52.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f911825e-1de6-4a58-a8a6-0a2b61a51466",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2821,7 +1766,7 @@
       "lng": -96.7644015,
       "kwh": 33.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/1ef62eb2-9f27-4a5b-9d75-0fc34ef0df3e",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2832,7 +1777,18 @@
       "lng": -96.7644015,
       "kwh": 18.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/66ee5963-b808-4242-a9a4-add2f0f8ce12",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-07-09 18:19:48+00:00",
+      "location": "Irving, TX",
+      "lat": 32.8295183,
+      "lng": -96.9442177,
+      "kwh": 59.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2de317db-93f8-42af-9255-a8f278af33e5",
+      "dist_home": 12.179467206845485,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2843,7 +1799,7 @@
       "lng": -96.7644015,
       "kwh": 38.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/e5f42165-c1da-40c3-884b-c3cee203d9cf",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2854,7 +1810,7 @@
       "lng": -96.7644015,
       "kwh": 49.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/dc881afb-bc2a-42f6-a827-e830bc500234",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2865,7 +1821,7 @@
       "lng": -96.7644015,
       "kwh": 35.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/dcf58f63-0ab3-4abc-8c7a-8aeb58a1d47d",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2876,7 +1832,7 @@
       "lng": -96.7644015,
       "kwh": 4.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/aa9d50ea-df44-4771-ba56-82a6197dc15a",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2887,7 +1843,51 @@
       "lng": -96.7644015,
       "kwh": 50.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/74521482-f895-4a96-a489-b0a8a6849dc5",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-08-19 21:56:13+00:00",
+      "location": "Waco, TX",
+      "lat": 31.5491899,
+      "lng": -97.1474628,
+      "kwh": 65.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/21f25faf-cd86-4763-ab7e-7038ede1252f",
+      "dist_home": 99.6886900507762,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-08-20 02:26:04+00:00",
+      "location": "Austin, TX - South Congress Avenue (Pay to Park, Floor B1)",
+      "lat": 30.2069947,
+      "lng": -97.7739001,
+      "kwh": 64.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9340dfe4-3720-4ad8-a040-5b9ec9d306b0",
+      "dist_home": 198.74593497133557,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-08-20 20:01:35+00:00",
+      "location": "Georgetown, TX",
+      "lat": 30.6370152,
+      "lng": -97.6775634,
+      "kwh": 71.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/e3527a06-dc38-456d-9b0b-500686711b0a",
+      "dist_home": 168.6462288705011,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-08-20 23:22:15+00:00",
+      "location": "Red Oak, TX",
+      "lat": 32.5143898,
+      "lng": -96.8066615,
+      "kwh": 29.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8152955e-d3ba-4df0-9d1e-0e07b6f2dad9",
+      "dist_home": 30.99019579450177,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2898,8 +1898,52 @@
       "lng": -96.7644015,
       "kwh": 33.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3c9a8eeb-ab8b-457e-85ee-35adbf856f6c",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-09-03 17:18:05+00:00",
+      "location": "Red Oak, TX",
+      "lat": 32.5143898,
+      "lng": -96.8066615,
+      "kwh": 69.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ff738b00-8a97-4402-908c-957052c02716",
+      "dist_home": 30.99019579450177,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-09-03 20:17:37+00:00",
+      "location": "Georgetown, TX",
+      "lat": 30.6370152,
+      "lng": -97.6775634,
+      "kwh": 57.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/54ee74fe-85af-4391-8e7e-511f8270839b",
+      "dist_home": 168.6462288705011,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-09-04 02:44:02+00:00",
+      "location": "San Antonio, TX - North Loop 1604 East",
+      "lat": 29.6046366,
+      "lng": -98.4504734,
+      "kwh": 42.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/cd1b7bfc-ab43-4c68-a536-cb568cdc765d",
+      "dist_home": 251.51330485438658,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-09-04 23:03:49+00:00",
+      "location": "Georgetown, TX",
+      "lat": 30.6370152,
+      "lng": -97.6775634,
+      "kwh": 57.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/28d512d1-894e-4eff-8348-cc35ab92d0cf",
+      "dist_home": 168.6462288705011,
+      "region": "TX",
       "in_colorado": false
     },
     {
@@ -2909,7 +1953,7 @@
       "lng": -96.7644015,
       "kwh": 24.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6f444474-b91f-4c3d-905f-79544e7cd555",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2920,7 +1964,7 @@
       "lng": -96.7644015,
       "kwh": 62.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7d59c2ce-926c-41bc-8f98-200e46f8d582",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2931,7 +1975,7 @@
       "lng": -96.7644015,
       "kwh": 5.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7b091633-e0b5-436f-a9b1-e6e7e3195e49",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2942,7 +1986,7 @@
       "lng": -96.7644015,
       "kwh": 3.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/26bb18e0-260a-4039-bc3c-20fbf8b363c1",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2953,7 +1997,7 @@
       "lng": -96.7644015,
       "kwh": 8.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/5ef0b380-8512-48f5-a8ca-f8bc72f00474",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2964,7 +2008,7 @@
       "lng": -96.7644015,
       "kwh": 44.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8dc0cbbc-4786-40d1-b6bb-d274004ba7f8",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2975,8 +2019,41 @@
       "lng": -96.7644015,
       "kwh": 27.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/779eeb45-41dc-4214-837f-fe3ebddb762a",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-11-05 20:26:13+00:00",
+      "location": "Denison, TX",
+      "lat": 33.7556593,
+      "lng": -96.536658,
+      "kwh": 58.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3cfeb630-8c83-43eb-9afd-44113357203e",
+      "dist_home": 56.956509884409485,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-11-13 22:23:27+00:00",
+      "location": "Denison, TX",
+      "lat": 33.7556593,
+      "lng": -96.536658,
+      "kwh": 41.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c9082291-5d2c-4868-a821-0719df99bdba",
+      "dist_home": 56.956509884409485,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2023-11-14 14:45:19+00:00",
+      "location": "Denison, TX",
+      "lat": 33.7556593,
+      "lng": -96.536658,
+      "kwh": 20.0,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/39ca859f-8ab6-49b7-b127-8435dd33e457",
+      "dist_home": 56.956509884409485,
+      "region": "TX",
       "in_colorado": false
     },
     {
@@ -2986,7 +2063,7 @@
       "lng": -96.7644015,
       "kwh": 30.0,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7cf6b0a6-a782-4077-aed4-b246e26aa589",
-      "dist_home": 4.84019774753099,
+      "dist_home": 3.728366432620008,
       "region": "HOME",
       "in_colorado": false
     },
@@ -2997,7 +2074,7 @@
       "lng": -96.8300029,
       "kwh": 58.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3008,7 +2085,7 @@
       "lng": -96.8300029,
       "kwh": 56.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3019,7 +2096,7 @@
       "lng": -96.8300029,
       "kwh": 74.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3030,8 +2107,30 @@
       "lng": -96.8300029,
       "kwh": 67.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-04-13 20:09:35+00:00",
+      "location": "New Boston, TX",
+      "lat": 33.4598415,
+      "lng": -94.4154787,
+      "kwh": 11.0,
+      "invoice_url": NaN,
+      "dist_home": 142.4505026711419,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-04-14 20:47:55+00:00",
+      "location": "Sulphur Springs, TX",
+      "lat": 33.1384886,
+      "lng": -95.6010143,
+      "kwh": 45.0,
+      "invoice_url": NaN,
+      "dist_home": 70.89039659774534,
+      "region": "TX",
       "in_colorado": false
     },
     {
@@ -3041,7 +2140,7 @@
       "lng": -96.8300029,
       "kwh": 55.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3052,7 +2151,7 @@
       "lng": -96.8300029,
       "kwh": 70.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3063,7 +2162,7 @@
       "lng": -96.8300029,
       "kwh": 56.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3074,7 +2173,7 @@
       "lng": -96.8300029,
       "kwh": 57.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3085,7 +2184,7 @@
       "lng": -96.8300029,
       "kwh": 66.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3096,7 +2195,7 @@
       "lng": -96.8300029,
       "kwh": 53.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3107,7 +2206,7 @@
       "lng": -96.8300029,
       "kwh": 56.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3118,7 +2217,7 @@
       "lng": -96.8300029,
       "kwh": 68.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3129,8 +2228,30 @@
       "lng": -96.8300029,
       "kwh": 35.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-06-01 20:05:23+00:00",
+      "location": "Temple, TX",
+      "lat": 31.0983747,
+      "lng": -97.3429563,
+      "kwh": 59.0,
+      "invoice_url": NaN,
+      "dist_home": 132.60342394263816,
+      "region": "TX",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-06-02 19:22:46+00:00",
+      "location": "Temple, TX",
+      "lat": 31.0983747,
+      "lng": -97.3429563,
+      "kwh": 57.0,
+      "invoice_url": NaN,
+      "dist_home": 132.60342394263816,
+      "region": "TX",
       "in_colorado": false
     },
     {
@@ -3140,7 +2261,7 @@
       "lng": -96.8300029,
       "kwh": 46.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3151,7 +2272,7 @@
       "lng": -96.8300029,
       "kwh": 40.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3162,7 +2283,7 @@
       "lng": -96.8300029,
       "kwh": 60.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3173,7 +2294,7 @@
       "lng": -96.8300029,
       "kwh": 11.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3184,7 +2305,7 @@
       "lng": -96.8300029,
       "kwh": 47.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3195,7 +2316,7 @@
       "lng": -96.8300029,
       "kwh": 40.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3206,7 +2327,7 @@
       "lng": -96.8300029,
       "kwh": 52.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3217,7 +2338,7 @@
       "lng": -96.8300029,
       "kwh": 63.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3228,7 +2349,7 @@
       "lng": -96.8300029,
       "kwh": 58.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3239,7 +2360,7 @@
       "lng": -96.8300029,
       "kwh": 47.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3250,7 +2371,7 @@
       "lng": -96.8300029,
       "kwh": 57.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3261,7 +2382,7 @@
       "lng": -96.8300029,
       "kwh": 54.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3272,7 +2393,7 @@
       "lng": -96.8300029,
       "kwh": 43.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3283,7 +2404,7 @@
       "lng": -96.8300029,
       "kwh": 37.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3294,7 +2415,7 @@
       "lng": -96.8300029,
       "kwh": 62.0,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3305,7 +2426,7 @@
       "lng": -96.8300029,
       "kwh": 58.329,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3316,7 +2437,7 @@
       "lng": -96.8300029,
       "kwh": 21.577,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3327,7 +2448,7 @@
       "lng": -96.8300029,
       "kwh": 54.602,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3338,7 +2459,7 @@
       "lng": -96.8300029,
       "kwh": 65.997,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3349,7 +2470,7 @@
       "lng": -96.8300029,
       "kwh": 55.611,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3360,7 +2481,7 @@
       "lng": -96.8300029,
       "kwh": 18.309,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3371,7 +2492,7 @@
       "lng": -96.8300029,
       "kwh": 54.435,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3382,7 +2503,7 @@
       "lng": -96.8300029,
       "kwh": 44.308,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3393,7 +2514,7 @@
       "lng": -96.8300029,
       "kwh": 62.119,
       "invoice_url": NaN,
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3404,7 +2525,7 @@
       "lng": -96.8300029,
       "kwh": 55.265,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8d98fe71-d4fc-4720-9d2b-2e2c90537ce7",
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3415,7 +2536,7 @@
       "lng": -96.8300029,
       "kwh": 55.877,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/5d3e97b8-ca92-4d87-b5e3-16780f0e7c38",
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3426,7 +2547,7 @@
       "lng": -96.8300029,
       "kwh": 48.093,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8bd01489-7ad7-45df-a545-f9f0796c0460",
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
       "region": "HOME",
       "in_colorado": false
     },
@@ -3437,15 +2558,819 @@
       "lng": -96.8300029,
       "kwh": 44.96,
       "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/fadff61d-cb41-4d8e-bc56-218959e83fdb",
-      "dist_home": 0.008245056327836564,
+      "dist_home": 1.3493258871685463,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-11-29 02:38:28+00:00",
+      "location": "Kirkland, WA",
+      "lat": 47.6765382,
+      "lng": -122.2070775,
+      "kwh": 3.395,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/0b9bdfcd-4497-4256-a5cd-c9dc5b0b615b",
+      "dist_home": 14.76250371010602,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-11-29 02:42:10+00:00",
+      "location": "Kirkland, WA",
+      "lat": 47.6765382,
+      "lng": -122.2070775,
+      "kwh": 44.064,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/4368b324-1235-47f7-abc4-06ca01423309",
+      "dist_home": 14.76250371010602,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-12-15 22:14:27+00:00",
+      "location": "North Bend, WA - South Fork Avenue Southwest",
+      "lat": 47.4891197,
+      "lng": -121.7907812,
+      "kwh": 49.115,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d9a57af6-5156-4f6c-8b66-588f9cf1af87",
+      "dist_home": 18.39900556962936,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-12-22 22:59:37+00:00",
+      "location": "Monroe, WA",
+      "lat": 47.8552259,
+      "lng": -121.971335,
+      "kwh": 33.493,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/fc77da6c-b815-45ca-a784-7ec98a105156",
+      "dist_home": 28.801874456225228,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-12-23 02:32:22+00:00",
+      "location": "Leavenworth, WA",
+      "lat": 47.5969138,
+      "lng": -120.661081,
+      "kwh": 40.893,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2a2d87ef-44ee-4031-96fc-4e986fa3e9ca",
+      "dist_home": 71.5955143835168,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-12-25 02:12:35+00:00",
+      "location": "Seattle, WA - NE Northgate Way (Floor 2)",
+      "lat": 47.7085558,
+      "lng": -122.323959,
+      "kwh": 49.247,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/43679dcf-eff5-4b8d-bb83-3e7a9f46a1bd",
+      "dist_home": 18.16299427983795,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2024-12-29 03:08:27+00:00",
+      "location": "Tulalip Bay, WA",
+      "lat": 48.0656302,
+      "lng": -122.286878,
+      "kwh": 42.048,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/48eb2319-8b88-494e-baa3-76a7589ef6d9",
+      "dist_home": 19.084757707420795,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-01-19 00:52:19+00:00",
+      "location": "Leavenworth, WA - US-2",
+      "lat": 47.5957449,
+      "lng": -120.6622886,
+      "kwh": 56.515,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6b5361ff-7c52-46ed-a166-18a83adf7e12",
+      "dist_home": 71.53006961611374,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-01-20 01:34:11+00:00",
+      "location": "Leavenworth, WA",
+      "lat": 47.5969138,
+      "lng": -120.661081,
+      "kwh": 64.763,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/0c6bb3fc-d06a-4b09-b3e6-7346ba29272e",
+      "dist_home": 71.5955143835168,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-04-27 02:26:00+00:00",
+      "location": "North Bend, WA - South Fork Avenue Southwest",
+      "lat": 47.4891197,
+      "lng": -121.7907812,
+      "kwh": 22.016,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/28822afb-76ad-4b91-8b75-b49b54fbe9dd",
+      "dist_home": 18.39900556962936,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-05-23 00:57:12+00:00",
+      "location": "Renton, WA - Southwest 41st Street",
+      "lat": 47.4438439,
+      "lng": -122.2212097,
+      "kwh": 4.752,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/fcdb180e-a708-4f91-9bb4-c3e66b79361d",
+      "dist_home": 2.246880370446766,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-04 20:47:27+00:00",
+      "location": "Seattle, WA",
+      "lat": 47.6038321,
+      "lng": -122.330062,
+      "kwh": 40.0464,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3fa77d35-a8ca-47a9-af36-88c5696eb1a4",
+      "dist_home": 11.879749099704078,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-06 18:04:13+00:00",
+      "location": "Seattle, WA",
+      "lat": 47.6038321,
+      "lng": -122.330062,
+      "kwh": 38.7659,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/73c49193-9af7-45c4-bd0a-def6fbaf7610",
+      "dist_home": 11.879749099704078,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-07 20:44:38+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 48.7678,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/595f0988-97c6-4542-b999-b1179374397d",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-08 19:04:32+00:00",
+      "location": "Forks, WA",
+      "lat": 47.950222,
+      "lng": -124.386165,
+      "kwh": 41.0506,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c03e524d-6940-41c7-9527-fab3d3536337",
+      "dist_home": 79.80375481132539,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-09 21:49:55+00:00",
+      "location": "Aberdeen, WA",
+      "lat": 46.975371,
+      "lng": -123.815722,
+      "kwh": 23.0106,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3d0291bf-399d-4400-9a0d-1c276111446f",
+      "dist_home": 83.72113267435607,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-10 20:09:37+00:00",
+      "location": "Everett, WA",
+      "lat": 47.9793437,
+      "lng": -122.2127011,
+      "kwh": 63.8252,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/cc85899e-fec3-4da7-90b5-6567a50a1ad4",
+      "dist_home": 20.875697112107684,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-13 20:29:52+00:00",
+      "location": "Arlington, WA",
+      "lat": 48.1896827,
+      "lng": -122.1288887,
+      "kwh": 39.475,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7b1c506f-83da-4e38-b6c0-bdcc1e0a1354",
+      "dist_home": 29.660693316518635,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-15 19:39:09+00:00",
+      "location": "Kirkland, WA",
+      "lat": 47.6765382,
+      "lng": -122.2070775,
+      "kwh": 65.769,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/05f5b42c-c948-4992-af40-330fe2180206",
+      "dist_home": 14.76250371010602,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-16 23:17:54+00:00",
+      "location": "Tulalip Bay, WA",
+      "lat": 48.0656302,
+      "lng": -122.286878,
+      "kwh": 63.6109,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/57c590a7-9301-49e1-a5df-4bf0fba6f82f",
+      "dist_home": 19.084757707420795,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-21 20:40:37+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 22.6748,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a9e4e1c3-7859-48f1-bb82-b1b39fce59e3",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-23 01:13:34+00:00",
+      "location": "Forks, WA",
+      "lat": 47.950222,
+      "lng": -124.386165,
+      "kwh": 46.8888,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7867aa3a-bfcf-4717-be43-467c6e7c4e5f",
+      "dist_home": 79.80375481132539,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-23 07:29:59+00:00",
+      "location": "Tacoma, WA - South Hosmer Street",
+      "lat": 47.1748283,
+      "lng": -122.4631366,
+      "kwh": 11.3322,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/b871e34d-3d80-42df-a886-dd101a427e3f",
+      "dist_home": 23.878769795934268,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-28 21:09:40+00:00",
+      "location": "Portland, OR - North Pavilion Avenue",
+      "lat": 45.6135685,
+      "lng": -122.6837959,
+      "kwh": 31.8258,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/299d70a4-bf25-4e18-ac41-f93bd6c5019c",
+      "dist_home": 130.02394558217023,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-06-29 03:32:20+00:00",
+      "location": "Chehalis, WA",
+      "lat": 46.6599653,
+      "lng": -122.963432,
+      "kwh": 38.2076,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/46c28687-7844-4f58-920f-d5b4d459224f",
+      "dist_home": 66.57676956880499,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-08-10 18:16:08+00:00",
+      "location": "Renton, WA - Southwest 41st Street",
+      "lat": 47.4438439,
+      "lng": -122.2212097,
+      "kwh": 56.3398,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f4838e61-29e7-4ec6-af5e-0f4e78b36044",
+      "dist_home": 2.246880370446766,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-08-22 19:51:37+00:00",
+      "location": "Issaquah, WA",
+      "lat": 47.5348778,
+      "lng": -122.043297,
+      "kwh": 24.0634,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3b20c70b-5f1f-4ef6-a60e-a7f94cf5bbd2",
+      "dist_home": 8.172913058753386,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-08-30 20:01:59+00:00",
+      "location": "Auburn, WA",
+      "lat": 47.3075369,
+      "lng": -122.2301808,
+      "kwh": 31.6879,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/00e52bde-4e8f-409f-90a7-60ceafab4815",
+      "dist_home": 11.002123230143498,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-09-07 19:10:56+00:00",
+      "location": "Kirkland, WA",
+      "lat": 47.6765382,
+      "lng": -122.2070775,
+      "kwh": 32.4481,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f07d4784-f591-4491-9413-a7445e838ba3",
+      "dist_home": 14.76250371010602,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-09-11 01:53:07+00:00",
+      "location": "Bellevue, WA - Northeast 8th Street",
+      "lat": 47.6167921,
+      "lng": -122.1115836,
+      "kwh": 48.2732,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d7805d6b-b980-40c1-9ce3-94695679c8e5",
+      "dist_home": 11.101529910231543,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-10-26 17:20:17+00:00",
+      "location": "Leavenworth, WA - US-2",
+      "lat": 47.5957449,
+      "lng": -120.6622886,
+      "kwh": 26.6741,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/048ee06f-296a-4d0b-b970-31e7c36831da",
+      "dist_home": 71.53006961611374,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-10-27 04:54:41+00:00",
+      "location": "Leavenworth, WA - US-2",
+      "lat": 47.5957449,
+      "lng": -120.6622886,
+      "kwh": 37.3507,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c6535175-d1b6-4702-a154-55148a303fb4",
+      "dist_home": 71.53006961611374,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-11-22 00:31:21+00:00",
+      "location": "Bellevue, WA - Northeast 8th Street",
+      "lat": 47.6167921,
+      "lng": -122.1115836,
+      "kwh": 16.613,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/1342f389-a752-4bb9-8a7f-20fd218929bf",
+      "dist_home": 11.101529910231543,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2025-12-11 23:04:12+00:00",
+      "location": "Bellevue, WA - Northeast 8th Street",
+      "lat": 47.6167921,
+      "lng": -122.1115836,
+      "kwh": 13.7916,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/de1e9725-7719-4936-9e2d-5fec6beb3e67",
+      "dist_home": 11.101529910231543,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-01-15 05:52:16+00:00",
+      "location": "Tulalip Bay, WA",
+      "lat": 48.0656302,
+      "lng": -122.286878,
+      "kwh": 18.5867,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/8eef30f9-0fcf-448e-95a4-7c5ce0beeadb",
+      "dist_home": 19.084757707420795,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-10 16:41:26+00:00",
+      "location": "Auburn, WA - Auburn Way North",
+      "lat": 47.3301528,
+      "lng": -122.2215547,
+      "kwh": 47.8649,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9ca9ff51-1bb1-4861-9874-28fc7394946f",
+      "dist_home": 9.390475713955436,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-11 17:59:58+00:00",
+      "location": "North Bend, WA",
+      "lat": 47.4957757,
+      "lng": -121.784889,
+      "kwh": 45.8233,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a8211f7c-082a-4b5c-bc25-2afe610dc098",
+      "dist_home": 18.720937331943485,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-12 03:45:51+00:00",
+      "location": "Leavenworth, WA - US-2",
+      "lat": 47.5957449,
+      "lng": -120.6622886,
+      "kwh": 30.4867,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2228fd2b-a5b6-4c98-b298-6fe75f6d109c",
+      "dist_home": 71.53006961611374,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-12 23:09:06+00:00",
+      "location": "Bellevue, WA - Northeast 8th Street",
+      "lat": 47.6167921,
+      "lng": -122.1115836,
+      "kwh": 11.9898,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9b1f0d65-495d-490c-9c14-95349f345ef0",
+      "dist_home": 11.101529910231543,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-13 23:56:46+00:00",
+      "location": "Kirkland, WA",
+      "lat": 47.6765382,
+      "lng": -122.2070775,
+      "kwh": 26.3429,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/5c1d7532-bb85-48e0-9d9f-e3b38e43f753",
+      "dist_home": 14.76250371010602,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-15 16:30:04+00:00",
+      "location": "Auburn, WA - Auburn Way North",
+      "lat": 47.3301528,
+      "lng": -122.2215547,
+      "kwh": 47.6871,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d9797595-90da-455e-af48-a7295017cd06",
+      "dist_home": 9.390475713955436,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-16 02:23:42+00:00",
+      "location": "Federal Way, WA",
+      "lat": 47.313494,
+      "lng": -122.33931,
+      "kwh": 31.4301,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/38e2ba57-705b-499a-adc0-eb4fe14bc580",
+      "dist_home": 12.68783059839901,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-20 02:08:12+00:00",
+      "location": "Bellevue, WA - Northeast 8th Street",
+      "lat": 47.6167921,
+      "lng": -122.1115836,
+      "kwh": 18.795,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/9e59b9c7-24ef-4f72-aa83-251baea608d3",
+      "dist_home": 11.101529910231543,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-21 18:12:10+00:00",
+      "location": "Tacoma, WA - S 40th Street",
+      "lat": 47.2209169,
+      "lng": -122.4499901,
+      "kwh": 33.1852,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/fd4b52c5-83c4-41fe-98bf-70b2abb03b2e",
+      "dist_home": 20.913258532802047,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-21 19:50:13+00:00",
+      "location": "Aberdeen, WA",
+      "lat": 46.975371,
+      "lng": -123.815722,
+      "kwh": 61.4938,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7932bdc2-b2a1-4a97-8319-613db2b5d949",
+      "dist_home": 83.72113267435607,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-22 03:03:45+00:00",
+      "location": "Forks, WA",
+      "lat": 47.950222,
+      "lng": -124.386165,
+      "kwh": 40.7843,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2c52a365-a475-477d-aed5-4ab57bdf54f6",
+      "dist_home": 79.80375481132539,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-22 06:40:15+00:00",
+      "location": "Suquamish, WA",
+      "lat": 47.717948,
+      "lng": -122.5844878,
+      "kwh": 21.6139,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d06619d0-59e9-4b54-b41d-657679c8ab59",
+      "dist_home": 16.426619309769077,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-02-25 04:38:53+00:00",
+      "location": "Bellevue, WA - Northeast 8th Street",
+      "lat": 47.6167921,
+      "lng": -122.1115836,
+      "kwh": 25.0085,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/d2f6e665-2543-47eb-94a6-3e3e61f8aedc",
+      "dist_home": 11.101529910231543,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-04-19 14:42:56+00:00",
+      "location": "Kirkland, WA",
+      "lat": 47.6765382,
+      "lng": -122.2070775,
+      "kwh": 54.2339,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/4535fbf3-98f3-4d4f-9ef1-a8de7cfe2cee",
+      "dist_home": 14.76250371010602,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-04-25 16:26:28+00:00",
+      "location": "Cle Elum, WA - West Davis Street",
+      "lat": 47.1948356,
+      "lng": -120.9540582,
+      "kwh": 24.1363,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/4de6e9d1-a8e6-4404-8c40-7bba4e4405e1",
+      "dist_home": 60.47098196931384,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-04-25 22:32:34+00:00",
+      "location": "Leavenworth, WA - US-2",
+      "lat": 47.5957449,
+      "lng": -120.6622886,
+      "kwh": 34.1701,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/87557d75-5871-4a3f-816b-9c519c51c210",
+      "dist_home": 71.53006961611374,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-04-27 00:35:15+00:00",
+      "location": "Cle Elum, WA - West Davis Street",
+      "lat": 47.1948356,
+      "lng": -120.9540582,
+      "kwh": 43.1168,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/c847bcec-f0d7-4076-b663-389bea471150",
+      "dist_home": 60.47098196931384,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-04-29 15:55:13+00:00",
+      "location": "Bellevue, WA - Northeast 8th Street",
+      "lat": 47.6167921,
+      "lng": -122.1115836,
+      "kwh": 18.4693,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/5f3ae925-0dfd-49a3-8753-4ac20cdcfcea",
+      "dist_home": 11.101529910231543,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-06-08 04:55:57+00:00",
+      "location": "Tumwater, WA - Kingswood Drive Southwest",
+      "lat": 46.9932302,
+      "lng": -122.9200682,
+      "kwh": 1.966,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/6e016e77-6006-4e30-95a7-55b211edfc09",
+      "dist_home": 47.45865323446152,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-06-08 05:01:30+00:00",
+      "location": "Tumwater, WA - Kingswood Drive Southwest",
+      "lat": 46.9932302,
+      "lng": -122.9200682,
+      "kwh": 45.4306,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3aaef3ee-0f7e-462f-895d-0ef39264f1cf",
+      "dist_home": 47.45865323446152,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-03 17:43:47+00:00",
+      "location": "Puyallup, WA",
+      "lat": 47.1849009,
+      "lng": -122.29214,
+      "kwh": 25.1876,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/34ef2a2d-8a0c-47ff-9030-f6cd6b4600f0",
+      "dist_home": 19.91960699349368,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-04 14:19:25+00:00",
+      "location": "Puyallup, WA",
+      "lat": 47.1849009,
+      "lng": -122.29214,
+      "kwh": 62.314,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ca41b6dc-313e-40d9-b767-89e69c1305b6",
+      "dist_home": 19.91960699349368,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-06 06:02:21+00:00",
+      "location": "Auburn, WA",
+      "lat": 47.3075369,
+      "lng": -122.2301808,
+      "kwh": 19.036,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/ddd286ef-cf2f-4e86-948e-b2e097382c84",
+      "dist_home": 11.002123230143498,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-06 06:10:45+00:00",
+      "location": "Auburn, WA",
+      "lat": 47.3075369,
+      "lng": -122.2301808,
+      "kwh": 13.787,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/f0824212-db8d-407d-85ae-63c915f858ee",
+      "dist_home": 11.002123230143498,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-11 03:42:25+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 38.4527,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/a60907fa-96be-4a0a-9214-8592d3269e18",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-11 04:02:24+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 5.005,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/12181958-78d1-4e0a-a4cc-0a93cae4192d",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-11 18:54:10+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 14.4045,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/83b9fc89-050b-4250-8bea-5b73d821bc9b",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-12 01:18:43+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 16.0067,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/7bbd68db-a7b2-404d-aab8-4e011935d5d2",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-12 21:13:43+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 29.0227,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/807f22cc-a960-4e8a-a9f8-719346179aee",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-13 01:55:46+00:00",
+      "location": "Forks, WA",
+      "lat": 47.950222,
+      "lng": -124.386165,
+      "kwh": 26.8805,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/3cec5a10-a99f-4194-8fa1-0a31b24049ac",
+      "dist_home": 79.80375481132539,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-13 06:51:12+00:00",
+      "location": "Aberdeen, WA",
+      "lat": 46.975371,
+      "lng": -123.815722,
+      "kwh": 37.8729,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/65113783-961e-455e-8de1-d814e7c29e27",
+      "dist_home": 83.72113267435607,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-13 07:09:20+00:00",
+      "location": "Aberdeen, WA",
+      "lat": 46.975371,
+      "lng": -123.815722,
+      "kwh": 10.1167,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/88464433-6d39-4976-af25-4d136f7420ea",
+      "dist_home": 83.72113267435607,
+      "region": "PNW",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-13 08:25:43+00:00",
+      "location": "Tacoma, WA - South Hosmer Street",
+      "lat": 47.1748283,
+      "lng": -122.4631366,
+      "kwh": 12.9011,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/2e22af74-438e-4d30-9391-2be607dedf4d",
+      "dist_home": 23.878769795934268,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-18 01:47:35+00:00",
+      "location": "Silverdale, WA",
+      "lat": 47.6594091,
+      "lng": -122.6766317,
+      "kwh": 14.1026,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/4d14cca6-a871-4a5f-b6db-eb5c4019ef43",
+      "dist_home": 20.08756289113713,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-18 03:51:29+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 10.0862,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/077cca07-aa72-499e-bc5d-5141141f95ac",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-18 04:00:16+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 16.1746,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/366e9e11-b454-4230-9f57-62689881e4a8",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-18 07:30:44+00:00",
+      "location": "Sequim, WA",
+      "lat": 48.0849312,
+      "lng": -123.1096706,
+      "kwh": 13.1075,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/144c3304-4273-45c9-bb55-29199e4c8cad",
+      "dist_home": 22.706134525909118,
+      "region": "HOME",
+      "in_colorado": false
+    },
+    {
+      "datetime": "2026-07-18 09:44:12+00:00",
+      "location": "Auburn, WA - Auburn Way North",
+      "lat": 47.3301528,
+      "lng": -122.2215547,
+      "kwh": 63.4881,
+      "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/057716ed-4aa7-4600-84f0-c3f19e9fbf9a",
+      "dist_home": 9.390475713955436,
       "region": "HOME",
       "in_colorado": false
     }
   ],
   "stats": {
     "total_charges": 300,
-    "trip_count": 24,
-    "local_count": 67,
-    "total_stops_in_trips": 205
+    "trip_count": 6,
+    "local_count": 161,
+    "total_stops_in_trips": 125,
+    "home_detection": "auto"
   }
 }
