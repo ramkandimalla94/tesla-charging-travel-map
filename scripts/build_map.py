@@ -151,7 +151,7 @@ def path_miles(path: list[list[float]]) -> float:
 
 
 def build_route_path(stops: list[dict]) -> list[list[float]]:
-    """Build route path within a single trip — never cross-trip."""
+    """Build smooth great-circle route path within a single trip."""
     if not stops:
         return []
     path: list[list[float]] = [[stops[0]["lat"], stops[0]["lng"]]]
@@ -160,8 +160,10 @@ def build_route_path(stops: list[dict]) -> list[list[float]]:
         if not is_valid_coord(a["lat"], a["lng"]) or not is_valid_coord(b["lat"], b["lng"]):
             continue
         dist = haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"])
-        if dist > 80:
-            segment = great_circle_arc(a["lat"], a["lng"], b["lat"], b["lng"])
+        # Always arc long legs; denser sampling for cinematic smooth curves
+        if dist > 15:
+            points = max(48, min(160, int(dist * 1.2)))
+            segment = great_circle_arc(a["lat"], a["lng"], b["lat"], b["lng"], num_points=points)
             path.extend(segment[1:])
         else:
             path.append([b["lat"], b["lng"]])
