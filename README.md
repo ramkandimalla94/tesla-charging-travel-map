@@ -12,6 +12,7 @@ On first visit, paste your [Mapbox public token](https://account.mapbox.com/acce
 
 ## Features
 
+- **Road-following routes** via Mapbox Directions API (cached in `data/routes_cache.json`)
 - **3D satellite map** with Mapbox terrain and deck.gl elevated arcs
 - **24 segmented trips** across 10 states — 8,859 kWh · 14,173 miles
 - **Trip playback** with director-mode camera, scrubber, and keyboard shortcuts
@@ -38,6 +39,9 @@ cp .env.example .env
 
 # Build map from committed trip data
 python scripts/build_map.py
+
+# Refresh driving routes from Mapbox (requires MAPBOX_TOKEN)
+python scripts/build_map.py --refresh-routes
 
 # Serve locally (Mapbox requires HTTP, not file://)
 python -m http.server 8765
