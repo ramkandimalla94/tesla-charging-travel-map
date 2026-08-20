@@ -341,6 +341,9 @@
     }
     .beacon-label.visible { opacity: 1; transform: translateY(0); }
     .beacon-label.active { border-color: rgba(251,191,36,0.5); color: var(--gold); }
+    .beacon-wrap.split-start .beacon-label { border-color: rgba(52,211,153,0.45); }
+    .beacon-wrap.split-end .beacon-label { border-color: rgba(251,191,36,0.45); }
+    .beacon-wrap.split-start .beacon-label::before { content: none; }
 
     .beacon.milestone .beacon-core { width: 36px; height: 36px; font-size: 12px; }
     .beacon.milestone.start .beacon-core {
@@ -720,6 +723,9 @@
     let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
+    let poiMarkerKey = '';
+    let lastDirectorMove = 0;
+    let hoverRaf = null;
     let smoothBearing = 0, camBearing = 0, lastTravelBearing = 0;
     const MAX_PITCH = 45;
 
@@ -1072,16 +1078,21 @@
       if (!map.getSource('mapbox-dem')) {
         map.addSource('mapbox-dem', { type:'raster-dem', url:'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize:512, maxzoom:14 });
       }
-      map.setTerrain({ source:'mapbox-dem', exaggeration: 1.0 });
+      map.setTerrain({ source:'mapbox-dem', exaggeration: 0.55 });
       setSplash(70);
     }
 
+    let mapLabelLayerIds = null;
     function setMapLabelsVisible(visible) {
       if (!map || !map.isStyleLoaded()) return;
-      map.getStyle().layers.forEach(layer => {
-        if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
-          try { map.setLayoutProperty(layer.id, 'visibility', visible ? 'visible' : 'none'); } catch (_) {}
-        }
+      if (!mapLabelLayerIds) {
+        mapLabelLayerIds = map.getStyle().layers
+          .filter(layer => layer.type === 'symbol' && layer.layout && layer.layout['text-field'])
+          .map(layer => layer.id);
+      }
+      const vis = visible ? 'visible' : 'none';
+      mapLabelLayerIds.forEach(id => {
+        try { map.setLayoutProperty(id, 'visibility', vis); } catch (_) {}
       });
     }
 
@@ -1124,14 +1135,36 @@
     }
 
     function setHoveredTrip(id) {
+      if (hoveredTripId === id) return;
       hoveredTripId = id;
       document.querySelectorAll('.trip-item').forEach(el => {
         el.classList.toggle('preview', !!id && el.dataset.id === id);
       });
-      if (selectedId === 'all') {
+      if (selectedId !== 'all') return;
+      // Coalesce rapid sidebar hover into one paint pass (major lag source).
+      if (hoverRaf) cancelAnimationFrame(hoverRaf);
+      hoverRaf = requestAnimationFrame(() => {
+        hoverRaf = null;
         TRIPS.forEach(t => setRouteStyle(t.id, t.color, 'overview'));
         drawRouteLabels();
-      }
+      });
+    }
+
+    function isSameHomeTrip(trip) {
+      if (!trip?.stops?.length) return false;
+      const start = trip.stops[0];
+      const end = trip.stops[trip.stops.length - 1];
+      return trip.stops.length > 1
+        && Math.abs(start.lat - end.lat) < 0.02
+        && Math.abs(start.lng - end.lng) < 0.02;
+    }
+
+    /** Pixel offsets so round-trip home start/return stay readable at any zoom. */
+    function milestoneMarkerOffset(sameHome, isStart, isEnd) {
+      if (!sameHome) return [0, 0];
+      if (isStart) return [-56, -6];
+      if (isEnd) return [56, -6];
+      return [0, 0];
     }
 
     // ── Beacon markers ──
@@ -1142,11 +1175,11 @@
       stopMarkers.forEach(m => {
         const isStart = m._idx === 0;
         const isEnd = m._idx === lastIdx;
-        const show = isStart || isEnd;
-        m._el.classList.toggle('visible', show);
+        // Show the whole journey at rest — not only the stacked home pin.
+        m._el.classList.toggle('visible', true);
         m._el.classList.remove('active');
         if (m._lbl) {
-          m._lbl.classList.toggle('visible', show);
+          m._lbl.classList.toggle('visible', isStart || isEnd);
           m._lbl.classList.remove('active');
         }
       });
@@ -1162,10 +1195,7 @@
           ? trip.stops.map((_, i) => i)
           : [...new Set([0, lastIdx])];
         const start = trip.stops[0];
-        const end = trip.stops[lastIdx];
-        const sameHome = lastIdx > 0 && start && end
-          && Math.abs(start.lat - end.lat) < 0.02
-          && Math.abs(start.lng - end.lng) < 0.02;
+        const sameHome = isSameHomeTrip(trip);
         indices.forEach(i => {
           const s = trip.stops[i];
           const wrap = document.createElement('div');
@@ -1173,6 +1203,8 @@
           const isStart = i === 0;
           const isEnd = i === lastIdx;
           const isMilestone = isStart || isEnd;
+          if (sameHome && isStart) wrap.classList.add('split-start');
+          if (sameHome && isEnd) wrap.classList.add('split-end');
           if (single) {
             const beacon = document.createElement('div');
             beacon.className = 'beacon' + (isMilestone ? ` milestone ${isStart ? 'start' : 'end'}` : ' waypoint');
@@ -1181,9 +1213,10 @@
             beacon.innerHTML = `<div class="beacon-ring"></div><div class="beacon-core" style="background:${trip.color}">${coreText}</div>`;
             const lbl = document.createElement('div');
             lbl.className = 'beacon-label';
-            if (sameHome && isStart) lbl.textContent = `Home · ${shortLabel(s.location)}`;
-            else if (sameHome && isEnd) lbl.textContent = `Return · ${shortLabel(s.location)}`;
-            else lbl.textContent = isStart ? `Start · ${shortLabel(s.location)}` : (isEnd ? `Finish · ${shortLabel(s.location)}` : shortLabel(s.location));
+            const place = shortLabel(s.location);
+            if (sameHome && isStart) lbl.textContent = `Start · ${place}`;
+            else if (sameHome && isEnd) lbl.textContent = `Return · ${place}`;
+            else lbl.textContent = isStart ? `Start · ${place}` : (isEnd ? `Finish · ${place}` : place);
             wrap.appendChild(beacon);
             if (isMilestone) wrap.appendChild(lbl);
             var el = beacon, lblRef = isMilestone ? lbl : null;
@@ -1192,22 +1225,35 @@
             dot.className = 'stop-dot';
             dot.style.background = trip.color;
             dot.style.color = trip.color;
-            dot.style.width = isStart ? '14px' : '10px';
-            dot.style.height = isStart ? '14px' : '10px';
+            // Round-trip overview: keep both home endpoints visible via size + ring
+            if (sameHome && isStart) {
+              dot.style.width = '12px'; dot.style.height = '12px';
+              dot.style.boxShadow = '0 0 0 3px rgba(52,211,153,0.55), 0 0 10px currentColor';
+            } else if (sameHome && isEnd) {
+              dot.style.width = '12px'; dot.style.height = '12px';
+              dot.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.55), 0 0 10px currentColor';
+            } else {
+              dot.style.width = isStart ? '14px' : '10px';
+              dot.style.height = isStart ? '14px' : '10px';
+            }
             dot.style.border = '2px solid rgba(255,255,255,0.85)';
             wrap.appendChild(dot);
             var el = dot, lblRef = null;
           }
-          let lng = s.lng, lat = s.lat;
-          // Nudge stacked home start/end markers so both remain readable
-          if (sameHome && isEnd) { lng += 0.035; lat += 0.02; }
-          if (sameHome && isStart) { lng -= 0.01; }
-          const m = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
-            .setLngLat([lng, lat])
+          const pixelOffset = single
+            ? milestoneMarkerOffset(sameHome, isStart, isEnd)
+            : milestoneMarkerOffset(sameHome, isStart, isEnd);
+          const m = new mapboxgl.Marker({
+            element: wrap,
+            anchor: 'bottom',
+            offset: pixelOffset,
+          })
+            .setLngLat([s.lng, s.lat])
             .setPopup(new mapboxgl.Popup({ offset: 14, maxWidth: '280px' }).setHTML(popupHtml(s)))
             .addTo(map);
           m._idx = i; m._el = el; m._lbl = lblRef; m._stop = s;
           m._isMilestone = isMilestone;
+          m._sameHome = sameHome;
           stopMarkers.push(m);
         });
       });
@@ -1261,24 +1307,31 @@
     function fitTrip(animate=true) {
       const bounds = new mapboxgl.LngLatBounds();
       activeTrips().forEach(t => {
-        t.stops.forEach(s => bounds.extend([s.lng, s.lat]));
+        // Prefer the driving path so round trips with identical home endpoints still frame the loop
+        const path = t.route_path || [];
+        if (path.length >= 2) {
+          path.forEach(p => bounds.extend([p[1], p[0]]));
+        } else {
+          t.stops.forEach(s => bounds.extend([s.lng, s.lat]));
+        }
       });
       if (bounds.isEmpty()) return;
       const trip = activeTrip();
-      const stopCount = activeTrips().reduce((sum, t) => sum + t.stop_count, 0);
+      const stopCount = activeTrips().reduce((sum, t) => sum + (t.stop_count || t.stops?.length || 0), 0);
       const miles = trip?.miles || 0;
       setMapLabelsVisible(!isSingleTrip());
       let maxZoom = 5;
       if (isSingleTrip()) {
-        maxZoom = Math.min(5.4, Math.max(3.6, 7.2 - Math.log2(Math.max(stopCount, 2))));
-        if (miles > 1800) maxZoom = Math.min(maxZoom, 4.2);
-        else if (miles > 900) maxZoom = Math.min(maxZoom, 4.8);
+        maxZoom = Math.min(6.2, Math.max(4.0, 7.4 - Math.log2(Math.max(stopCount, 2))));
+        if (miles > 1800) maxZoom = Math.min(maxZoom, 4.4);
+        else if (miles > 900) maxZoom = Math.min(maxZoom, 5.0);
+        else if (miles < 450) maxZoom = Math.min(6.4, Math.max(maxZoom, 5.4));
       }
       map.fitBounds(bounds, {
         padding:{top:88,bottom:200,left:360,right:48},
-        pitch: isSingleTrip() ? 32 : 0,
-        bearing: isSingleTrip() ? 0 : 0,
-        duration: animate ? 1600 : 0,
+        pitch: isSingleTrip() ? 28 : 0,
+        bearing: 0,
+        duration: animate ? 1100 : 0,
         maxZoom,
         minZoom: 3,
       });
@@ -1353,12 +1406,26 @@
     function clearPoiMarkers() {
       poiMarkers.forEach(m => m.remove());
       poiMarkers = [];
+      poiMarkerKey = '';
     }
 
     function updatePoiMarkers(pois, visible) {
+      const key = (visible && pois?.length)
+        ? pois.map(p => `${p.id || p.name}:${p.lat},${p.lng}`).join('|')
+        : '';
+      if (key === poiMarkerKey) return;
       clearPoiMarkers();
-      if (!visible || !pois?.length || !map) return;
+      poiMarkerKey = key;
+      if (!key || !map) return;
+      // Keep POIs away from stacked home pins — skip landmarks within ~2.5km of a same-home endpoint
+      const trip = activeTrip();
+      const home = isSameHomeTrip(trip) ? trip.stops[0] : null;
       pois.forEach(poi => {
+        if (home) {
+          const dLat = poi.lat - home.lat;
+          const dLng = poi.lng - home.lng;
+          if ((dLat * dLat + dLng * dLng) < 0.0006) return; // ~2.5km
+        }
         const wrap = document.createElement('div');
         wrap.className = 'poi-wrap visible';
         const pin = document.createElement('div');
@@ -1443,37 +1510,54 @@
             .setLngLat([pos.lng, pos.lat]).addTo(map);
         }
         if (directorMode) {
-          const lookAhead = 0.04;
-          let lookPos = pos;
-          if (state.phase === 'travel' && state.path?.length >= 2) {
-            lookPos = pointOnPath(state.path, Math.min(state.frac + lookAhead, 1)) || pos;
+          const now = performance.now();
+          // Throttle camera eases — easeTo every RAF was a major lag source.
+          if (now - lastDirectorMove > 180) {
+            lastDirectorMove = now;
+            const lookAhead = 0.04;
+            let lookPos = pos;
+            if (state.phase === 'travel' && state.path?.length >= 2) {
+              lookPos = pointOnPath(state.path, Math.min(state.frac + lookAhead, 1)) || pos;
+            }
+            camBearing = state.phase === 'travel'
+              ? smoothAngle(camBearing, bearing, 0.06)
+              : camBearing;
+            const zoom = state.phase === 'dwell' && state.pois?.length ? 7.2 : Math.min(6.8, Math.max(5.2, map.getZoom()));
+            const cam = {
+              center: [lookPos.lng, lookPos.lat],
+              zoom,
+              pitch: Math.min(MAX_PITCH, state.phase === 'dwell' ? 38 : 42),
+              bearing: camBearing,
+            };
+            if (isRecording) map.jumpTo(cam);
+            else map.easeTo({ ...cam, duration: 420, essential: true });
           }
-          camBearing = state.phase === 'travel'
-            ? smoothAngle(camBearing, bearing, 0.06)
-            : camBearing;
-          const zoom = state.phase === 'dwell' && state.pois?.length ? 7.2 : Math.min(6.8, Math.max(5.2, map.getZoom()));
-          const cam = {
-            center: [lookPos.lng, lookPos.lat],
-            zoom,
-            pitch: Math.min(MAX_PITCH, state.phase === 'dwell' ? 38 : 42),
-            bearing: camBearing,
-          };
-          if (isRecording) map.jumpTo(cam);
-          else map.easeTo({ ...cam, duration: 500, essential: true });
         }
       }
 
       updatePoiMarkers(state.pois, state.phase === 'dwell');
 
+      const lastIdx = stops.length - 1;
+      const sameHome = isSameHomeTrip(activeTrip());
       stopMarkers.forEach(m => {
         const reached = m._idx <= animStopIdx;
         const isActive = m._idx === animStopIdx;
-        m._el.classList.toggle('visible', reached || m._isMilestone);
-        m._el.classList.toggle('active', isActive);
+        const isStart = m._idx === 0;
+        const isEnd = m._idx === lastIdx;
+        // While the car sits on a stacked home pin, hide that milestone so the car wins.
+        const carCovers = sameHome && isActive && (isStart || isEnd) && state.phase === 'dwell';
+        m._el.classList.toggle('visible', (reached || m._isMilestone) && !carCovers);
+        m._el.classList.toggle('active', isActive && !carCovers);
         if (m._lbl) {
-          m._lbl.classList.toggle('visible', isActive);
-          m._lbl.classList.toggle('active', isActive);
-          if (isActive) m._lbl.textContent = shortLabel(m._stop.location);
+          const showLbl = isActive && !carCovers;
+          m._lbl.classList.toggle('visible', showLbl);
+          m._lbl.classList.toggle('active', showLbl);
+          if (showLbl) {
+            const place = shortLabel(m._stop.location);
+            if (sameHome && isStart) m._lbl.textContent = `Start · ${place}`;
+            else if (sameHome && isEnd) m._lbl.textContent = `Return · ${place}`;
+            else m._lbl.textContent = place;
+          }
         }
       });
 
@@ -1625,6 +1709,11 @@
 
     // ── Select trip ──
     function selectTrip(id) {
+      if (selectedId === id && id !== 'all') {
+        // Re-clicking the same trip should feel instant — just refit, don't rebuild layers.
+        resetVisuals(); drawStops(); updateHero(); fitTrip();
+        return;
+      }
       selectedId=id;
       hoveredTripId=null;
       dismissOnboarding();
