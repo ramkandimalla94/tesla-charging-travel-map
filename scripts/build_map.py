@@ -25,12 +25,14 @@ OUTPUT_DIR = ROOT / "output"
 GPX_DIR = OUTPUT_DIR / "gpx"
 TRIPS_FILE = DATA_DIR / "trips.json"
 ROUTES_CACHE_FILE = DATA_DIR / "routes_cache.json"
+NEARBY_PLACES_FILE = DATA_DIR / "nearby_places.json"
+VISITED_PLACES_FILE = DATA_DIR / "visited_places.json"
 HTML_OUTPUT = OUTPUT_DIR / "travel_map.html"
 GEOJSON_OUTPUT = OUTPUT_DIR / "trips.geojson"
 
-# Legs shorter than this use a direct connector (same parking lot, etc.).
+POI_RADIUS_MILES = 40
+POI_MAX_PER_STOP = 3
 MIN_ROUTE_MILES = 0.3
-# Pause between Mapbox Directions requests (free tier ~300/min).
 ROUTE_FETCH_DELAY_S = 0.25
 
 # Continental US bounds for overview camera
@@ -54,6 +56,113 @@ STATE_NAMES = {
 def load_trips() -> dict:
     with open(TRIPS_FILE, encoding="utf-8") as f:
         return json.load(f)
+
+
+def load_nearby_places() -> list[dict]:
+    if not NEARBY_PLACES_FILE.exists():
+        return []
+    with open(NEARBY_PLACES_FILE, encoding="utf-8") as f:
+        return json.load(f).get("places", [])
+
+
+def load_visited_places() -> dict[str, dict[str, bool]]:
+    if not VISITED_PLACES_FILE.exists():
+        return {}
+    with open(VISITED_PLACES_FILE, encoding="utf-8") as f:
+        return json.load(f).get("visited", {})
+
+
+def match_pois_for_stop(
+    stop: dict,
+    all_places: list[dict],
+    visited_for_trip: dict[str, bool],
+) -> list[dict]:
+    """Return nearby POIs sorted by distance, capped at POI_MAX_PER_STOP."""
+    lat, lng = stop.get("lat"), stop.get("lng")
+    if not is_valid_coord(lat, lng):
+        return []
+    matches: list[tuple[float, dict]] = []
+    for place in all_places:
+        dist = haversine_miles(lat, lng, place["lat"], place["lng"])
+        if dist <= POI_RADIUS_MILES:
+            poi = {
+                "id": place["id"],
+                "name": place["name"],
+                "category": place.get("category", "landmark"),
+                "emoji": place.get("emoji", "📍"),
+                "tagline": place.get("tagline", ""),
+                "lat": place["lat"],
+                "lng": place["lng"],
+                "distance_mi": round(dist, 1),
+                "visited": bool(visited_for_trip.get(place["id"], False)),
+            }
+            matches.append((dist, poi))
+    matches.sort(key=lambda x: x[0])
+    return [p for _, p in matches[:POI_MAX_PER_STOP]]
+
+
+def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]]) -> dict:
+    """Narrative captions for cinematic replay and video export."""
+    origin = short_location_label(stops[0]["location"]) if stops else ""
+    dest = short_location_label(stops[-1]["location"]) if stops else ""
+    states = trip.get("via_states") or []
+    via = ", ".join(states) if states else "the open road"
+    days = trip_duration_days(trip["start"], trip["end"])
+    all_pois = [p for pois in stop_pois for p in pois]
+    visited_count = sum(1 for p in all_pois if p.get("visited"))
+    nearby_names = list(dict.fromkeys(p["name"] for p in all_pois))[:6]
+    crew = trip.get("trip_crew") or trip.get("owner_short") or "you"
+    vehicle = trip.get("vehicle_label") or "your Tesla"
+    if trip.get("is_shared"):
+        who = f"{crew} in {vehicle}"
+    elif vehicle == "your Tesla":
+        who = "your Tesla"
+    else:
+        who = vehicle
+
+    intro = (
+        f"A {days}-day road trip for {who} from {origin.split(',')[0]} "
+        f"through {via} — {len(stops)} Supercharger stops powering the journey."
+    )
+    outro = (
+        f"Journey complete — {len(stops)} charging stops across {via}. "
+        + (
+            f"{visited_count} confirmed visits · {len(all_pois)} nearby highlights explored."
+            if all_pois
+            else "Every mile charged by Supercharger."
+        )
+    )
+
+    stop_captions: list[dict] = []
+    for i, (stop, pois) in enumerate(zip(stops, stop_pois)):
+        label = short_location_label(stop["location"])
+        city = label.split(",")[0]
+        if pois:
+            poi_text = " · ".join(
+                f"{p['emoji']} {p['name']}" + (" ✓" if p.get("visited") else "")
+                for p in pois[:2]
+            )
+            caption = f"Charging in {city} — nearby: {poi_text}"
+            sub = pois[0].get("tagline", "")
+        elif i == 0:
+            caption = f"Departing {city} — the adventure begins"
+            sub = f"First Supercharger of {len(stops)} stops"
+        elif i == len(stops) - 1:
+            caption = f"Final stop · {city}"
+            sub = "Homeward bound"
+        else:
+            caption = f"Charging in {city}"
+            sub = f"Stop {i + 1} of {len(stops)}"
+        stop_captions.append({"caption": caption, "sub": sub, "pois": pois})
+
+    return {
+        "intro": intro,
+        "outro": outro,
+        "highlights": nearby_names,
+        "visited_count": visited_count,
+        "nearby_count": len(all_pois),
+        "stop_captions": stop_captions,
+    }
 
 
 def trip_color(index: int) -> str:
@@ -161,7 +270,6 @@ def path_miles(path: list[list[float]]) -> float:
 
 
 def simplify_path(path: list[list[float]], max_points: int = 160) -> list[list[float]]:
-    """Downsample dense Mapbox geometry while preserving road shape."""
     if len(path) <= max_points:
         return path
     step = (len(path) - 1) / (max_points - 1)
@@ -191,7 +299,6 @@ def save_routes_cache(cache: dict) -> None:
 def fetch_mapbox_driving_route(
     lat1: float, lng1: float, lat2: float, lng2: float, token: str
 ) -> tuple[list[list[float]], float] | None:
-    """Fetch a driving route from Mapbox Directions API. Returns ([lat,lng], miles)."""
     coords = f"{lng1},{lat1};{lng2},{lat2}"
     query = urllib.parse.urlencode({
         "geometries": "geojson",
@@ -206,38 +313,25 @@ def fetch_mapbox_driving_route(
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         print(f"  Route fetch failed ({lat1:.4f},{lng1:.4f})→({lat2:.4f},{lng2:.4f}): {exc}")
         return None
-
     if data.get("code") != "Ok" or not data.get("routes"):
         print(f"  No driving route ({lat1:.4f},{lng1:.4f})→({lat2:.4f},{lng2:.4f}): {data.get('code')}")
         return None
-
     route = data["routes"][0]
     path = [[pt[1], pt[0]] for pt in route["geometry"]["coordinates"]]
-    miles = route["distance"] / 1609.344
-    return path, miles
+    return path, route["distance"] / 1609.344
 
 
 def get_driving_segment(
-    lat1: float,
-    lng1: float,
-    lat2: float,
-    lng2: float,
-    cache: dict,
-    token: str,
-    refresh: bool,
-    stats: dict,
+    lat1: float, lng1: float, lat2: float, lng2: float,
+    cache: dict, token: str, refresh: bool, stats: dict,
 ) -> list[list[float]]:
-    """Return road-following path for one leg, using cache + Mapbox with arc fallback."""
     dist = haversine_miles(lat1, lng1, lat2, lng2)
     if dist < MIN_ROUTE_MILES:
         return [[lat1, lng1], [lat2, lng2]]
-
     key = leg_cache_key(lat1, lng1, lat2, lng2)
-    if key in cache:
-        if not refresh or key in stats["session_keys"]:
-            stats["cache_hits"] += 1
-            return cache[key]["path"]
-
+    if key in cache and (not refresh or key in stats["session_keys"]):
+        stats["cache_hits"] += 1
+        return cache[key]["path"]
     if token:
         result = fetch_mapbox_driving_route(lat1, lng1, lat2, lng2, token)
         if result:
@@ -249,19 +343,14 @@ def get_driving_segment(
             time.sleep(ROUTE_FETCH_DELAY_S)
             return path
         stats["fetch_failed"] += 1
-
     stats["fallback"] += 1
-    return great_circle_arc(lat1, lng1, lat2, lng2)
+    points = max(48, min(160, int(max(dist, 5) * 1.2)))
+    return great_circle_arc(lat1, lng1, lat2, lng2, num_points=points)
 
 
 def build_route_path(
-    stops: list[dict],
-    cache: dict,
-    token: str,
-    refresh: bool,
-    stats: dict,
+    stops: list[dict], cache: dict, token: str, refresh: bool, stats: dict,
 ) -> list[list[float]]:
-    """Build road-following route path within a single trip — never cross-trip."""
     if not stops:
         return []
     path: list[list[float]] = [[stops[0]["lat"], stops[0]["lng"]]]
@@ -269,8 +358,7 @@ def build_route_path(
         a, b = stops[i - 1], stops[i]
         if not is_valid_coord(a["lat"], a["lng"]) or not is_valid_coord(b["lat"], b["lng"]):
             continue
-        dist = haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"])
-        if dist > 1500:
+        if haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"]) > 1500:
             continue
         segment = get_driving_segment(
             a["lat"], a["lng"], b["lat"], b["lng"], cache, token, refresh, stats
@@ -280,15 +368,10 @@ def build_route_path(
 
 
 def build_arcs(
-    stops: list[dict],
-    color: str,
-    trip_id: str,
-    cache: dict,
-    token: str,
-    refresh: bool,
-    stats: dict,
+    stops: list[dict], color: str, trip_id: str,
+    cache: dict, token: str, refresh: bool, stats: dict,
 ) -> list[dict]:
-    """Build road-following arc segments for deck.gl PathLayer (selected trip only)."""
+    """Build short-path arc segments for deck.gl PathLayer (selected trip only)."""
     arcs: list[dict] = []
     for i in range(1, len(stops)):
         a, b = stops[i - 1], stops[i]
@@ -318,6 +401,170 @@ def extract_state(location: str) -> str | None:
     return m.group(1) if m else None
 
 
+def short_location_label(location: str) -> str:
+    city_match = re.match(r"^([^,]+)", location)
+    city = city_match.group(1).strip() if city_match else location
+    state = extract_state(location)
+    return f"{city}, {state}" if state else city
+
+
+def parse_ts(ts: str) -> datetime:
+    return datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+
+
+def extract_leg_path(
+    lat1: float, lng1: float, lat2: float, lng2: float,
+    cache: dict | None = None, token: str = "", refresh: bool = False, stats: dict | None = None,
+) -> list[list[float]]:
+    if cache is not None and stats is not None:
+        return get_driving_segment(lat1, lng1, lat2, lng2, cache, token, refresh, stats)
+    dist = haversine_miles(lat1, lng1, lat2, lng2)
+    points = max(32, min(128, int(max(dist, 5) * 1.5)))
+    return great_circle_arc(lat1, lng1, lat2, lng2, num_points=points)
+
+
+def leg_bearing_deg(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    p = math.pi / 180
+    lat1r, lat2r = lat1 * p, lat2 * p
+    dLng = (lng2 - lng1) * p
+    y = math.sin(dLng) * math.cos(lat2r)
+    x = math.cos(lat1r) * math.sin(lat2r) - math.sin(lat1r) * math.cos(lat2r) * math.cos(dLng)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
+
+
+def build_playback_timeline(
+    stops: list[dict],
+    route_path: list[list[float]],
+    story: dict | None = None,
+    stop_pois: list[list[dict]] | None = None,
+    cache: dict | None = None,
+    token: str = "",
+    refresh: bool = False,
+    stats: dict | None = None,
+) -> dict:
+    """
+    Time-weighted playback segments for cinematic replay.
+    Long halts between charges produce longer dwell + slower leg pacing.
+    Adds intro/outro title cards and nearby-place highlights on dwell segments.
+    """
+    if len(stops) < 1:
+        return {"segments": [], "total_video_ms": 0, "real_duration_ms": 0, "story": story or {}}
+
+    raw_segments: list[dict] = []
+    real_total_ms = 0
+    stop_pois = stop_pois or [[] for _ in stops]
+    story = story or {}
+
+    for i, stop in enumerate(stops):
+        label = short_location_label(stop["location"])
+        pois = stop_pois[i] if i < len(stop_pois) else []
+        caption = story.get("stop_captions", [{}] * len(stops))
+        cap = caption[i] if i < len(caption) else {}
+        if i < len(stops) - 1:
+            nxt = stops[i + 1]
+            gap_ms = max(
+                60_000,
+                int((parse_ts(nxt["datetime"]) - parse_ts(stop["datetime"])).total_seconds() * 1000),
+            )
+            real_total_ms += gap_ms
+            gap_hours = gap_ms / 3_600_000
+            dwell_ratio = min(0.88, max(0.18, gap_hours / (gap_hours + 2.5)))
+            dwell_ms = int(gap_ms * dwell_ratio)
+            travel_ms = gap_ms - dwell_ms
+            leg_path = extract_leg_path(
+                stop["lat"], stop["lng"], nxt["lat"], nxt["lng"],
+                cache, token, refresh, stats,
+            )
+            raw_segments.append({
+                "type": "dwell",
+                "real_duration_ms": dwell_ms,
+                "lat": stop["lat"],
+                "lng": stop["lng"],
+                "label": label,
+                "stop_index": i,
+                "pois": pois,
+                "caption": cap.get("caption", f"Charging in {label}"),
+                "subcaption": cap.get("sub", ""),
+            })
+            raw_segments.append({
+                "type": "travel",
+                "real_duration_ms": travel_ms,
+                "path": leg_path,
+                "bearing": round(leg_bearing_deg(stop["lat"], stop["lng"], nxt["lat"], nxt["lng"]), 1),
+                "from_label": label,
+                "to_label": short_location_label(nxt["location"]),
+                "stop_index": i,
+            })
+        else:
+            final_ms = 300_000
+            if stop.get("end_datetime"):
+                final_ms = max(
+                    60_000,
+                    int(
+                        (parse_ts(stop["end_datetime"]) - parse_ts(stop["datetime"])).total_seconds()
+                        * 1000
+                    ),
+                )
+            real_total_ms += final_ms
+            raw_segments.append({
+                "type": "dwell",
+                "real_duration_ms": final_ms,
+                "lat": stop["lat"],
+                "lng": stop["lng"],
+                "label": label,
+                "stop_index": i,
+                "pois": pois,
+                "caption": cap.get("caption", f"Final stop · {label}"),
+                "subcaption": cap.get("sub", "Journey complete"),
+            })
+
+    target_ms = min(120_000, max(25_000, len(stops) * 3_200))
+    scale = target_ms / max(real_total_ms, 1)
+    video_segments: list[dict] = []
+    for seg in raw_segments:
+        dur = seg["real_duration_ms"] * scale
+        if seg["type"] == "dwell":
+            # Longer dwell when POIs are present — time to showcase nearby places
+            poi_bonus = 1.35 if seg.get("pois") else 1.0
+            dur = max(1_800, min(12_000, dur * poi_bonus))
+        else:
+            dur = max(1_400, min(20_000, dur))
+        video_segments.append({**seg, "duration_ms": int(dur)})
+
+    # Cinematic intro/outro title cards for video export
+    intro_seg = {
+        "type": "intro",
+        "duration_ms": 4_500,
+        "title": story.get("intro_title", ""),
+        "caption": story.get("intro", "Road trip replay"),
+        "highlights": story.get("highlights", [])[:4],
+    }
+    outro_seg = {
+        "type": "outro",
+        "duration_ms": 5_000,
+        "caption": story.get("outro", "Journey complete"),
+        "visited_count": story.get("visited_count", 0),
+        "nearby_count": story.get("nearby_count", 0),
+    }
+    all_segments = [intro_seg, *video_segments, outro_seg]
+
+    return {
+        "segments": all_segments,
+        "total_video_ms": sum(s["duration_ms"] for s in all_segments),
+        "real_duration_ms": real_total_ms,
+        "story": story,
+    }
+
+
+def is_featured_trip(trip: dict, miles: int, stop_count: int) -> bool:
+    return (
+        trip.get("has_colorado")
+        or miles >= 600
+        or stop_count >= 10
+        or trip_duration_days(trip["start"], trip["end"]) >= 4
+    )
+
+
 def trip_duration_days(start: str, end: str) -> int:
     try:
         s = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
@@ -334,6 +581,8 @@ def prepare_trips(
     refresh: bool,
     stats: dict,
 ) -> list[dict]:
+    all_places = load_nearby_places()
+    visited_all = load_visited_places()
     prepared: list[dict] = []
     for i, trip in enumerate(trips_data["trips"]):
         stops = [
@@ -352,6 +601,16 @@ def prepare_trips(
         state_names = [STATE_NAMES.get(s, s) for s in states]
         via_summary = trip.get("via_summary") or ", ".join(states)
         arcs = build_arcs(stops, trip_color(i), trip["id"], cache, token, refresh, stats)
+        visited_for_trip = visited_all.get(trip["id"], {})
+        stop_pois = [
+            match_pois_for_stop(s, all_places, visited_for_trip) for s in stops
+        ]
+        story = build_trip_story(trip, stops, stop_pois)
+        story["intro_title"] = trip["name"]
+        playback = build_playback_timeline(
+            stops, route_path, story, stop_pois, cache, token, refresh, stats
+        )
+        featured = is_featured_trip(trip, miles, len(stops))
         prepared.append({
             "id": trip["id"],
             "name": trip["name"],
@@ -373,7 +632,19 @@ def prepare_trips(
             "dest_label": trip.get("dest_label", ""),
             "has_colorado": trip.get("has_colorado", False),
             "colorado_stops": trip.get("colorado_stops", 0),
+            "featured": featured,
             "arcs": arcs,
+            "playback": playback,
+            "story": story,
+            "owner": trip.get("owner", ""),
+            "owner_short": trip.get("owner_short", ""),
+            "vin": trip.get("vin", ""),
+            "travelers": trip.get("travelers", []),
+            "trip_crew": trip.get("trip_crew", ""),
+            "driver": trip.get("driver", ""),
+            "driver_short": trip.get("driver_short", ""),
+            "vehicle_label": trip.get("vehicle_label", ""),
+            "is_shared": trip.get("is_shared", False),
             "region": "colorado" if trip.get("has_colorado") else (
                 "pnw" if any(s in states for s in ("WA", "OR", "ID")) else "other"
             ),
@@ -383,8 +654,13 @@ def prepare_trips(
 
 def build_dashboard(trips: list[dict]) -> dict:
     all_states: set[str] = set()
+    owners: set[str] = set()
     for t in trips:
         all_states.update(t["states"])
+        if t.get("owner_short"):
+            owners.add(t["owner_short"])
+        elif t.get("owner"):
+            owners.add(t["owner"].split()[0])
     longest = max(trips, key=lambda t: t["miles"]) if trips else None
     return {
         "total_kwh": round(sum(t["total_kwh"] for t in trips), 0),
@@ -396,6 +672,8 @@ def build_dashboard(trips: list[dict]) -> dict:
             "name": longest["name"], "miles": longest["miles"], "id": longest["id"],
         } if longest else None,
         "colorado_trips": sum(1 for t in trips if t["has_colorado"]),
+        "featured_trips": sum(1 for t in trips if t.get("featured")),
+        "owners": sorted(owners),
         "us_bounds": US_BOUNDS,
     }
 
@@ -446,17 +724,10 @@ def build_geojson(trips: list[dict]) -> dict:
 
 def write_gpx(trip: dict, path: Path) -> None:
     gpx = ET.Element("gpx", {
-        "version": "1.1", "creator": "Tesla Travel Map",
+        "version": "1.1", "creator": "Road Replay",
         "xmlns": "http://www.topografix.com/GPX/1/1",
     })
     ET.SubElement(ET.SubElement(gpx, "metadata"), "name").text = trip["name"]
-    route = trip.get("route_path") or []
-    if len(route) >= 2:
-        trk = ET.SubElement(gpx, "trk")
-        ET.SubElement(trk, "name").text = trip["name"]
-        seg = ET.SubElement(trk, "trkseg")
-        for lat, lng in route:
-            ET.SubElement(seg, "trkpt", {"lat": str(lat), "lon": str(lng)})
     for stop in trip["stops"]:
         if stop.get("lat") is None:
             continue
@@ -554,9 +825,8 @@ def main() -> None:
     for old in GPX_DIR.glob("*.gpx"):
         if old.stem not in valid_ids:
             old.unlink()
-    prepared_by_id = {t["id"]: t for t in prepared}
     for trip in trips_data["trips"]:
-        write_gpx(prepared_by_id.get(trip["id"], trip), GPX_DIR / f"{trip['id']}.gpx")
+        write_gpx(trip, GPX_DIR / f"{trip['id']}.gpx")
 
     HTML_OUTPUT.write_text(render_html(prepared, dashboard, timeline, embed_token), encoding="utf-8")
     if args.public:

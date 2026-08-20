@@ -3,287 +3,517 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tesla Travel Replay</title>
+  <title>Road Replay — Tesla Trip Cinema</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #06080d; --glass: rgba(10,12,18,0.82); --glass-light: rgba(255,255,255,0.04);
-      --border: rgba(255,255,255,0.08); --text: #f0f2f5; --muted: #7a8290;
-      --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.45); --co: #f59e0b;
-      --sidebar-w: 340px; --timeline-h: 72px; --hero-h: 0px;
+      --bg: #030306;
+      --surface: rgba(12, 14, 20, 0.78);
+      --surface-2: rgba(255, 255, 255, 0.035);
+      --border: rgba(255, 255, 255, 0.09);
+      --border-bright: rgba(255, 255, 255, 0.16);
+      --text: #f4f6fa;
+      --muted: #8b93a3;
+      --accent: #5eead4;
+      --accent-2: #38bdf8;
+      --gold: #fbbf24;
+      --panel-w: 320px;
+      --dock-h: 132px;
+      --timeline-h: 56px;
+      --font-display: 'Syne', system-ui, sans-serif;
+      --font-body: 'DM Sans', system-ui, sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    html, body {
+      height: 100%; overflow: hidden;
+      font-family: var(--font-body); background: var(--bg); color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #map-wrap { position: absolute; inset: 0; overflow: hidden; }
+    #map { position: absolute; inset: 0; }
+    .map-vignette {
+      position: absolute; inset: 0; pointer-events: none; z-index: 2;
+      background:
+        radial-gradient(ellipse 85% 65% at 50% 45%, transparent 30%, rgba(3,3,6,0.55) 100%),
+        linear-gradient(to bottom, rgba(3,3,6,0.45) 0%, transparent 18%, transparent 72%, rgba(3,3,6,0.82) 100%);
+    }
+    .map-grain {
+      position: absolute; inset: 0; pointer-events: none; z-index: 3; opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .mapboxgl-canvas { transition: filter 0.8s ease; }
+    body.night .mapboxgl-canvas { filter: brightness(0.38) contrast(1.12) saturate(0.78) hue-rotate(205deg); }
 
     /* ── Splash ── */
     #splash {
       position: fixed; inset: 0; z-index: 9999; background: var(--bg);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: opacity 0.8s ease, visibility 0.8s;
+      transition: opacity 0.9s ease, visibility 0.9s;
     }
     #splash.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-    #splash .logo { font-size: 48px; margin-bottom: 16px; animation: pulse-logo 2s ease infinite; }
-    #splash h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
-    #splash p { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
-    .splash-bar { width: 240px; height: 3px; background: var(--glass-light); border-radius: 2px; overflow: hidden; }
-    .splash-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #60a5fa); width: 0%; transition: width 0.3s; border-radius: 2px; }
-    @keyframes pulse-logo { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.85} }
+    #splash .brand-mark {
+      font-family: var(--font-display); font-size: 13px; letter-spacing: 0.45em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 28px;
+    }
+    #splash h1 {
+      font-family: var(--font-display); font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800; letter-spacing: -0.03em; margin-bottom: 10px;
+      background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    #splash p { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+    .splash-bar { width: 280px; height: 2px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+    .splash-fill {
+      height: 100%; width: 0%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 20px rgba(94, 234, 212, 0.5);
+      transition: width 0.35s ease;
+    }
 
-    /* ── Map ── */
-    #map { position: absolute; inset: 0; }
+    /* ── Top bar ── */
+    .top-bar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 12;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px; pointer-events: none;
+    }
+    .brand {
+      font-family: var(--font-display); font-size: 15px; font-weight: 800;
+      letter-spacing: 0.18em; text-transform: uppercase; pointer-events: auto;
+      text-shadow: 0 2px 16px rgba(0,0,0,0.8);
+    }
+    .brand span { color: var(--accent); }
+    .stat-rail {
+      display: flex; gap: 8px; pointer-events: auto;
+    }
+    .stat-chip {
+      background: var(--surface); backdrop-filter: blur(20px) saturate(1.3);
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 8px 14px; font-size: 11px; color: var(--muted);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+    .stat-chip strong { color: var(--text); font-weight: 700; margin-left: 4px; font-size: 12px; }
 
-    /* Night mode: tint the WebGL canvas only (markers/controls stay bright).
-       Avoids a full Mapbox style reload — instant, no tile refetch. */
-    .mapboxgl-canvas { transition: filter 0.7s ease; }
-    body.night .mapboxgl-canvas { filter: brightness(0.42) contrast(1.08) saturate(0.85) hue-rotate(202deg); }
-
-    /* ── Sidebar ── */
-    .sidebar {
-      position: absolute; top: 16px; left: 16px; bottom: calc(var(--timeline-h) + 24px);
-      width: var(--sidebar-w); z-index: 10;
-      background: var(--glass); backdrop-filter: blur(24px) saturate(1.4);
-      border: 1px solid var(--border); border-radius: 20px;
-      box-shadow: 0 16px 64px rgba(0,0,0,0.55);
+    /* ── Trip panel ── */
+    .trip-panel {
+      position: absolute; top: 72px; left: 18px; bottom: calc(var(--dock-h) + var(--timeline-h) + 36px);
+      width: var(--panel-w); z-index: 10;
+      background: var(--surface); backdrop-filter: blur(28px) saturate(1.5);
+      border: 1px solid var(--border); border-radius: 18px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04);
       display: flex; flex-direction: column; overflow: hidden;
-      transition: transform 0.4s cubic-bezier(.4,0,.2,1);
+      transition: transform 0.45s cubic-bezier(.22,1,.36,1), opacity 0.35s;
     }
-    .sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w) - 24px)); }
+    .trip-panel.collapsed { transform: translateX(calc(-1 * var(--panel-w) - 28px)); opacity: 0.4; }
 
-    .sidebar-header { padding: 20px 20px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .sidebar-header h1 { font-size: 17px; font-weight: 800; letter-spacing: -0.4px; }
-    .sidebar-header .sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
-    .badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle; letter-spacing: 0.3px; }
-    .badge-3d { background: rgba(59,130,246,0.2); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+    .panel-head { padding: 18px 18px 14px; border-bottom: 1px solid var(--border); }
+    .panel-head .eyebrow {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+    }
+    .panel-head h2 {
+      font-family: var(--font-display); font-size: 18px; font-weight: 700;
+      letter-spacing: -0.02em; line-height: 1.2;
+    }
+    .panel-head .sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-    /* Hero card */
-    .hero {
-      margin: 12px 16px 0; padding: 16px; border-radius: 14px;
-      background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(99,102,241,0.08));
-      border: 1px solid rgba(59,130,246,0.2); flex-shrink: 0;
+    .trip-hero {
+      margin: 14px 14px 0; padding: 16px; border-radius: 14px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid var(--border); position: relative; overflow: hidden;
     }
-    .hero.co { background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(234,88,12,0.08)); border-color: rgba(245,158,11,0.25); }
-    .hero-name { font-size: 14px; font-weight: 700; line-height: 1.3; margin-bottom: 4px; }
-    .hero-via { font-size: 11px; color: var(--muted); margin-bottom: 8px; line-height: 1.4; }
-    .hero-via strong { color: #93c5fd; font-weight: 600; }
-    .hero.co .hero-via strong { color: #fbbf24; }
-    .hero-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .hero-stat { font-size: 10px; color: var(--muted); }
-    .hero-stat strong { display: block; font-size: 15px; font-weight: 700; color: var(--text); margin-top: 1px; }
-    .hero-states { margin-top: 8px; font-size: 10px; color: var(--muted); }
-    .hero-states span { display: inline-block; background: var(--glass-light); padding: 2px 7px; border-radius: 4px; margin: 2px 2px 0 0; font-size: 9px; }
-
-    /* Trip list */
-    .trip-scroll { flex: 1; overflow-y: auto; padding: 10px 12px 12px; }
-    .trip-scroll::-webkit-scrollbar { width: 4px; }
-    .trip-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    .group-label { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 4px 4px; }
-    .trip-item {
-      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-      border-radius: 12px; cursor: pointer; margin-bottom: 4px;
-      border: 1px solid transparent; transition: all 0.18s;
-    }
-    .trip-item:hover { background: var(--glass-light); }
-    .trip-item.active { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.25); }
-    .trip-item.co { border: 1px solid rgba(245,158,11,0.25); background: rgba(245,158,11,0.06); }
-    .trip-item.co:hover { background: rgba(245,158,11,0.12); }
-    .trip-item.co.active { background: rgba(245,158,11,0.18); border-color: rgba(245,158,11,0.45); }
-    .trip-item.co .trip-name { color: #fbbf24; font-weight: 700; }
-    .group-label.co-label { color: #fbbf24; font-size: 10px; }
-    .trip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
-    .trip-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .trip-meta { font-size: 10px; color: var(--muted); margin-top: 1px; }
-
-    /* Controls strip */
-    .controls {
-      padding: 12px 16px; border-top: 1px solid var(--border); flex-shrink: 0;
-    }
-    .btn-row { display: flex; gap: 5px; margin-bottom: 8px; }
-    .btn {
-      flex: 1; padding: 9px 0; border-radius: 10px; border: 1px solid var(--border);
-      background: var(--glass-light); color: var(--text); cursor: pointer;
-      font-size: 12px; font-weight: 600; transition: all 0.15s; font-family: inherit;
-    }
-    .btn:hover { background: rgba(255,255,255,0.08); }
-    .btn.primary { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
-    .btn.primary:hover { background: #2563eb; }
-    .btn:disabled { opacity: 0.3; cursor: default; }
-    .btn.active-toggle { background: rgba(59,130,246,0.2); border-color: var(--accent); color: #93c5fd; }
-
-    input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; cursor: pointer; }
-    .range-row { margin-bottom: 6px; }
-    .range-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-top: 2px; }
-
-    /* Stats panel (top-right) */
-    .stats-panel {
-      position: absolute; top: 16px; right: 16px; z-index: 10;
-      background: var(--glass); backdrop-filter: blur(24px);
-      border: 1px solid var(--border); border-radius: 16px;
-      padding: 14px 18px; min-width: 180px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    }
-    .stats-panel h3 { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .stat-item .val { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; line-height: 1; }
-    .stat-item .lbl { font-size: 9px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
-    .stat-item.wide { grid-column: 1 / -1; }
-    .states-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-    .state-chip { font-size: 9px; padding: 2px 7px; border-radius: 4px; background: var(--glass-light); color: var(--muted); }
-
-    /* Toggle buttons top-right below stats */
-    .map-tools {
-      position: absolute; top: 16px; right: 210px; z-index: 10;
-      display: flex; gap: 6px;
-    }
-    .tool-btn {
-      width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
-      background: var(--glass); backdrop-filter: blur(16px); color: var(--text);
-      cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
-    }
-    .tool-btn:hover { background: rgba(255,255,255,0.1); }
-    .tool-btn.on { background: rgba(59,130,246,0.2); border-color: var(--accent); }
-
-    /* Master timeline */
-    .timeline-bar {
-      position: absolute; bottom: 16px; left: 16px; right: 16px; height: var(--timeline-h);
-      background: var(--glass); backdrop-filter: blur(24px);
-      border: 1px solid var(--border); border-radius: 16px;
-      z-index: 10; padding: 10px 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .timeline-label { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
-    .timeline-track { position: relative; flex: 1; background: rgba(255,255,255,0.03); border-radius: 6px; overflow: hidden; cursor: pointer; }
-    .tl-seg {
-      position: absolute; top: 4px; bottom: 4px; border-radius: 4px;
-      cursor: pointer; transition: opacity 0.2s, transform 0.15s; opacity: 0.75;
-      min-width: 4px;
-    }
-    .tl-seg:hover, .tl-seg.active { opacity: 1; transform: scaleY(1.15); }
-    .tl-seg.co { box-shadow: 0 0 8px rgba(245,158,11,0.5); }
-    .timeline-scrub { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; box-shadow: 0 0 6px #fff; pointer-events: none; transition: left 0.1s; }
-
-    /* Progress bar during playback */
-    .playback-bar {
-      position: absolute; bottom: calc(var(--timeline-h) + 28px); left: 50%; transform: translateX(-50%);
-      z-index: 10; background: var(--glass); backdrop-filter: blur(16px);
-      border: 1px solid var(--border); border-radius: 30px;
-      padding: 8px 20px; font-size: 12px; font-weight: 500;
-      display: none; align-items: center; gap: 12px; white-space: nowrap;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-    .playback-bar.visible { display: flex; }
-    .pb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse-dot 1s ease infinite; }
-    @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
-
-    /* Vehicle marker */
-    .vehicle-wrap { position: relative; width: 48px; height: 48px; }
-    .vehicle-glow {
-      position: absolute; inset: -8px; border-radius: 50%;
-      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-      animation: vglow 1.8s ease-in-out infinite;
-    }
-    @keyframes vglow { 0%,100%{transform:scale(1);opacity:0.8} 50%{transform:scale(1.3);opacity:0.4} }
-    .vehicle-body {
-      position: absolute; inset: 4px; display: flex; align-items: center; justify-content: center;
-      background: rgba(10,12,18,0.85); border-radius: 50%; border: 2px solid var(--accent);
-      box-shadow: 0 0 16px var(--accent-glow);
-    }
-    .vehicle-body svg { width: 22px; height: 22px; fill: #fff; }
-
-    /* Numbered stop pins */
-    .stop-pin-wrap {
-      display: flex; flex-direction: column; align-items: center;
-      pointer-events: auto;
-    }
-    .stop-pin {
-      width: 28px; height: 28px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 800; color: #fff;
-      border: 2px solid rgba(255,255,255,0.9);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-      transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), opacity 0.4s;
-      opacity: 0; transform: scale(0);
-    }
-    .stop-pin-wrap.visible .stop-pin { opacity: 1; transform: scale(1); }
-    .stop-pin-wrap.active .stop-pin { transform: scale(1.35); box-shadow: 0 0 20px currentColor; }
-    .stop-label {
-      margin-top: 5px; max-width: 140px; text-align: center;
-      font-size: 11px; font-weight: 700; line-height: 1.2; color: #fff;
-      background: rgba(0,0,0,0.72); padding: 3px 8px; border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.15);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      opacity: 1; transform: translateY(0);
+    .trip-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 100% 0%, rgba(94,234,212,0.12), transparent 55%);
       pointer-events: none;
     }
-    .stop-pin-wrap.active .stop-label { color: #fde68a; background: rgba(120,53,15,0.88); border-color: rgba(251,191,36,0.45); font-size: 12px; }
+    .trip-hero.featured::before {
+      background: radial-gradient(circle at 100% 0%, rgba(251,191,36,0.16), transparent 55%);
+    }
+    .trip-hero-name {
+      font-family: var(--font-display); font-size: 15px; font-weight: 700;
+      line-height: 1.35; margin-bottom: 6px; position: relative;
+    }
+    .trip-hero-via { font-size: 11px; color: var(--muted); line-height: 1.45; margin-bottom: 12px; position: relative; }
+    .trip-hero-via em { color: var(--accent-2); font-style: normal; font-weight: 600; }
+    .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; position: relative; }
+    .metric {
+      text-align: center; padding: 8px 4px; border-radius: 10px;
+      background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.04);
+    }
+    .metric .val { display: block; font-family: var(--font-display); font-size: 14px; font-weight: 700; }
+    .metric .lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
 
-    /* Sidebar toggle */
-    .sidebar-toggle {
-      position: absolute; top: 16px; left: calc(var(--sidebar-w) + 28px); z-index: 11;
-      width: 32px; height: 32px; border-radius: 8px;
-      background: var(--glass); border: 1px solid var(--border);
-      color: var(--text); cursor: pointer; font-size: 14px;
+    .trip-scroll { flex: 1; overflow-y: auto; padding: 10px 10px 14px; }
+    .trip-scroll::-webkit-scrollbar { width: 3px; }
+    .trip-scroll::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 99px; }
+    .group-label {
+      font-size: 9px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.12em; padding: 10px 6px 6px;
+    }
+    .group-label.featured { color: var(--gold); }
+    .trip-item {
+      display: flex; align-items: center; gap: 12px; padding: 11px 12px;
+      border-radius: 12px; cursor: pointer; margin-bottom: 3px;
+      border: 1px solid transparent; transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+    .trip-item:hover { background: var(--surface-2); transform: translateX(2px); }
+    .trip-item.active {
+      background: rgba(94, 234, 212, 0.08); border-color: rgba(94, 234, 212, 0.22);
+      box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.08);
+    }
+    .trip-item.featured { border-color: rgba(251, 191, 36, 0.15); }
+    .trip-item.featured.active { background: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.35); }
+    .trip-swatch {
+      width: 10px; height: 36px; border-radius: 99px; flex-shrink: 0;
+      box-shadow: 0 0 12px currentColor;
+    }
+    .trip-name { font-size: 12px; font-weight: 600; line-height: 1.3; }
+    .trip-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    .panel-toggle {
+      position: absolute; top: 78px; left: calc(var(--panel-w) + 30px); z-index: 11;
+      width: 34px; height: 34px; border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(16px); transition: left 0.4s, transform 0.4s;
+      backdrop-filter: blur(16px); transition: left 0.45s cubic-bezier(.22,1,.36,1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
     }
-    .sidebar.collapsed ~ .sidebar-toggle { left: 16px; }
+    .panel-toggle svg { width: 14px; height: 14px; opacity: 0.8; }
+    .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
 
-    /* Mapbox overrides */
-    .mapboxgl-ctrl-group { background: var(--glass) !important; border: 1px solid var(--border) !important; border-radius: 10px !important; overflow: hidden; }
-    .mapboxgl-ctrl-group button { background: transparent !important; border-color: var(--border) !important; }
-    .mapboxgl-ctrl-group button span { filter: invert(1); }
-    .mapboxgl-popup-content { background: var(--glass) !important; color: var(--text) !important; border-radius: 14px !important; border: 1px solid var(--border) !important; padding: 14px 16px !important; font-family: 'Inter', sans-serif !important; font-size: 13px !important; backdrop-filter: blur(20px) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; }
-    .mapboxgl-popup-tip { border-top-color: var(--glass) !important; }
-    .mapboxgl-popup-close-button { color: var(--muted) !important; font-size: 18px !important; padding: 4px 8px !important; }
-    .mapboxgl-ctrl-attrib { background: rgba(6,8,13,0.7) !important; color: var(--muted) !important; font-size: 9px !important; }
-    .mapboxgl-ctrl-attrib a { color: var(--muted) !important; }
+    /* ── Transport dock ── */
+    .transport-dock {
+      position: absolute; bottom: calc(var(--timeline-h) + 22px); left: 50%;
+      transform: translateX(-50%); z-index: 14;
+      width: min(720px, calc(100vw - 40px));
+      background: var(--surface); backdrop-filter: blur(32px) saturate(1.4);
+      border: 1px solid var(--border-bright); border-radius: 20px;
+      padding: 14px 18px 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .dock-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+    .dock-info { flex: 1; min-width: 0; }
+    .dock-location {
+      font-family: var(--font-display); font-size: 14px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .dock-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .dock-actions { display: flex; gap: 6px; align-items: center; }
+    .icon-btn {
+      width: 38px; height: 38px; border-radius: 12px;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+      color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s, transform 0.12s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.08); border-color: var(--border-bright); }
+    .icon-btn:active { transform: scale(0.94); }
+    .icon-btn:disabled { opacity: 0.28; cursor: default; }
+    .icon-btn.on { background: rgba(94,234,212,0.12); border-color: rgba(94,234,212,0.35); color: var(--accent); }
+    .icon-btn.primary {
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(145deg, #fff, #cbd5e1); border: none; color: #0f172a;
+      box-shadow: 0 4px 24px rgba(255,255,255,0.15);
+    }
+    .icon-btn.primary:hover { background: #fff; }
+    .icon-btn.export {
+      width: auto; padding: 0 14px; gap: 7px; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      background: linear-gradient(135deg, rgba(94,234,212,0.18), rgba(56,189,248,0.12));
+      border-color: rgba(94,234,212,0.35); color: var(--accent);
+    }
+    .icon-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
 
-    /* Overview dot markers (no numbers) */
+    .scrub-track {
+      position: relative; height: 6px; background: rgba(255,255,255,0.06);
+      border-radius: 99px; overflow: hidden; cursor: pointer;
+    }
+    .scrub-fill {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      border-radius: 99px; box-shadow: 0 0 12px rgba(94,234,212,0.45);
+      transition: width 0.08s linear;
+    }
+    input[type=range]#scrubber {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; cursor: pointer; margin: 0;
+    }
+    .dock-sliders { display: grid; grid-template-columns: 1fr 120px; gap: 14px; margin-top: 10px; align-items: center; }
+    .speed-wrap label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    input[type=range]#speed { width: 100%; accent-color: var(--accent); height: 3px; margin-top: 4px; }
+    .speed-val { font-size: 11px; font-weight: 700; color: var(--accent); text-align: right; }
+
+    /* ── Timeline ── */
+    .timeline-bar {
+      position: absolute; bottom: 14px; left: 18px; right: 18px; height: var(--timeline-h);
+      background: var(--surface); backdrop-filter: blur(24px);
+      border: 1px solid var(--border); border-radius: 14px;
+      z-index: 10; padding: 8px 14px 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .timeline-label { font-size: 9px; font-weight: 600; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+    .timeline-track { position: relative; flex: 1; height: 22px; background: rgba(0,0,0,0.35); border-radius: 8px; overflow: hidden; cursor: pointer; }
+    .tl-seg {
+      position: absolute; top: 3px; bottom: 3px; border-radius: 5px;
+      cursor: pointer; opacity: 0.7; transition: opacity 0.2s, filter 0.2s; min-width: 3px;
+    }
+    .tl-seg:hover, .tl-seg.active { opacity: 1; filter: brightness(1.15); }
+    .tl-seg.featured { box-shadow: 0 0 10px rgba(251,191,36,0.4); }
+    .timeline-scrub {
+      position: absolute; top: 0; bottom: 0; width: 2px;
+      background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.8);
+      pointer-events: none; transition: left 0.08s;
+    }
+
+    /* ── Location HUD (cinema) ── */
+    .location-hud {
+      position: absolute; top: 68px; left: 50%; transform: translateX(-50%); z-index: 13;
+      display: none; align-items: center; gap: 12px;
+      background: rgba(8,10,16,0.82); backdrop-filter: blur(24px);
+      border: 1px solid var(--border-bright); border-radius: 16px;
+      padding: 12px 20px; box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      max-width: min(92vw, 560px);
+    }
+    .location-hud.visible { display: flex; }
+    .hud-icon {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(94,234,212,0.12); border: 1px solid rgba(94,234,212,0.25);
+      font-size: 16px;
+    }
+    .hud-icon.charging { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.3); }
+    .hud-body { min-width: 0; }
+    .hud-phase { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+    .hud-text {
+      font-family: var(--font-display); font-size: 17px; font-weight: 700;
+      letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ── Beacons & labels ── */
+    .beacon-wrap { display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+    .beacon {
+      position: relative; width: 32px; height: 32px;
+      opacity: 0; transform: scale(0.4); transition: opacity 0.45s, transform 0.45s cubic-bezier(.34,1.4,.64,1);
+    }
+    .beacon.visible { opacity: 1; transform: scale(1); }
+    .beacon-ring {
+      position: absolute; inset: -6px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.35);
+      animation: beacon-pulse 2.4s ease-in-out infinite;
+    }
+    .beacon.active .beacon-ring { inset: -10px; border-color: rgba(255,255,255,0.7); animation-duration: 1.2s; }
+    @keyframes beacon-pulse { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.08);opacity:0.2} }
+    .beacon-core {
+      position: absolute; inset: 0; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 11px; font-weight: 800; color: #fff;
+      border: 2px solid rgba(255,255,255,0.95);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 24px var(--beacon-glow, rgba(94,234,212,0.5));
+    }
+    .beacon-label {
+      margin-top: 6px; padding: 4px 10px; border-radius: 999px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: #fff;
+      background: rgba(8,10,16,0.82); border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(8px); white-space: nowrap; max-width: 150px;
+      overflow: hidden; text-overflow: ellipsis;
+      opacity: 0; transform: translateY(6px); transition: opacity 0.35s, transform 0.35s;
+    }
+    .beacon-label.visible { opacity: 1; transform: translateY(0); }
+    .beacon-label.active { border-color: rgba(251,191,36,0.5); color: var(--gold); }
+
+    .beacon.milestone .beacon-core { width: 36px; height: 36px; font-size: 12px; }
+    .beacon.milestone.start .beacon-core {
+      background: linear-gradient(145deg, #34d399, #059669) !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 28px rgba(52,211,153,0.55);
+    }
+    .beacon.milestone.end .beacon-core {
+      background: linear-gradient(145deg, #fbbf24, #d97706) !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 28px rgba(251,191,36,0.5);
+    }
+    .beacon.waypoint { width: 14px; height: 14px; }
+    .beacon.waypoint .beacon-ring { display: none; }
+    .beacon.waypoint .beacon-core {
+      inset: 0; font-size: 0; border-width: 1.5px;
+      box-shadow: 0 0 10px var(--beacon-glow, rgba(94,234,212,0.45));
+    }
+    .beacon.waypoint.revealed { width: 28px; height: 28px; }
+    .beacon.waypoint.revealed .beacon-core { font-size: 10px; }
+
     .stop-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.6);
-      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+      width: 5px; height: 5px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.7);
+      box-shadow: 0 0 8px currentColor;
     }
 
-    kbd { background: var(--glass-light); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 10px; font-family: inherit; }
+    /* ── Vehicle (red Tesla) ── */
+    .vehicle-wrap { position: relative; width: 56px; height: 56px; }
+    .vehicle-glow {
+      position: absolute; inset: -14px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(220,38,38,0.65) 0%, rgba(220,38,38,0.15) 45%, transparent 70%);
+      animation: vglow 2s ease-in-out infinite;
+    }
+    @keyframes vglow { 0%,100%{transform:scale(1);opacity:0.95} 50%{transform:scale(1.28);opacity:0.4} }
+    .vehicle-body {
+      position: absolute; inset: 4px; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(155deg, #ef4444 0%, #dc2626 45%, #991b1b 100%);
+      border-radius: 50%;
+      border: 2.5px solid rgba(255,255,255,0.92);
+      box-shadow: 0 0 28px rgba(220,38,38,0.55), 0 4px 18px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+    .vehicle-body svg { width: 30px; height: 30px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+    .vehicle-body .tesla-body { fill: #fff; }
+    .vehicle-body .tesla-accent { fill: rgba(255,255,255,0.85); }
 
-    /* Onboarding */
+    /* ── Nearby place pins ── */
+    .poi-wrap {
+      display: flex; flex-direction: column; align-items: center; pointer-events: none;
+      opacity: 0; transform: scale(0.5) translateY(8px);
+      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.34,1.4,.64,1);
+    }
+    .poi-wrap.visible { opacity: 1; transform: scale(1) translateY(0); }
+    .poi-pin {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; background: rgba(8,10,16,0.88);
+      border: 2px solid rgba(251,191,36,0.75);
+      box-shadow: 0 0 20px rgba(251,191,36,0.35), 0 4px 14px rgba(0,0,0,0.5);
+      animation: poi-pulse 2.2s ease-in-out infinite;
+    }
+    .poi-pin.visited { border-color: rgba(52,211,153,0.85); box-shadow: 0 0 20px rgba(52,211,153,0.4), 0 4px 14px rgba(0,0,0,0.5); }
+    @keyframes poi-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+    .poi-label {
+      margin-top: 5px; padding: 3px 9px; border-radius: 999px;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.02em; color: #fff;
+      background: rgba(8,10,16,0.85); border: 1px solid rgba(251,191,36,0.35);
+      backdrop-filter: blur(8px); white-space: nowrap; max-width: 130px;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .poi-label.visited { border-color: rgba(52,211,153,0.45); color: #6ee7b7; }
+
+    /* ── Story overlay (cinema captions) ── */
+    .story-overlay {
+      position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 14;
+      width: min(92vw, 640px); text-align: center; pointer-events: none;
+      opacity: 0; transition: opacity 0.6s ease;
+    }
+    .story-overlay.visible { opacity: 1; }
+    .story-caption {
+      font-family: var(--font-display); font-size: clamp(16px, 2.8vw, 22px); font-weight: 800;
+      letter-spacing: -0.02em; line-height: 1.35;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.95), 0 0 40px rgba(0,0,0,0.8);
+    }
+    .story-sub {
+      font-size: 12px; color: #cbd5e1; margin-top: 8px; letter-spacing: 0.04em;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.9);
+    }
+    .story-pois {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px;
+    }
+    .story-poi-chip {
+      font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+      background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.35); color: var(--gold);
+    }
+    .story-poi-chip.visited { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.4); color: #6ee7b7; }
+    body.cinema-mode .story-overlay { bottom: 80px; }
+
+    /* ── Cinema / export ── */
+    body.cinema-mode .trip-panel,
+    body.cinema-mode .panel-toggle,
+    body.cinema-mode .top-bar,
+    body.cinema-mode .transport-dock,
+    body.cinema-mode .timeline-bar,
+    body.cinema-mode #onboarding,
+    body.cinema-mode .mapboxgl-ctrl-group,
+    body.cinema-mode .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
+    body.cinema-mode .location-hud { opacity: 0 !important; }
+    body.cinema-mode .beacon-ring { animation: none !important; }
+    body.cinema-mode.portrait-export #map-wrap {
+      display: flex; align-items: center; justify-content: center; background: #000;
+    }
+    body.cinema-mode.portrait-export #map {
+      width: min(100vw, calc(100vh * 9 / 16)); height: 100vh; position: relative; inset: auto;
+    }
+    .cinema-title {
+      position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); z-index: 15;
+      text-align: center; display: none; pointer-events: none;
+    }
+    body.cinema-mode .cinema-title.visible { display: block; }
+    .cinema-title h2 {
+      font-family: var(--font-display); font-size: clamp(22px, 4vw, 32px); font-weight: 800;
+      text-shadow: 0 4px 24px rgba(0,0,0,0.95);
+    }
+    .cinema-title p { font-size: 12px; color: #cbd5e1; margin-top: 6px; letter-spacing: 0.06em; }
+    .cinema-title .cinema-highlights {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 14px;
+    }
+    .cinema-title .cinema-highlights span {
+      font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 999px;
+      background: rgba(220,38,38,0.2); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5;
+    }
+
+    .export-status {
+      position: fixed; bottom: 24px; right: 24px; z-index: 10001;
+      background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px;
+      padding: 12px 18px; font-size: 12px; font-weight: 600; display: none;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+    .export-status.visible { display: block; }
+
+    /* ── Onboarding / token ── */
     #onboarding {
-      position: fixed; inset: 0; z-index: 9000; background: rgba(6,8,13,0.55);
+      position: fixed; inset: 0; z-index: 9000; background: rgba(3,3,6,0.65);
       display: flex; align-items: center; justify-content: center;
       opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0.4s;
     }
     #onboarding.visible { opacity: 1; visibility: visible; }
     .onboard-card {
-      max-width: 420px; margin-left: 360px; padding: 28px 32px;
-      background: var(--glass); border: 1px solid var(--border); border-radius: 20px;
-      backdrop-filter: blur(24px); box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+      max-width: 440px; margin-left: 340px; padding: 32px 36px;
+      background: var(--surface); border: 1px solid var(--border-bright); border-radius: 20px;
+      backdrop-filter: blur(28px); box-shadow: 0 32px 100px rgba(0,0,0,0.65);
     }
-    .onboard-card h2 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
-    .onboard-card p { font-size: 13px; color: var(--muted); line-height: 1.55; margin-bottom: 20px; }
-    .onboard-card .highlight { color: #fbbf24; font-weight: 600; }
-    .onboard-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    .onboard-actions .btn { flex: 1; min-width: 140px; justify-content: center; padding: 12px 16px; font-size: 13px; }
-    .onboard-actions .btn.gold { background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #f59e0b; color: #fff; }
-
-    /* Token gate (GitHub Pages — no embedded token) */
+    .onboard-card h2 { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-bottom: 10px; }
+    .onboard-card p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+    .onboard-card .highlight { color: var(--gold); font-weight: 600; }
+    .onboard-actions { display: flex; gap: 10px; }
+    .btn {
+      flex: 1; padding: 13px 18px; border-radius: 12px; border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer;
+      font-size: 13px; font-weight: 600; font-family: inherit; transition: all 0.15s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.08); }
+    .btn.gold {
+      background: linear-gradient(135deg, rgba(251,191,36,0.25), rgba(245,158,11,0.15));
+      border-color: rgba(251,191,36,0.4); color: var(--gold);
+    }
+    .btn.primary { background: #fff; color: #0f172a; border: none; font-weight: 700; }
     #token-gate {
       position: fixed; inset: 0; z-index: 10000; background: var(--bg);
       display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
     }
     #token-gate.visible { display: flex; }
-    #token-gate h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-    #token-gate p { font-size: 13px; color: var(--muted); max-width: 420px; text-align: center; line-height: 1.55; margin-bottom: 20px; }
+    #token-gate h2 { font-family: var(--font-display); font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+    #token-gate p { font-size: 14px; color: var(--muted); max-width: 420px; text-align: center; line-height: 1.6; margin-bottom: 20px; }
     #token-gate input {
-      width: min(420px, 90vw); padding: 12px 16px; border-radius: 12px;
-      border: 1px solid var(--border); background: var(--glass-light); color: var(--text);
-      font-size: 13px; margin-bottom: 12px;
+      width: min(420px, 90vw); padding: 14px 16px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 13px; margin-bottom: 12px;
     }
-    #token-gate a { color: #93c5fd; }
+    #token-gate a { color: var(--accent-2); }
+
+    .mapboxgl-ctrl-group { background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 10px !important; }
+    .mapboxgl-ctrl-group button span { filter: invert(1); }
+    .mapboxgl-popup-content {
+      background: var(--surface) !important; color: var(--text) !important; border-radius: 14px !important;
+      border: 1px solid var(--border) !important; font-family: var(--font-body) !important;
+      backdrop-filter: blur(20px) !important; box-shadow: 0 16px 48px rgba(0,0,0,0.55) !important;
+    }
+    .mapboxgl-ctrl-attrib { background: rgba(3,3,6,0.75) !important; color: var(--muted) !important; font-size: 9px !important; }
+    kbd {
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      border-radius: 4px; padding: 1px 5px; font-size: 10px;
+    }
   </style>
 </head>
 <body>
@@ -300,10 +530,10 @@
   <!-- Onboarding -->
   <div id="onboarding">
     <div class="onboard-card">
-      <h2>⚡ Start Here</h2>
-      <p>Welcome to your Tesla charging travel replay. Pick a journey from the sidebar — try the <span class="highlight">Colorado round trip</span> for the full 3D experience with numbered stops and playback.</p>
+      <h2>Start Your Replay</h2>
+      <p>Pick a journey from the trip panel — start with an <span class="highlight">Epic Road Trip</span> for the full cinematic experience with location labels and video export.</p>
       <div class="onboard-actions">
-        <button class="btn gold" id="onboard-co">🏔 Colorado Trip</button>
+        <button class="btn gold" id="onboard-featured">🎬 Epic Trip</button>
         <button class="btn" id="onboard-dismiss">Explore Overview</button>
       </div>
     </div>
@@ -311,108 +541,136 @@
 
   <!-- Splash -->
   <div id="splash">
-    <div class="logo">⚡</div>
-    <h1>Tesla Travel Replay</h1>
-    <p>Loading satellite terrain · {{ trips|length }} journeys</p>
+    <div class="brand-mark">Supercharger Cinema</div>
+    <h1>Road Replay</h1>
+    <p>Loading terrain · {{ trips|length }} journeys · {{ "{:,}".format(dashboard.total_miles) }} miles driven</p>
     <div class="splash-bar"><div class="splash-fill" id="splash-fill"></div></div>
   </div>
 
-  <div id="map"></div>
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div class="map-vignette"></div>
+    <div class="map-grain"></div>
+  </div>
 
-  <!-- Sidebar toggle -->
-  <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">◀</button>
-
-  <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <h1>Travel Replay <span class="badge badge-3d">3D SATELLITE</span></h1>
-      <div class="sub">{{ dashboard.trip_count }} trips · {{ dashboard.states|length }} states · {{ "{:,}".format(dashboard.total_miles) }} mi</div>
+  <!-- Top bar -->
+  <header class="top-bar">
+    <div class="brand">ROAD<span>REPLAY</span></div>
+    <div class="stat-rail">
+      <div class="stat-chip">{{ dashboard.trip_count }}<strong>trips</strong></div>
+      <div class="stat-chip">{{ "{:,}".format(dashboard.total_miles) }}<strong>mi</strong></div>
+      <div class="stat-chip">{{ dashboard.total_kwh|int }}<strong>kWh</strong></div>
+      <div class="stat-chip">{{ dashboard.states|length }}<strong>states</strong></div>
     </div>
+  </header>
 
-    <div class="hero" id="hero-card">
-      <div class="hero-name" id="hero-name">Select a trip</div>
-      <div class="hero-via" id="hero-via"></div>
-      <div class="hero-meta">
-        <div class="hero-stat">Distance<strong id="hero-miles">—</strong></div>
-        <div class="hero-stat">Energy<strong id="hero-kwh">—</strong></div>
-        <div class="hero-stat">Duration<strong id="hero-days">—</strong></div>
-        <div class="hero-stat">Stops<strong id="hero-stops">—</strong></div>
-      </div>
-      <div class="hero-states" id="hero-states"></div>
-    </div>
-
-    <div class="trip-scroll" id="trip-list">
-      <div class="group-label">All Journeys</div>
-      <div class="trip-item active" data-id="all">
-        <div class="trip-dot" style="background:linear-gradient(90deg,#3b82f6,#f59e0b)"></div>
-        <div><div class="trip-name">Overview — All Trips</div><div class="trip-meta">{{ trips|length }} routes · {{ dashboard.total_kwh|int }} kWh total</div></div>
-      </div>
-      {% set co_trips = trips|selectattr('has_colorado')|list %}
-      {% if co_trips %}
-      <div class="group-label co-label">🏔 Colorado Trips</div>
-      {% for trip in co_trips %}
-      <div class="trip-item co" data-id="{{ trip.id }}">
-        <div class="trip-dot" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
-        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.colorado_stops }} CO stops · {{ trip.stop_count }} total · {{ trip.miles }} mi</div></div>
-      </div>
-      {% endfor %}
-      {% endif %}
-      <div class="group-label">Road Trips</div>
-      {% for trip in trips if not trip.has_colorado %}
-      <div class="trip-item" data-id="{{ trip.id }}">
-        <div class="trip-dot" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
-        <div><div class="trip-name">{{ trip.name }}</div><div class="trip-meta">{{ trip.start }} → {{ trip.end }} · {{ trip.miles }} mi</div></div>
-      </div>
-      {% endfor %}
-    </div>
-
-    <div class="controls">
-      <div class="btn-row">
-        <button class="btn primary" id="btn-play">▶ Play</button>
-        <button class="btn" id="btn-pause" disabled>⏸</button>
-        <button class="btn" id="btn-step">⏭</button>
-        <button class="btn" id="btn-reset">↺</button>
-      </div>
-      <div class="btn-row">
-        <button class="btn" id="btn-loop" title="Loop trip">🔁 Loop</button>
-        <button class="btn" id="btn-director" title="Director mode camera">🎬 Director</button>
-        <button class="btn" id="btn-night" title="Night mode">🌙</button>
-      </div>
-      <div class="range-row">
-        <input type="range" id="speed" min="0.25" max="8" step="0.25" value="1">
-        <div class="range-labels"><span>0.25×</span><span id="speed-label">1×</span><span>8×</span></div>
-      </div>
-      <div class="range-row">
-        <input type="range" id="scrubber" min="0" max="1000" value="0">
-        <div class="range-labels"><span id="prog-start">—</span><span id="prog-text">Ready</span><span id="prog-end">—</span></div>
-      </div>
-      <div style="font-size:9px;color:var(--muted);margin-top:6px;text-align:center">
-        <kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> step · <kbd>R</kbd> reset · <kbd>D</kbd> director
-      </div>
-    </div>
-  </aside>
-
-  <!-- Stats panel -->
-  <div class="stats-panel">
-    <h3>Lifetime Stats</h3>
-    <div class="stat-grid">
-      <div class="stat-item"><div class="val">{{ dashboard.total_kwh|int }}</div><div class="lbl">kWh</div></div>
-      <div class="stat-item"><div class="val">{{ dashboard.trip_count }}</div><div class="lbl">Trips</div></div>
-      <div class="stat-item"><div class="val">{{ "{:,}".format(dashboard.total_miles) }}</div><div class="lbl">Miles</div></div>
-      <div class="stat-item"><div class="val">{{ dashboard.states|length }}</div><div class="lbl">States</div></div>
-      <div class="stat-item wide">
-        <div class="lbl">States Visited</div>
-        <div class="states-list">
-          {% for s in dashboard.state_names %}<span class="state-chip">{{ s }}</span>{% endfor %}
-        </div>
-      </div>
+  <div class="location-hud" id="location-hud">
+    <div class="hud-icon" id="hud-icon">🚗</div>
+    <div class="hud-body">
+      <div class="hud-phase" id="hud-phase">Driving</div>
+      <div class="hud-text" id="hud-text"></div>
     </div>
   </div>
 
-  <!-- Playback indicator -->
-  <div class="playback-bar" id="playback-bar">
-    <div class="pb-dot"></div>
-    <span id="playback-text">Playing...</span>
+  <div class="story-overlay" id="story-overlay">
+    <div class="story-caption" id="story-caption"></div>
+    <div class="story-sub" id="story-sub"></div>
+    <div class="story-pois" id="story-pois"></div>
+  </div>
+
+  <div class="cinema-title" id="cinema-title">
+    <h2 id="cinema-title-text"></h2>
+    <p id="cinema-subtitle"></p>
+    <div class="cinema-highlights" id="cinema-highlights"></div>
+  </div>
+  <div class="export-status" id="export-status">Recording…</div>
+
+  <button class="panel-toggle" id="sidebar-toggle" title="Toggle trips panel" aria-label="Toggle panel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+
+  <aside class="trip-panel" id="sidebar">
+    <div class="panel-head">
+      <div class="eyebrow">Your Journeys</div>
+      <h2 id="panel-title">Select a Trip</h2>
+      <div class="sub" id="panel-sub">{{ dashboard.trip_count }} road trips from your Supercharger history</div>
+    </div>
+
+    <div class="trip-hero" id="hero-card">
+      <div class="trip-hero-name" id="hero-name">Overview</div>
+      <div class="trip-hero-via" id="hero-via">Choose a journey to begin cinematic playback.</div>
+      <div class="metric-grid">
+        <div class="metric"><span class="val" id="hero-miles">—</span><span class="lbl">Miles</span></div>
+        <div class="metric"><span class="val" id="hero-kwh">—</span><span class="lbl">kWh</span></div>
+        <div class="metric"><span class="val" id="hero-days">—</span><span class="lbl">Days</span></div>
+        <div class="metric"><span class="val" id="hero-stops">—</span><span class="lbl">Stops</span></div>
+      </div>
+    </div>
+
+    <div class="trip-scroll" id="trip-list">
+      <div class="group-label">Overview</div>
+      <div class="trip-item active" data-id="all">
+        <div class="trip-swatch" style="background:linear-gradient(180deg,#5eead4,#38bdf8)"></div>
+        <div><div class="trip-name">All Routes</div><div class="trip-meta">{{ trips|length }} journeys · lifetime map</div></div>
+      </div>
+      {% set featured_trips = trips|selectattr('featured')|list %}
+      {% if featured_trips %}
+      <div class="group-label featured">Epic Road Trips</div>
+      {% for trip in featured_trips %}
+      <div class="trip-item featured" data-id="{{ trip.id }}">
+        <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
+        <div>
+          <div class="trip-name">{{ trip.name }}</div>
+          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
+        </div>
+      </div>
+      {% endfor %}
+      {% endif %}
+      <div class="group-label">All Trips</div>
+      {% for trip in trips if not trip.featured %}
+      <div class="trip-item" data-id="{{ trip.id }}">
+        <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
+        <div>
+          <div class="trip-name">{{ trip.name }}</div>
+          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <!-- Transport dock -->
+  <div class="transport-dock" id="transport-dock">
+    <div class="dock-top">
+      <div class="dock-info">
+        <div class="dock-location" id="prog-text">Select a trip to replay</div>
+        <div class="dock-sub"><span id="prog-start">—</span> → <span id="prog-end">—</span></div>
+      </div>
+      <div class="dock-actions">
+        <button class="icon-btn" id="btn-reset" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v5h5"/></svg></button>
+        <button class="icon-btn" id="btn-step" title="Next stop"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l12 8-12 8V4z"/></svg></button>
+        <button class="icon-btn primary" id="btn-play" disabled title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></button>
+        <button class="icon-btn" id="btn-pause" disabled title="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg></button>
+        <button class="icon-btn" id="btn-loop" title="Loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+        <button class="icon-btn on" id="btn-director" title="Director camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l6 3-6 3V9z"/></svg></button>
+        <button class="icon-btn" id="btn-night" title="Night mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+        <button class="icon-btn export" id="btn-export" disabled title="Export video">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+          Export
+        </button>
+      </div>
+    </div>
+    <div class="scrub-track">
+      <div class="scrub-fill" id="scrub-fill"></div>
+      <input type="range" id="scrubber" min="0" max="1000" value="0">
+    </div>
+    <div class="dock-sliders">
+      <div class="speed-wrap">
+        <label>Playback speed · <span class="speed-val" id="speed-label">1×</span></label>
+        <input type="range" id="speed" min="0.25" max="8" step="0.25" value="1">
+      </div>
+      <div style="font-size:9px;color:var(--muted);text-align:right;padding-top:14px"><kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> step</div>
+    </div>
   </div>
 
   <!-- Master timeline -->
@@ -420,7 +678,7 @@
     <div class="timeline-label" id="timeline-label">Journey Timeline</div>
     <div class="timeline-track" id="timeline-track">
       {% for seg in timeline %}
-      <div class="tl-seg{% if seg.has_colorado %} co{% endif %}"
+      <div class="tl-seg{% if seg.has_colorado %} featured{% endif %}"
            data-id="{{ seg.id }}" title="{{ seg.name }}"
            style="left:{{ seg.left_pct }}%;width:{{ seg.width_pct }}%;background:{{ seg.color }}"></div>
       {% endfor %}
@@ -435,20 +693,19 @@
     const MAPBOX_TOKEN = {{ mapbox_token | tojson }};
     const US_BOUNDS = DASHBOARD.us_bounds;
     const BASE_MS = 1600;
-    const TRIP_PLAYBACK_MS = 48000;
 
     let map;
 
     // ── State ──
-    let selectedId = 'all', animProg = 0, animStopIdx = 0;
+    let selectedId = 'all', animTimeMs = 0, animProg = 0, animStopIdx = 0;
     let isPlaying = false, animFrame = null, lastTs = 0;
-    let speed = 1, loopTrip = false, directorMode = false, nightMode = false;
-    let vehicleMarker = null, stopMarkers = [];
-    let smoothBearing = 0, lastCameraUpdate = 0, tripFollowZoom = 7;
-    const MAX_PITCH = 50;
-    const CAMERA_INTERVAL_MS = 500;
+    let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
+    let isRecording = false, mediaRecorder = null, recordedChunks = [];
+    let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
+    let smoothBearing = 0, camBearing = 0, lastTravelBearing = 0;
+    const MAX_PITCH = 45;
 
-    const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div></div>`;
+    const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 64 28" aria-hidden="true"><path class="tesla-body" d="M2 18 Q8 9 16 8 L48 8 Q56 9 62 18 L60 22 L4 22 Z"/><path class="tesla-accent" d="M18 8 L26 4 L34 8"/><circle cx="14" cy="21" r="3.2" fill="#111"/><circle cx="50" cy="21" r="3.2" fill="#111"/><path class="tesla-accent" d="M28 8 L32 6 L36 8" opacity="0.6"/></svg></div></div>`;
 
     // ── Splash progress ──
     function setSplash(pct) { document.getElementById('splash-fill').style.width = pct + '%'; }
@@ -467,10 +724,123 @@
       document.getElementById('onboarding').classList.remove('visible');
       localStorage.setItem('tesla-map-onboarded', '1');
     }
-    function startWithColorado() {
-      const co = TRIPS.find(t => t.has_colorado);
-      if (co) selectTrip(co.id);
+    function startWithFeatured() {
+      const epic = TRIPS.find(t => t.featured) || TRIPS.find(t => t.has_colorado) || TRIPS[0];
+      if (epic) selectTrip(epic.id);
       dismissOnboarding();
+    }
+
+    function shortLabel(location) {
+      const city = (location || '').split(',')[0].trim();
+      const st = (location || '').match(/,\s*([A-Z]{2})\b/);
+      return st ? `${city}, ${st[1]}` : city;
+    }
+
+    function activePlayback() {
+      const t = activeTrip();
+      return t?.playback || null;
+    }
+
+    function playbackProgress() {
+      const pb = activePlayback();
+      if (!pb || !pb.total_video_ms) return 0;
+      return Math.min(1, animTimeMs / pb.total_video_ms);
+    }
+
+    function smoothAngle(current, target, alpha) {
+      let diff = ((target - current + 540) % 360) - 180;
+      return (current + diff * alpha + 360) % 360;
+    }
+
+    function trailCoordsAtTime(elapsedMs) {
+      const pb = activePlayback();
+      if (!pb?.segments?.length) return [];
+      let t = 0;
+      const coords = [];
+      for (const seg of pb.segments) {
+        const segEnd = t + seg.duration_ms;
+        if (seg.type === 'intro' || seg.type === 'outro') {
+          if (elapsedMs >= segEnd) t = segEnd;
+          continue;
+        }
+        if (elapsedMs >= segEnd) {
+          if (seg.type === 'travel' && seg.path?.length >= 2) {
+            const leg = seg.path.map(p => [p[1], p[0]]);
+            if (coords.length) leg.shift();
+            coords.push(...leg);
+          }
+          t = segEnd;
+          continue;
+        }
+        if (seg.type === 'travel' && seg.path?.length >= 2) {
+          const frac = Math.max(0, Math.min(1, (elapsedMs - t) / seg.duration_ms));
+          const endIdx = Math.max(1, Math.ceil(frac * (seg.path.length - 1)));
+          const leg = seg.path.slice(0, endIdx + 1).map(p => [p[1], p[0]]);
+          if (coords.length) leg.shift();
+          coords.push(...leg);
+        }
+        break;
+      }
+      return coords;
+    }
+
+    function positionAtTime(elapsedMs) {
+      const pb = activePlayback();
+      if (!pb || !pb.segments?.length) return null;
+      let cursor = 0;
+      for (const seg of pb.segments) {
+        const end = cursor + seg.duration_ms;
+        if (elapsedMs < end) {
+          const frac = Math.max(0, Math.min(1, (elapsedMs - cursor) / seg.duration_ms));
+          if (seg.type === 'intro') {
+            return {
+              phase: 'intro', label: seg.title || activeTrip()?.name || '',
+              caption: seg.caption || '', highlights: seg.highlights || [],
+              frac, stopIndex: 0, bearing: lastTravelBearing, seg,
+            };
+          }
+          if (seg.type === 'outro') {
+            return {
+              phase: 'outro', label: 'Journey Complete',
+              caption: seg.caption || '', visitedCount: seg.visited_count || 0,
+              nearbyCount: seg.nearby_count || 0, frac, stopIndex: activeStops().length - 1,
+              bearing: lastTravelBearing, seg,
+            };
+          }
+          if (seg.type === 'dwell') {
+            return {
+              lat: seg.lat, lng: seg.lng, phase: 'dwell', label: seg.label,
+              caption: seg.caption || '', subcaption: seg.subcaption || '',
+              pois: seg.pois || [], stopIndex: seg.stop_index, frac,
+              bearing: lastTravelBearing, seg,
+            };
+          }
+          const path = seg.path || [];
+          const pos = pointOnPath(path, frac) || { lat: path[0]?.[0], lng: path[0]?.[1] };
+          const microBearing = path.length >= 2 ? pathBearing(path, frac) : (seg.bearing || 0);
+          const bearing = seg.bearing != null
+            ? smoothAngle(seg.bearing, microBearing, Math.min(1, frac * 3))
+            : microBearing;
+          return {
+            ...pos, phase: 'travel', label: seg.to_label, stopIndex: seg.stop_index,
+            frac, bearing, path, seg,
+          };
+        }
+        cursor = end;
+      }
+      const last = pb.segments[pb.segments.length - 1];
+      if (last.type === 'outro') {
+        return {
+          phase: 'outro', label: 'Journey Complete', caption: last.caption || '',
+          visitedCount: last.visited_count || 0, nearbyCount: last.nearby_count || 0,
+          frac: 1, stopIndex: activeStops().length - 1, bearing: lastTravelBearing, seg: last,
+        };
+      }
+      return {
+        lat: last.lat, lng: last.lng, phase: 'dwell', label: last.label || last.to_label,
+        caption: last.caption || '', pois: last.pois || [],
+        stopIndex: last.stop_index, frac: 1, bearing: lastTravelBearing, seg: last,
+      };
     }
 
     // ── Map init ──
@@ -496,7 +866,7 @@
       drawRoutes();
       drawStops();
       updateHero();
-      ensureMapLabelsVisible();
+      setMapLabelsVisible(true);
       document.getElementById('btn-play').disabled = true;
       document.getElementById('prog-text').textContent = 'Select a trip to play';
       introFlyover();
@@ -546,6 +916,109 @@
       return [r,g,b];
     }
 
+    function routeLayerIds(tripId) {
+      const base = `route-${tripId}`;
+      return {
+        src: base,
+        shadow: `${base}-shadow`,
+        glowOuter: `${base}-glow-outer`,
+        glowMid: `${base}-glow-mid`,
+        core: `${base}-core`,
+        highlight: `${base}-highlight`,
+      };
+    }
+
+    function addRouteLayers(tripId, coords, color, visible) {
+      const ids = routeLayerIds(tripId);
+      const vis = visible ? 'visible' : 'none';
+      const feature = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } };
+      if (!map.getSource(ids.src)) {
+        map.addSource(ids.src, { type: 'geojson', lineMetrics: true, data: feature });
+        map.addLayer({
+          id: ids.shadow, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: { 'line-color': '#000', 'line-width': 18, 'line-opacity': 0.28, 'line-blur': 6 },
+        });
+        map.addLayer({
+          id: ids.glowOuter, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: { 'line-color': color, 'line-width': 14, 'line-opacity': 0.22, 'line-blur': 5 },
+        });
+        map.addLayer({
+          id: ids.glowMid, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: { 'line-color': color, 'line-width': 7, 'line-opacity': 0.55, 'line-blur': 1.5 },
+        });
+        map.addLayer({
+          id: ids.core, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: {
+            'line-width': 2.2,
+            'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, 'rgba(255,255,255,0.15)', 0.08, color, 1, '#ffffff'],
+          },
+        });
+        map.addLayer({
+          id: ids.highlight, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: { 'line-color': '#ffffff', 'line-width': 0.8, 'line-opacity': 0.85 },
+        });
+      } else {
+        map.getSource(ids.src).setData(feature);
+        [ids.shadow, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+          map.setLayoutProperty(id, 'visibility', vis);
+        });
+        map.setPaintProperty(ids.glowOuter, 'line-color', color);
+        map.setPaintProperty(ids.glowMid, 'line-color', color);
+        map.setPaintProperty(ids.core, 'line-gradient', ['interpolate', ['linear'], ['line-progress'], 0, 'rgba(255,255,255,0.15)', 0.08, color, 1, '#ffffff']);
+      }
+    }
+
+    function setRouteStyle(tripId, color, mode) {
+      const ids = routeLayerIds(tripId);
+      if (!map.getLayer(ids.core)) return;
+      const styles = {
+        overview: { shadow: 0.12, outer: 0.08, mid: 0.18, coreW: 1, hi: 0.2 },
+        active: { shadow: 0.38, outer: 0.32, mid: 0.72, coreW: 2.4, hi: 0.95 },
+        playback: { shadow: 0.06, outer: 0.04, mid: 0.08, coreW: 0.8, hi: 0.12 },
+        hidden: { shadow: 0, outer: 0, mid: 0, coreW: 0, hi: 0 },
+      }[mode] || styles.hidden;
+      map.setPaintProperty(ids.shadow, 'line-opacity', styles.shadow);
+      map.setPaintProperty(ids.glowOuter, 'line-opacity', styles.outer);
+      map.setPaintProperty(ids.glowMid, 'line-opacity', styles.mid);
+      map.setPaintProperty(ids.core, 'line-width', styles.coreW);
+      map.setPaintProperty(ids.highlight, 'line-opacity', styles.hi);
+      map.setPaintProperty(ids.glowOuter, 'line-color', color);
+      map.setPaintProperty(ids.glowMid, 'line-color', color);
+    }
+
+    function ensureTrailLayers(color) {
+      if (map.getSource('active-trail')) return;
+      map.addSource('active-trail', { type: 'geojson', lineMetrics: true, data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
+      map.addLayer({
+        id: 'active-trail-shadow', type: 'line', source: 'active-trail',
+        paint: { 'line-color': '#000', 'line-width': 20, 'line-opacity': 0.35, 'line-blur': 8 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      map.addLayer({
+        id: 'active-trail-glow', type: 'line', source: 'active-trail',
+        paint: { 'line-color': color, 'line-width': 12, 'line-opacity': 0.55, 'line-blur': 4 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      map.addLayer({
+        id: 'active-trail-line', type: 'line', source: 'active-trail',
+        paint: {
+          'line-width': 2.8,
+          'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, color, 0.85, '#ffffff', 1, '#ffffff'],
+        },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      map.addLayer({
+        id: 'active-trail-head', type: 'line', source: 'active-trail',
+        paint: { 'line-color': '#ffffff', 'line-width': 1, 'line-opacity': 1 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+    }
+
     // ── Terrain (subtle — routes use Mapbox line layers on surface) ──
     function setupTerrain() {
       setSplash(50);
@@ -556,70 +1029,92 @@
       setSplash(70);
     }
 
-    function stopLabel(location) {
-      return (location || '').split(',')[0].split(' - ')[0].trim();
-    }
-
-    function ensureMapLabelsVisible() {
+    function setMapLabelsVisible(visible) {
       if (!map || !map.isStyleLoaded()) return;
       map.getStyle().layers.forEach(layer => {
-        if (layer.type !== 'symbol' || !layer.layout || !layer.layout['text-field']) return;
-        try {
-          map.setLayoutProperty(layer.id, 'visibility', 'visible');
-          map.setPaintProperty(layer.id, 'text-opacity', 1);
-          map.setPaintProperty(layer.id, 'icon-opacity', 1);
-        } catch (_) {}
-      });
-    }
-
-    // ── Route ghost lines ──
-    function drawRoutes() {
-      TRIPS.forEach(trip => {
-        const srcId = `route-${trip.id}`;
-        const coords = (trip.route_path||[]).map(p=>[p[1],p[0]]);
-        const isSelected = selectedId === trip.id;
-        const isOverview = selectedId === 'all';
-        const visible = isOverview || isSelected;
-        const lineOp = isSelected ? 0.95 : (isOverview ? 0.14 : 0);
-        const glowOp = isSelected ? 0.35 : (isOverview ? 0.04 : 0);
-        const lineW = isSelected ? 4 : (isOverview ? 1 : 0);
-        if (!map.getSource(srcId)) {
-          map.addSource(srcId,{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:coords}}});
-          map.addLayer({id:`${srcId}-glow`,type:'line',source:srcId,paint:{'line-color':trip.color,'line-width':8,'line-opacity':glowOp,'line-blur':3},layout:{visibility:visible?'visible':'none'}});
-          map.addLayer({id:`${srcId}-line`,type:'line',source:srcId,layout:{'line-cap':'round','line-join':'round',visibility:visible?'visible':'none'},paint:{'line-color':trip.color,'line-width':lineW,'line-opacity':lineOp}});
-        } else {
-          map.setLayoutProperty(`${srcId}-line`, 'visibility', visible ? 'visible' : 'none');
-          map.setLayoutProperty(`${srcId}-glow`, 'visibility', visible ? 'visible' : 'none');
-          map.setPaintProperty(`${srcId}-line`, 'line-opacity', lineOp);
-          map.setPaintProperty(`${srcId}-line`, 'line-width', lineW);
-          map.setPaintProperty(`${srcId}-glow`, 'line-opacity', glowOp);
+        if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+          try { map.setLayoutProperty(layer.id, 'visibility', visible ? 'visible' : 'none'); } catch (_) {}
         }
       });
     }
 
-    // ── Stop markers ──
+    // ── Premium route rendering ──
+    function drawRoutes() {
+      TRIPS.forEach(trip => {
+        const coords = (trip.route_path || []).map(p => [p[1], p[0]]);
+        const isSelected = selectedId === trip.id;
+        const isOverview = selectedId === 'all';
+        const visible = isOverview || isSelected;
+        addRouteLayers(trip.id, coords, trip.color, visible);
+        if (!visible) setRouteStyle(trip.id, trip.color, 'hidden');
+        else if (isSelected) setRouteStyle(trip.id, trip.color, 'active');
+        else setRouteStyle(trip.id, trip.color, 'overview');
+      });
+    }
+
+    // ── Beacon markers ──
+    function applyIdleStopVisuals() {
+      if (!isSingleTrip() || isPlaying) return;
+      const stops = activeStops();
+      const lastIdx = stops.length - 1;
+      stopMarkers.forEach(m => {
+        const isStart = m._idx === 0;
+        const isEnd = m._idx === lastIdx;
+        const show = isStart || isEnd;
+        m._el.classList.toggle('visible', show);
+        m._el.classList.remove('active', 'revealed');
+        if (m._lbl) {
+          m._lbl.classList.toggle('visible', show);
+          m._lbl.classList.remove('active');
+        }
+        if (m._waypointCore && !show) m._waypointCore.textContent = '';
+      });
+    }
+
     function drawStops() {
-      stopMarkers.forEach(m=>m.remove()); stopMarkers=[];
+      stopMarkers.forEach(m => m.remove()); stopMarkers = [];
       const single = isSingleTrip();
       activeTrips().forEach(trip => {
-        trip.stops.forEach((s,i) => {
-          const el = document.createElement('div');
+        const lastIdx = trip.stops.length - 1;
+        trip.stops.forEach((s, i) => {
+          const wrap = document.createElement('div');
+          wrap.className = 'beacon-wrap';
+          const isStart = i === 0;
+          const isEnd = i === lastIdx;
+          const isMilestone = isStart || isEnd;
           if (single) {
-            el.className = 'stop-pin-wrap';
-            el.innerHTML = `<div class="stop-pin" style="background:${trip.color}">${i+1}</div><div class="stop-label">${stopLabel(s.location)}</div>`;
-            el.classList.add('visible');
+            const beacon = document.createElement('div');
+            beacon.className = 'beacon' + (isMilestone ? ` milestone ${isStart ? 'start' : 'end'}` : ' waypoint');
+            beacon.style.setProperty('--beacon-glow', trip.color + '88');
+            const coreText = isStart ? '▶' : (isEnd ? '◆' : '');
+            beacon.innerHTML = `<div class="beacon-ring"></div><div class="beacon-core" style="background:${trip.color}">${coreText}</div>`;
+            const coreEl = beacon.querySelector('.beacon-core');
+            const lbl = document.createElement('div');
+            lbl.className = 'beacon-label';
+            lbl.textContent = isStart ? `Start · ${shortLabel(s.location)}` : (isEnd ? `Finish · ${shortLabel(s.location)}` : shortLabel(s.location));
+            wrap.appendChild(beacon);
+            if (isMilestone) wrap.appendChild(lbl);
+            var el = beacon, lblRef = isMilestone ? lbl : null;
+            if (!isMilestone) el._waypointCore = coreEl;
           } else {
-            el.className = 'stop-dot';
-            el.style.background = trip.color;
+            const dot = document.createElement('div');
+            dot.className = 'stop-dot';
+            dot.style.background = trip.color;
+            dot.style.color = trip.color;
+            wrap.appendChild(dot);
+            var el = dot, lblRef = null;
           }
-          const m = new mapboxgl.Marker({element:el, anchor:'bottom'})
-            .setLngLat([s.lng,s.lat])
-            .setPopup(new mapboxgl.Popup({offset:12,maxWidth:'260px'}).setHTML(popupHtml(s)))
+          const m = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+            .setLngLat([s.lng, s.lat])
+            .setPopup(new mapboxgl.Popup({ offset: 14, maxWidth: '280px' }).setHTML(popupHtml(s)))
             .addTo(map);
-          m._idx=i; m._el=el; m._stop=s;
+          m._idx = i; m._el = el; m._lbl = lblRef; m._stop = s;
+          m._waypointCore = el._waypointCore || null;
+          m._isMilestone = isMilestone;
           stopMarkers.push(m);
         });
       });
+      applyIdleStopVisuals();
     }
 
     // ── Hero card ──
@@ -627,196 +1122,422 @@
       const trips = activeTrips();
       const card = document.getElementById('hero-card');
       const viaEl = document.getElementById('hero-via');
-      if (selectedId==='all') {
-        document.getElementById('hero-name').textContent = 'All Journeys — Select a trip';
-        viaEl.innerHTML = 'Looking for Colorado? Choose <strong>🏔 Colorado Trips</strong> below.';
-        document.getElementById('hero-miles').textContent = DASHBOARD.total_miles.toLocaleString()+' mi';
-        document.getElementById('hero-kwh').textContent = DASHBOARD.total_kwh.toLocaleString()+' kWh';
-        document.getElementById('hero-days').textContent = TRIPS.length+' trips';
-        document.getElementById('hero-stops').textContent = TRIPS.reduce((s,t)=>s+t.stop_count,0);
-        document.getElementById('hero-states').innerHTML = '<span style="opacity:0.7">Lifetime: '+DASHBOARD.state_names.join(' · ')+'</span>';
-        card.classList.remove('co');
+      const panelTitle = document.getElementById('panel-title');
+      if (selectedId === 'all') {
+        panelTitle.textContent = 'All Routes';
+        document.getElementById('hero-name').textContent = 'Lifetime Overview';
+        viaEl.innerHTML = 'Select an <em>Epic Road Trip</em> for cinematic replay and video export.';
+        document.getElementById('hero-miles').textContent = DASHBOARD.total_miles.toLocaleString();
+        document.getElementById('hero-kwh').textContent = DASHBOARD.total_kwh.toLocaleString();
+        document.getElementById('hero-days').textContent = TRIPS.length;
+        document.getElementById('hero-stops').textContent = TRIPS.reduce((s, t) => s + t.stop_count, 0);
+        card.classList.remove('featured');
       } else {
         const t = trips[0];
+        panelTitle.textContent = t.name.split('—').pop()?.trim() || t.name;
         document.getElementById('hero-name').textContent = t.name;
-        if (t.has_colorado) {
-          viaEl.innerHTML = 'Via: <strong>' + (t.via_summary || t.states.join(', ')) + '</strong> · 🏔 ' + t.colorado_stops + ' Colorado stops';
-        } else if (t.via_summary) {
-          viaEl.innerHTML = 'Via: <strong>' + t.via_summary + '</strong> · No Colorado on this route';
-        } else {
-          viaEl.innerHTML = t.states.length ? 'Via: <strong>' + t.states.join(', ') + '</strong>' : '';
-        }
-        document.getElementById('hero-miles').textContent = t.miles.toLocaleString()+' mi';
-        document.getElementById('hero-kwh').textContent = t.total_kwh+' kWh';
-        document.getElementById('hero-days').textContent = t.duration_days+' days';
+        const ownerBit = t.is_shared
+          ? ` · <em>${t.trip_crew} in ${t.vehicle_label || "shared car"}</em>`
+          : (t.vehicle_label === 'your Tesla'
+            ? ` · <em>your Tesla</em>`
+            : (t.trip_crew ? ` · <em>${t.trip_crew}</em>` : ''));
+        if (t.via_summary) viaEl.innerHTML = `Route via <em>${t.via_summary}</em>${ownerBit}`;
+        else viaEl.innerHTML = (t.states.length ? `Through <em>${t.states.join(', ')}</em>` : '') + ownerBit;
+        document.getElementById('hero-miles').textContent = t.miles.toLocaleString();
+        document.getElementById('hero-kwh').textContent = t.total_kwh;
+        document.getElementById('hero-days').textContent = t.duration_days;
         document.getElementById('hero-stops').textContent = t.stop_count;
-        document.getElementById('hero-states').innerHTML = t.state_names.map(s=>`<span>${s}</span>`).join('');
-        card.classList.toggle('co', t.has_colorado);
+        card.classList.toggle('featured', t.featured || t.has_colorado);
       }
     }
 
     // ── Intro — continental US, flat mercator view ──
     function introFlyover() {
       map.fitBounds([[US_BOUNDS.west, US_BOUNDS.south], [US_BOUNDS.east, US_BOUNDS.north]], {
-        padding:{top:80,bottom:120,left:380,right:220},
-        pitch:0, bearing:0, duration:1200, maxZoom:5,
+        padding:{top:72,bottom:200,left:360,right:48},
+        pitch:0, bearing:0, duration:1400, maxZoom:5,
       });
-      setTimeout(hideSplash, 2000);
+      setTimeout(hideSplash, 2200);
     }
 
     // ── Fit trip — frame route in continental US ──
     function fitTrip(animate=true) {
       const bounds = new mapboxgl.LngLatBounds();
       activeTrips().forEach(t => {
-        (t.route_path || t.stops).forEach(p => {
-          const lat = Array.isArray(p) ? p[0] : p.lat;
-          const lng = Array.isArray(p) ? p[1] : p.lng;
-          bounds.extend([lng, lat]);
-        });
+        t.stops.forEach(s => bounds.extend([s.lng, s.lat]));
       });
       if (bounds.isEmpty()) return;
-      ensureMapLabelsVisible();
-      const single = isSingleTrip();
+      const trip = activeTrip();
+      const stopCount = activeTrips().reduce((sum, t) => sum + t.stop_count, 0);
+      const miles = trip?.miles || 0;
+      setMapLabelsVisible(!isSingleTrip());
+      let maxZoom = 5;
+      if (isSingleTrip()) {
+        maxZoom = Math.min(5.4, Math.max(3.6, 7.2 - Math.log2(Math.max(stopCount, 2))));
+        if (miles > 1800) maxZoom = Math.min(maxZoom, 4.2);
+        else if (miles > 900) maxZoom = Math.min(maxZoom, 4.8);
+      }
       map.fitBounds(bounds, {
-        padding:{top:90,bottom:130,left:380,right:220},
-        pitch: single ? 35 : 0,
-        bearing: single ? 0 : 0,
-        duration: animate ? 1400 : 0,
-        maxZoom: single ? 8.5 : 5,
+        padding:{top:88,bottom:200,left:360,right:48},
+        pitch: isSingleTrip() ? 32 : 0,
+        bearing: isSingleTrip() ? 0 : 0,
+        duration: animate ? 1600 : 0,
+        maxZoom,
         minZoom: 3,
       });
-      map.once('moveend', () => {
-        if (single) {
-          tripFollowZoom = Math.min(9, Math.max(7.5, map.getZoom()));
-          if (map.getZoom() < 7.5) map.setZoom(7.5);
-          ensureMapLabelsVisible();
-        }
+    }
+
+    function updateLocationHud(state) {
+      const hud = document.getElementById('location-hud');
+      const icon = document.getElementById('hud-icon');
+      if (!state || !isSingleTrip() || state.phase === 'intro' || state.phase === 'outro') {
+        hud.classList.remove('visible');
+        return;
+      }
+      hud.classList.add('visible');
+      const charging = state.phase === 'dwell';
+      icon.textContent = charging ? '⚡' : '🚗';
+      icon.classList.toggle('charging', charging);
+      document.getElementById('hud-phase').textContent = charging ? 'Charging' : 'En Route';
+      document.getElementById('hud-text').textContent = state.label || '';
+    }
+
+    function updateStoryOverlay(state) {
+      const overlay = document.getElementById('story-overlay');
+      const captionEl = document.getElementById('story-caption');
+      const subEl = document.getElementById('story-sub');
+      const poisEl = document.getElementById('story-pois');
+      if (!state || !isSingleTrip()) {
+        overlay.classList.remove('visible');
+        return;
+      }
+      const show = isPlaying || isRecording;
+      if (!show) { overlay.classList.remove('visible'); return; }
+
+      if (state.phase === 'intro') {
+        overlay.classList.add('visible');
+        captionEl.textContent = state.label || activeTrip()?.name || '';
+        subEl.textContent = state.caption || '';
+        poisEl.innerHTML = (state.highlights || []).map(h =>
+          `<span class="story-poi-chip">${h}</span>`
+        ).join('');
+        return;
+      }
+      if (state.phase === 'outro') {
+        overlay.classList.add('visible');
+        captionEl.textContent = 'Journey Complete';
+        subEl.textContent = state.caption || '';
+        const vc = state.visitedCount || 0;
+        const nc = state.nearbyCount || 0;
+        poisEl.innerHTML = nc
+          ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
+          : '';
+        return;
+      }
+      if (state.phase === 'dwell' && (state.caption || state.pois?.length)) {
+        overlay.classList.add('visible');
+        captionEl.textContent = state.caption || `Charging · ${state.label}`;
+        subEl.textContent = state.subcaption || '';
+        poisEl.innerHTML = (state.pois || []).map(p =>
+          `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
+        ).join('');
+        return;
+      }
+      if (state.phase === 'travel') {
+        overlay.classList.add('visible');
+        captionEl.textContent = `Driving to ${state.label || 'next stop'}`;
+        subEl.textContent = '';
+        poisEl.innerHTML = '';
+        return;
+      }
+      overlay.classList.remove('visible');
+    }
+
+    function clearPoiMarkers() {
+      poiMarkers.forEach(m => m.remove());
+      poiMarkers = [];
+    }
+
+    function updatePoiMarkers(pois, visible) {
+      clearPoiMarkers();
+      if (!visible || !pois?.length || !map) return;
+      pois.forEach(poi => {
+        const wrap = document.createElement('div');
+        wrap.className = 'poi-wrap visible';
+        const pin = document.createElement('div');
+        pin.className = 'poi-pin' + (poi.visited ? ' visited' : '');
+        pin.textContent = poi.emoji || '📍';
+        const lbl = document.createElement('div');
+        lbl.className = 'poi-label' + (poi.visited ? ' visited' : '');
+        lbl.textContent = poi.name;
+        wrap.appendChild(pin);
+        wrap.appendChild(lbl);
+        const m = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+          .setLngLat([poi.lng, poi.lat])
+          .addTo(map);
+        poiMarkers.push(m);
       });
     }
 
-    function updateDirectorCamera(pos, bearing) {
-      if (!directorMode || !pos) return;
-      const now = performance.now();
-      if (now - lastCameraUpdate < CAMERA_INTERVAL_MS) return;
-      lastCameraUpdate = now;
-
-      let diff = ((bearing - smoothBearing + 540) % 360) - 180;
-      smoothBearing = (smoothBearing + diff * 0.12 + 360) % 360;
-
-      map.easeTo({
-        center: [pos.lng, pos.lat],
-        zoom: tripFollowZoom,
-        pitch: 38,
-        bearing: smoothBearing,
-        duration: CAMERA_INTERVAL_MS,
-        essential: true,
-      });
+    function setPlaybackVisuals(playing) {
+      const t = activeTrip();
+      if (!t) return;
+      setRouteStyle(t.id, t.color, playing ? 'playback' : 'active');
     }
 
-    // ── Trail + vehicle ──
-    function updateTrail(prog) {
-      const path = activePath(), stops = activeStops();
-      if (!path.length) return;
-      animStopIdx = findStopIdx(stops, path, prog);
-      const pos = pointOnPath(path, prog);
-      const endIdx = Math.max(1, Math.ceil(prog*(path.length-1)));
-      const trailCoords = path.slice(0,endIdx+1).map(p=>[p[1],p[0]]);
-      if (pos) trailCoords.push([pos.lng,pos.lat]);
-      const color = stops[Math.min(animStopIdx,stops.length-1)]?.tripColor||'#3b82f6';
+    function updateTrailFromState(state) {
+      const stops = activeStops();
+      if (!state) return;
+      animStopIdx = state.stopIndex ?? 0;
+      animProg = playbackProgress();
+      const color = stops[Math.min(animStopIdx, stops.length - 1)]?.tripColor || '#ef4444';
 
-      if (map.getSource('active-trail')) {
-        map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:trailCoords}});
-        map.setPaintProperty('active-trail-line','line-color',color);
-        map.setPaintProperty('active-trail-glow','line-color',color);
-      } else {
-        map.addSource('active-trail',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:trailCoords}}});
-        map.addLayer({id:'active-trail-glow',type:'line',source:'active-trail',paint:{'line-color':color,'line-width':16,'line-opacity':0.3,'line-blur':8}});
-        map.addLayer({id:'active-trail-line',type:'line',source:'active-trail',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':color,'line-width':4,'line-opacity':1}});
+      if (state.phase === 'intro') {
+        if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker = null; }
+        clearPoiMarkers();
+        ensureTrailLayers(color);
+        map.getSource('active-trail').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+        updateStoryOverlay(state);
+        updateLocationHud(state);
+        document.getElementById('scrubber').value = Math.round(animProg * 1000);
+        document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
+        document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
+        document.getElementById('prog-text').textContent = state.label || 'Opening…';
+        return;
+      }
+      if (state.phase === 'outro') {
+        if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker = null; }
+        clearPoiMarkers();
+        updateStoryOverlay(state);
+        updateLocationHud(state);
+        document.getElementById('scrubber').value = Math.round(animProg * 1000);
+        document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
+        document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
+        document.getElementById('prog-text').textContent = 'Journey complete';
+        return;
       }
 
-      if (pos) {
-        const bearing = pathBearing(path, prog);
+      const pos = { lat: state.lat, lng: state.lng };
+      const trailCoords = trailCoordsAtTime(animTimeMs);
+
+      if (state.phase === 'travel') {
+        lastTravelBearing = smoothAngle(lastTravelBearing, state.bearing || 0, 0.18);
+        smoothBearing = lastTravelBearing;
+      }
+      const bearing = state.phase === 'dwell' ? lastTravelBearing : smoothBearing;
+
+      ensureTrailLayers(color);
+      if (trailCoords.length >= 2) {
+        map.getSource('active-trail').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: trailCoords } });
+        map.setPaintProperty('active-trail-glow', 'line-color', color);
+        map.setPaintProperty('active-trail-line', 'line-gradient', ['interpolate', ['linear'], ['line-progress'], 0, color, 0.85, '#ffffff', 1, '#ffffff']);
+      }
+
+      if (pos.lat != null) {
         if (vehicleMarker) {
-          vehicleMarker.setLngLat([pos.lng,pos.lat]);
-          vehicleMarker.getElement().querySelector('.vehicle-body').style.transform = `rotate(${bearing}deg)`;
+          vehicleMarker.setLngLat([pos.lng, pos.lat]);
+          const body = vehicleMarker.getElement().querySelector('.vehicle-body');
+          if (body && state.phase === 'travel') body.style.transform = `rotate(${bearing}deg)`;
+          else if (body) body.style.transform = 'rotate(0deg)';
         } else {
           const el = document.createElement('div');
           el.innerHTML = carHtml;
-          vehicleMarker = new mapboxgl.Marker({element:el, anchor:'center', rotationAlignment:'map'})
-            .setLngLat([pos.lng,pos.lat]).addTo(map);
+          vehicleMarker = new mapboxgl.Marker({ element: el, anchor: 'center', rotationAlignment: 'map' })
+            .setLngLat([pos.lng, pos.lat]).addTo(map);
         }
-        // Director mode: smooth follow — throttled, no spin
-        if (directorMode) updateDirectorCamera(pos, bearing);
+        if (directorMode) {
+          const lookAhead = 0.04;
+          let lookPos = pos;
+          if (state.phase === 'travel' && state.path?.length >= 2) {
+            lookPos = pointOnPath(state.path, Math.min(state.frac + lookAhead, 1)) || pos;
+          }
+          camBearing = state.phase === 'travel'
+            ? smoothAngle(camBearing, bearing, 0.06)
+            : camBearing;
+          const zoom = state.phase === 'dwell' && state.pois?.length ? 7.2 : Math.min(6.8, Math.max(5.2, map.getZoom()));
+          const cam = {
+            center: [lookPos.lng, lookPos.lat],
+            zoom,
+            pitch: Math.min(MAX_PITCH, state.phase === 'dwell' ? 38 : 42),
+            bearing: camBearing,
+          };
+          if (isRecording) map.jumpTo(cam);
+          else map.easeTo({ ...cam, duration: 500, essential: true });
+        }
       }
 
+      updatePoiMarkers(state.pois, state.phase === 'dwell');
+
       stopMarkers.forEach(m => {
-        if (!m._el.classList.contains('stop-pin-wrap')) return;
-        m._el.classList.add('visible');
-        m._el.classList.toggle('active', m._idx === animStopIdx);
+        const reached = m._idx <= animStopIdx;
+        const isActive = m._idx === animStopIdx;
+        m._el.classList.toggle('visible', reached || m._isMilestone);
+        m._el.classList.toggle('active', isActive);
+        m._el.classList.toggle('revealed', reached && !m._isMilestone);
+        if (m._waypointCore && reached && !m._isMilestone) m._waypointCore.textContent = String(m._idx + 1);
+        if (m._lbl) {
+          m._lbl.classList.toggle('visible', isActive);
+          m._lbl.classList.toggle('active', isActive);
+          if (isActive) m._lbl.textContent = shortLabel(m._stop.location);
+        }
       });
 
-      // UI updates
-      document.getElementById('scrubber').value = Math.round(prog*1000);
-      document.getElementById('timeline-scrub').style.left = (prog*100)+'%';
+      document.getElementById('scrubber').value = Math.round(animProg * 1000);
+      document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
+      document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
       const cur = stops[animStopIdx];
-      document.getElementById('prog-text').textContent = cur ? `Stop ${animStopIdx+1}: ${cur.location.split(',')[0]}` : 'Ready';
-      if (cur) { document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0,10)||''; document.getElementById('prog-end').textContent = cur.datetime?.slice(0,10)||''; }
+      document.getElementById('prog-text').textContent = cur
+        ? (state.phase === 'dwell' ? `Charging · ${shortLabel(cur.location)}` : `Driving · ${state.label || shortLabel(cur.location)}`)
+        : 'Ready to replay';
+      if (cur) {
+        document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0, 10) || '';
+        document.getElementById('prog-end').textContent = cur.datetime?.slice(0, 10) || '';
+      }
+      updateLocationHud(state);
+      updateStoryOverlay(state);
+    }
+
+    function updateTrail(prog) {
+      animTimeMs = prog * (activePlayback()?.total_video_ms || 0);
+      updateTrailFromState(positionAtTime(animTimeMs));
     }
 
     // ── Playback ──
     function animate(ts) {
       if (!isPlaying) return;
       if (!lastTs) lastTs=ts;
-      animProg += (ts-lastTs) / (TRIP_PLAYBACK_MS / speed);
-      lastTs=ts;
-      if (animProg>=1) {
-        animProg=1; updateTrail(1);
-        if (loopTrip) { animProg=0; animStopIdx=0; stopMarkers.forEach(m=>{ if (m._el.classList.contains('stop-pin-wrap')) m._el.classList.remove('active'); }); lastTs=0; animFrame=requestAnimationFrame(animate); return; }
-        stopPlayback(); return;
+      const pb = activePlayback();
+      if (!pb?.total_video_ms) { stopPlayback(); return; }
+      animTimeMs += (ts - lastTs) * speed;
+      lastTs = ts;
+      if (animTimeMs >= pb.total_video_ms) {
+        animTimeMs = pb.total_video_ms;
+        updateTrailFromState(positionAtTime(animTimeMs));
+        if (isRecording) finishRecording();
+        if (loopTrip) {
+          animTimeMs = 0; animStopIdx = 0;
+          applyIdleStopVisuals();
+          lastTs = 0;
+          if (!isRecording) { animFrame = requestAnimationFrame(animate); }
+          return;
+        }
+        stopPlayback();
+        return;
       }
-      updateTrail(animProg);
-      animFrame=requestAnimationFrame(animate);
+      updateTrailFromState(positionAtTime(animTimeMs));
+      animFrame = requestAnimationFrame(animate);
     }
-    function startPlayback() {
+    function startPlayback(forRecording=false) {
       if (!isSingleTrip()) {
         document.getElementById('prog-text').textContent = 'Select a trip first';
         return;
       }
-      if (!activePath().length) return;
-      if (animProg>=1) { animProg=0; resetVisuals(); drawStops(); }
-      isPlaying=true; lastTs=0;
-      document.getElementById('btn-play').disabled=true;
-      document.getElementById('btn-pause').disabled=false;
-      document.getElementById('playback-bar').classList.add('visible');
-      document.getElementById('playback-text').textContent = `Playing · ${speed}×`;
-      animFrame=requestAnimationFrame(animate);
+      if (!activePlayback()?.total_video_ms) return;
+      if (animTimeMs >= activePlayback().total_video_ms) { animTimeMs = 0; resetVisuals(false); drawStops(); }
+      isPlaying = true; lastTs = 0;
+      setPlaybackVisuals(true);
+      document.getElementById('btn-play').disabled = true;
+      document.getElementById('btn-pause').disabled = false;
+      document.getElementById('location-hud').classList.add('visible');
+      animFrame = requestAnimationFrame(animate);
     }
     function stopPlayback() {
       isPlaying=false;
       if (animFrame) cancelAnimationFrame(animFrame);
-      document.getElementById('btn-play').disabled=false;
-      document.getElementById('btn-pause').disabled=true;
-      document.getElementById('playback-bar').classList.remove('visible');
-      ensureMapLabelsVisible();
+      document.getElementById('btn-play').disabled = !isSingleTrip();
+      document.getElementById('btn-pause').disabled = true;
+      if (!isRecording) setPlaybackVisuals(false);
     }
-    function resetVisuals() {
-      stopPlayback(); animProg=0; animStopIdx=0; smoothBearing=0; lastCameraUpdate=0;
+    function resetVisuals(clearHud=true) {
+      stopPlayback(); animTimeMs=0; animProg=0; animStopIdx=0;
+      smoothBearing = 0; camBearing = 0; lastTravelBearing = 0;
       if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
-      if (map.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
-      stopMarkers.forEach(m=>{ if (m._el.classList.contains('stop-pin-wrap')) m._el.classList.remove('active'); });
+      clearPoiMarkers();
+      if (map?.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
+      applyIdleStopVisuals();
       document.getElementById('scrubber').value=0;
+      document.getElementById('scrub-fill').style.width='0%';
       document.getElementById('timeline-scrub').style.left='0%';
-      document.getElementById('prog-text').textContent = isSingleTrip() ? 'Ready' : 'Select a trip to play';
+      document.getElementById('prog-text').textContent = isSingleTrip() ? 'Ready to replay' : 'Select a trip to replay';
+      if (clearHud) {
+        document.getElementById('location-hud').classList.remove('visible');
+        document.getElementById('story-overlay').classList.remove('visible');
+      }
+      setPlaybackVisuals(false);
+    }
+
+    async function exportTripVideo() {
+      if (!isSingleTrip() || !map) return;
+      const trip = activeTrip();
+      const story = trip.story || {};
+      const status = document.getElementById('export-status');
+      status.textContent = 'Preparing cinematic recording…';
+      status.classList.add('visible');
+      resetVisuals();
+      drawStops();
+      fitTrip(false);
+      await new Promise(r => setTimeout(r, 1600));
+
+      document.body.classList.add('cinema-mode', 'portrait-export');
+      const title = document.getElementById('cinema-title');
+      document.getElementById('cinema-title-text').textContent = trip.name;
+      document.getElementById('cinema-subtitle').textContent =
+        `${trip.miles.toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days} days`;
+      const hlEl = document.getElementById('cinema-highlights');
+      hlEl.innerHTML = (story.highlights || []).slice(0, 4).map(h => `<span>${h}</span>`).join('');
+      title.classList.add('visible');
+      map.resize();
+      await new Promise(r => setTimeout(r, 500));
+
+      const canvas = map.getCanvas();
+      const stream = canvas.captureStream(30);
+      recordedChunks = [];
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9' : 'video/webm';
+      mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+      mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${trip.id}_road_trip.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        isRecording = false;
+        document.body.classList.remove('cinema-mode', 'portrait-export');
+        title.classList.remove('visible');
+        hlEl.innerHTML = '';
+        status.classList.remove('visible');
+        document.getElementById('story-overlay').classList.remove('visible');
+        map.resize();
+        fitTrip(false);
+      };
+
+      isRecording = true;
+      status.textContent = 'Recording road trip story…';
+      mediaRecorder.start(250);
+      startPlayback(true);
+    }
+
+    function finishRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        document.getElementById('export-status').textContent = 'Saving video…';
+        mediaRecorder.stop();
+      }
+      stopPlayback();
     }
 
     // ── Select trip ──
     function selectTrip(id) {
       selectedId=id;
+      dismissOnboarding();
       document.querySelectorAll('.trip-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       document.querySelectorAll('.tl-seg').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       resetVisuals(); drawRoutes(); drawStops(); updateHero(); fitTrip();
-      ensureMapLabelsVisible();
+      setMapLabelsVisible(!isSingleTrip());
       document.getElementById('btn-play').disabled = !isSingleTrip();
+      document.getElementById('btn-export').disabled = !isSingleTrip();
     }
 
     // ── Night mode ──
@@ -828,8 +1549,6 @@
       document.getElementById('btn-night').classList.toggle('on', nightMode);
       document.body.classList.toggle('night', nightMode);
     }
-
-    // ── Events ──
     document.getElementById('trip-list').addEventListener('click', e=>{
       const item=e.target.closest('.trip-item'); if(item) selectTrip(item.dataset.id);
     });
@@ -840,42 +1559,62 @@
     document.getElementById('btn-pause').addEventListener('click', stopPlayback);
     document.getElementById('btn-step').addEventListener('click', ()=>{
       if (!isSingleTrip()) return;
-      stopPlayback(); const stops=activeStops();
-      if (animStopIdx<stops.length-1) { animStopIdx++; animProg=animStopIdx/Math.max(stops.length-1,1); updateTrail(animProg); }
+      stopPlayback();
+      const pb = activePlayback();
+      if (!pb) return;
+      let cursor = 0, targetIdx = animStopIdx + 1;
+      for (const seg of pb.segments) {
+        if (seg.stop_index >= targetIdx && seg.type === 'dwell') {
+          animTimeMs = cursor;
+          updateTrailFromState(positionAtTime(animTimeMs));
+          return;
+        }
+        cursor += seg.duration_ms;
+      }
+      animTimeMs = pb.total_video_ms;
+      updateTrailFromState(positionAtTime(animTimeMs));
     });
     document.getElementById('btn-reset').addEventListener('click', ()=>{ resetVisuals(); drawStops(); fitTrip(); });
     document.getElementById('btn-loop').addEventListener('click', ()=>{
-      loopTrip=!loopTrip; document.getElementById('btn-loop').classList.toggle('active-toggle', loopTrip);
+      loopTrip=!loopTrip; document.getElementById('btn-loop').classList.toggle('on', loopTrip);
     });
     document.getElementById('btn-director').addEventListener('click', ()=>{
-      directorMode=!directorMode;
-      document.getElementById('btn-director').classList.toggle('active-toggle', directorMode);
-      smoothBearing = map.getBearing();
-      lastCameraUpdate = 0;
+      directorMode=!directorMode; document.getElementById('btn-director').classList.toggle('on', directorMode);
     });
     document.getElementById('btn-night').addEventListener('click', toggleNight);
     document.getElementById('speed').addEventListener('input', e=>{ speed=parseFloat(e.target.value); document.getElementById('speed-label').textContent=speed+'×'; });
     document.getElementById('scrubber').addEventListener('input', e=>{
       if (!isSingleTrip()) return;
-      stopPlayback(); animProg=parseInt(e.target.value)/1000;
-      animStopIdx=findStopIdx(activeStops(), activePath(), animProg);
-      updateTrail(animProg);
+      stopPlayback();
+      const pb = activePlayback();
+      if (!pb) return;
+      animTimeMs = (parseInt(e.target.value)/1000) * pb.total_video_ms;
+      updateTrailFromState(positionAtTime(animTimeMs));
     });
     document.getElementById('sidebar-toggle').addEventListener('click', ()=>{
       const sb=document.getElementById('sidebar');
       sb.classList.toggle('collapsed');
-      document.getElementById('sidebar-toggle').textContent=sb.classList.contains('collapsed')?'▶':'◀';
     });
     document.addEventListener('keydown', e=>{
       if (e.target.tagName==='INPUT') return;
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
       if (e.code==='ArrowRight') { stopPlayback(); document.getElementById('btn-step').click(); }
-      if (e.code==='ArrowLeft') { stopPlayback(); if(isSingleTrip()&&animStopIdx>0){animStopIdx--; animProg=animStopIdx/Math.max(activeStops().length-1,1); updateTrail(animProg);} }
+      if (e.code==='ArrowLeft') { stopPlayback(); if(isSingleTrip()&&animStopIdx>0){
+        const pb = activePlayback(); if (!pb) return;
+        let cursor = 0, targetIdx = animStopIdx - 1;
+        for (const seg of pb.segments) {
+          if (seg.stop_index === targetIdx && seg.type === 'dwell') {
+            animTimeMs = cursor; updateTrailFromState(positionAtTime(animTimeMs)); return;
+          }
+          cursor += seg.duration_ms;
+        }
+      }}
       if (e.code==='KeyR') document.getElementById('btn-reset').click();
       if (e.code==='KeyD') document.getElementById('btn-director').click();
     });
 
-    document.getElementById('onboard-co').addEventListener('click', startWithColorado);
+    document.getElementById('btn-export').addEventListener('click', exportTripVideo);
+    document.getElementById('onboard-featured').addEventListener('click', startWithFeatured);
     document.getElementById('onboard-dismiss').addEventListener('click', dismissOnboarding);
     document.getElementById('onboarding').addEventListener('click', e=>{
       if (e.target.id === 'onboarding') dismissOnboarding();
