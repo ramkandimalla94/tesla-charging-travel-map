@@ -1,0 +1,15 @@
+{
+  "_comment": "Copy to visited_places.json and set visited: true for places you actually went to. The map will highlight confirmed visits vs nearby suggestions.",
+  "visited": {
+    "trip_009_2024-06-30_Henrietta_to_Vernon": {
+      "garden-of-the-gods": true,
+      "aspen-mountain": true,
+      "maroon-bells": true,
+      "mesa-verde": true
+    },
+    "trip_011_2024-11-19_Henrietta_to_Yakima": {
+      "multnomah-falls": true,
+      "crater-lake": true
+    }
+  }
+}

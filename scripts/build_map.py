@@ -20,8 +20,13 @@ DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "output"
 GPX_DIR = OUTPUT_DIR / "gpx"
 TRIPS_FILE = DATA_DIR / "trips.json"
+NEARBY_PLACES_FILE = DATA_DIR / "nearby_places.json"
+VISITED_PLACES_FILE = DATA_DIR / "visited_places.json"
 HTML_OUTPUT = OUTPUT_DIR / "travel_map.html"
 GEOJSON_OUTPUT = OUTPUT_DIR / "trips.geojson"
+
+POI_RADIUS_MILES = 40
+POI_MAX_PER_STOP = 3
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -44,6 +49,105 @@ STATE_NAMES = {
 def load_trips() -> dict:
     with open(TRIPS_FILE, encoding="utf-8") as f:
         return json.load(f)
+
+
+def load_nearby_places() -> list[dict]:
+    if not NEARBY_PLACES_FILE.exists():
+        return []
+    with open(NEARBY_PLACES_FILE, encoding="utf-8") as f:
+        return json.load(f).get("places", [])
+
+
+def load_visited_places() -> dict[str, dict[str, bool]]:
+    if not VISITED_PLACES_FILE.exists():
+        return {}
+    with open(VISITED_PLACES_FILE, encoding="utf-8") as f:
+        return json.load(f).get("visited", {})
+
+
+def match_pois_for_stop(
+    stop: dict,
+    all_places: list[dict],
+    visited_for_trip: dict[str, bool],
+) -> list[dict]:
+    """Return nearby POIs sorted by distance, capped at POI_MAX_PER_STOP."""
+    lat, lng = stop.get("lat"), stop.get("lng")
+    if not is_valid_coord(lat, lng):
+        return []
+    matches: list[tuple[float, dict]] = []
+    for place in all_places:
+        dist = haversine_miles(lat, lng, place["lat"], place["lng"])
+        if dist <= POI_RADIUS_MILES:
+            poi = {
+                "id": place["id"],
+                "name": place["name"],
+                "category": place.get("category", "landmark"),
+                "emoji": place.get("emoji", "📍"),
+                "tagline": place.get("tagline", ""),
+                "lat": place["lat"],
+                "lng": place["lng"],
+                "distance_mi": round(dist, 1),
+                "visited": bool(visited_for_trip.get(place["id"], False)),
+            }
+            matches.append((dist, poi))
+    matches.sort(key=lambda x: x[0])
+    return [p for _, p in matches[:POI_MAX_PER_STOP]]
+
+
+def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]]) -> dict:
+    """Narrative captions for cinematic replay and video export."""
+    origin = short_location_label(stops[0]["location"]) if stops else ""
+    dest = short_location_label(stops[-1]["location"]) if stops else ""
+    states = trip.get("via_states") or []
+    via = ", ".join(states) if states else "the open road"
+    days = trip_duration_days(trip["start"], trip["end"])
+    all_pois = [p for pois in stop_pois for p in pois]
+    visited_count = sum(1 for p in all_pois if p.get("visited"))
+    nearby_names = list(dict.fromkeys(p["name"] for p in all_pois))[:6]
+
+    intro = (
+        f"A {days}-day Tesla road trip from {origin.split(',')[0]} "
+        f"through {via} — {len(stops)} Supercharger stops powering the journey."
+    )
+    outro = (
+        f"Journey complete — {len(stops)} charging stops across {via}. "
+        + (
+            f"{visited_count} confirmed visits · {len(all_pois)} nearby highlights explored."
+            if all_pois
+            else "Every mile charged by Supercharger."
+        )
+    )
+
+    stop_captions: list[dict] = []
+    for i, (stop, pois) in enumerate(zip(stops, stop_pois)):
+        label = short_location_label(stop["location"])
+        city = label.split(",")[0]
+        if pois:
+            poi_text = " · ".join(
+                f"{p['emoji']} {p['name']}" + (" ✓" if p.get("visited") else "")
+                for p in pois[:2]
+            )
+            caption = f"Charging in {city} — nearby: {poi_text}"
+            sub = pois[0].get("tagline", "")
+        elif i == 0:
+            caption = f"Departing {city} — the adventure begins"
+            sub = f"First Supercharger of {len(stops)} stops"
+        elif i == len(stops) - 1:
+            caption = f"Final stop · {city}"
+            sub = "Homeward bound"
+        else:
+            caption = f"Charging in {city}"
+            sub = f"Stop {i + 1} of {len(stops)}"
+        stop_captions.append({"caption": caption, "sub": sub, "pois": pois})
+
+    return {
+        "intro": intro,
+        "outro": outro,
+        "highlights": nearby_names,
+        "visited_count": visited_count,
+        "nearby_count": len(all_pois),
+        "stop_captions": stop_captions,
+    }
 
 
 def trip_color(index: int) -> str:
@@ -228,19 +332,30 @@ def leg_bearing_deg(lat1: float, lng1: float, lat2: float, lng2: float) -> float
     return (math.degrees(math.atan2(y, x)) + 360) % 360
 
 
-def build_playback_timeline(stops: list[dict], route_path: list[list[float]]) -> dict:
+def build_playback_timeline(
+    stops: list[dict],
+    route_path: list[list[float]],
+    story: dict | None = None,
+    stop_pois: list[list[dict]] | None = None,
+) -> dict:
     """
     Time-weighted playback segments for cinematic replay.
     Long halts between charges produce longer dwell + slower leg pacing.
+    Adds intro/outro title cards and nearby-place highlights on dwell segments.
     """
     if len(stops) < 1:
-        return {"segments": [], "total_video_ms": 0, "real_duration_ms": 0}
+        return {"segments": [], "total_video_ms": 0, "real_duration_ms": 0, "story": story or {}}
 
     raw_segments: list[dict] = []
     real_total_ms = 0
+    stop_pois = stop_pois or [[] for _ in stops]
+    story = story or {}
 
     for i, stop in enumerate(stops):
         label = short_location_label(stop["location"])
+        pois = stop_pois[i] if i < len(stop_pois) else []
+        caption = story.get("stop_captions", [{}] * len(stops))
+        cap = caption[i] if i < len(caption) else {}
         if i < len(stops) - 1:
             nxt = stops[i + 1]
             gap_ms = max(
@@ -262,6 +377,9 @@ def build_playback_timeline(stops: list[dict], route_path: list[list[float]]) ->
                 "lng": stop["lng"],
                 "label": label,
                 "stop_index": i,
+                "pois": pois,
+                "caption": cap.get("caption", f"Charging in {label}"),
+                "subcaption": cap.get("sub", ""),
             })
             raw_segments.append({
                 "type": "travel",
@@ -290,23 +408,46 @@ def build_playback_timeline(stops: list[dict], route_path: list[list[float]]) ->
                 "lng": stop["lng"],
                 "label": label,
                 "stop_index": i,
+                "pois": pois,
+                "caption": cap.get("caption", f"Final stop · {label}"),
+                "subcaption": cap.get("sub", "Journey complete"),
             })
 
-    target_ms = min(90_000, max(20_000, len(stops) * 2_800))
+    target_ms = min(120_000, max(25_000, len(stops) * 3_200))
     scale = target_ms / max(real_total_ms, 1)
     video_segments: list[dict] = []
     for seg in raw_segments:
         dur = seg["real_duration_ms"] * scale
         if seg["type"] == "dwell":
-            dur = max(700, min(9_000, dur))
+            # Longer dwell when POIs are present — time to showcase nearby places
+            poi_bonus = 1.35 if seg.get("pois") else 1.0
+            dur = max(1_800, min(12_000, dur * poi_bonus))
         else:
-            dur = max(1_200, min(18_000, dur))
+            dur = max(1_400, min(20_000, dur))
         video_segments.append({**seg, "duration_ms": int(dur)})
 
+    # Cinematic intro/outro title cards for video export
+    intro_seg = {
+        "type": "intro",
+        "duration_ms": 4_500,
+        "title": story.get("intro_title", ""),
+        "caption": story.get("intro", "Road trip replay"),
+        "highlights": story.get("highlights", [])[:4],
+    }
+    outro_seg = {
+        "type": "outro",
+        "duration_ms": 5_000,
+        "caption": story.get("outro", "Journey complete"),
+        "visited_count": story.get("visited_count", 0),
+        "nearby_count": story.get("nearby_count", 0),
+    }
+    all_segments = [intro_seg, *video_segments, outro_seg]
+
     return {
-        "segments": video_segments,
-        "total_video_ms": sum(s["duration_ms"] for s in video_segments),
+        "segments": all_segments,
+        "total_video_ms": sum(s["duration_ms"] for s in all_segments),
         "real_duration_ms": real_total_ms,
+        "story": story,
     }
 
 
@@ -329,6 +470,8 @@ def trip_duration_days(start: str, end: str) -> int:
 
 
 def prepare_trips(trips_data: dict) -> list[dict]:
+    all_places = load_nearby_places()
+    visited_all = load_visited_places()
     prepared: list[dict] = []
     for i, trip in enumerate(trips_data["trips"]):
         stops = [
@@ -347,7 +490,13 @@ def prepare_trips(trips_data: dict) -> list[dict]:
         state_names = [STATE_NAMES.get(s, s) for s in states]
         via_summary = trip.get("via_summary") or ", ".join(states)
         arcs = build_arcs(stops, trip_color(i), trip["id"])
-        playback = build_playback_timeline(stops, route_path)
+        visited_for_trip = visited_all.get(trip["id"], {})
+        stop_pois = [
+            match_pois_for_stop(s, all_places, visited_for_trip) for s in stops
+        ]
+        story = build_trip_story(trip, stops, stop_pois)
+        story["intro_title"] = trip["name"]
+        playback = build_playback_timeline(stops, route_path, story, stop_pois)
         featured = is_featured_trip(trip, miles, len(stops))
         prepared.append({
             "id": trip["id"],
@@ -373,6 +522,7 @@ def prepare_trips(trips_data: dict) -> list[dict]:
             "featured": featured,
             "arcs": arcs,
             "playback": playback,
+            "story": story,
             "region": "colorado" if trip.get("has_colorado") else (
                 "pnw" if any(s in states for s in ("WA", "OR", "ID")) else "other"
             ),
