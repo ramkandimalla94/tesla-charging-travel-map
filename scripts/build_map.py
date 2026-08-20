@@ -536,24 +536,25 @@ def build_playback_timeline(
     for seg in raw_segments:
         dur = seg["real_duration_ms"] * scale
         if seg["type"] == "dwell":
-            # Longer dwell when POIs are present — time to showcase nearby places
-            poi_bonus = 1.35 if seg.get("pois") else 1.0
-            dur = max(1_800, min(12_000, dur * poi_bonus))
+            # Cap dwells tightly — multi-second "Charging…" freezes read as a stalled UI.
+            # POI stops get a short extra beat to read the caption, not a long hold.
+            poi_bonus = 1.2 if seg.get("pois") else 1.0
+            dur = max(1_200, min(3_600, dur * poi_bonus))
         else:
-            dur = max(1_400, min(20_000, dur))
+            dur = max(1_200, min(14_000, dur))
         video_segments.append({**seg, "duration_ms": int(dur)})
 
-    # Cinematic intro/outro title cards for video export
+    # Cinematic intro/outro title cards for video export (keep snappy for in-app play)
     intro_seg = {
         "type": "intro",
-        "duration_ms": 4_500,
+        "duration_ms": 2_800,
         "title": story.get("intro_title", ""),
         "caption": story.get("intro", "Road trip replay"),
         "highlights": story.get("highlights", [])[:4],
     }
     outro_seg = {
         "type": "outro",
-        "duration_ms": 5_000,
+        "duration_ms": 3_200,
         "caption": story.get("outro", "Journey complete"),
         "visited_count": story.get("visited_count", 0),
         "nearby_count": story.get("nearby_count", 0),
