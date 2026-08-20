@@ -32,11 +32,23 @@ POI_MAX_PER_STOP = 3
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
 
 TRIP_COLORS = [
-    "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFEAA7", "#DDA0DD",
-    "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9", "#F8B500",
-    "#00CED1", "#FF69B4", "#32CD32", "#FF8C00", "#9370DB",
-    "#20B2AA", "#FFD700", "#DC143C", "#00FA9A", "#FF4500",
-    "#1E90FF", "#ADFF2F", "#FF1493", "#00BFFF", "#FFA07A",
+    "#FF4D4D", "#00E5C0", "#3B82F6", "#FBBF24", "#A855F7",
+    "#34D399", "#FB7185", "#38BDF8", "#F97316", "#C084FC",
+    "#2DD4BF", "#F472B6", "#84CC16", "#F59E0B", "#818CF8",
+    "#14B8A6", "#EAB308", "#EF4444", "#22D3EE", "#E879F9",
+    "#4ADE80", "#FACC15", "#F43F5E", "#60A5FA", "#FB923C",
+]
+
+# Pixel offsets / dash patterns so overlapping overview routes stay readable
+TRIP_OVERVIEW_STYLES = [
+    {"offset": 0, "dash": None},
+    {"offset": 5, "dash": [2, 1.5]},
+    {"offset": -5, "dash": [1.2, 1.2]},
+    {"offset": 9, "dash": [3, 1.5]},
+    {"offset": -9, "dash": [1.5, 2]},
+    {"offset": 13, "dash": [4, 2]},
+    {"offset": -13, "dash": [2, 2.5]},
+    {"offset": 17, "dash": [2.5, 1]},
 ]
 
 STATE_NAMES = {
@@ -506,6 +518,7 @@ def prepare_trips(trips_data: dict) -> list[dict]:
         story["intro_title"] = trip["name"]
         playback = build_playback_timeline(stops, route_path, story, stop_pois)
         featured = is_featured_trip(trip, miles, len(stops))
+        style = TRIP_OVERVIEW_STYLES[i % len(TRIP_OVERVIEW_STYLES)]
         prepared.append({
             "id": trip["id"],
             "name": trip["name"],
@@ -514,6 +527,8 @@ def prepare_trips(trips_data: dict) -> list[dict]:
             "startTs": str(trip["start"]),
             "endTs": str(trip["end"]),
             "color": trip_color(i),
+            "overview_offset": style["offset"],
+            "overview_dash": style["dash"],
             "stops": stops,
             "route_path": route_path,
             "stop_count": len(stops),

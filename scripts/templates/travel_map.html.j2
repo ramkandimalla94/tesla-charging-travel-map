@@ -166,12 +166,30 @@
     }
     .trip-item.featured { border-color: rgba(251, 191, 36, 0.15); }
     .trip-item.featured.active { background: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.35); }
+    .trip-item.preview {
+      background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16);
+      box-shadow: inset 3px 0 0 currentColor;
+    }
     .trip-swatch {
       width: 10px; height: 36px; border-radius: 99px; flex-shrink: 0;
       box-shadow: 0 0 12px currentColor;
     }
     .trip-name { font-size: 12px; font-weight: 600; line-height: 1.3; }
     .trip-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .route-chip {
+      position: absolute; z-index: 6; pointer-events: none;
+      transform: translate(-50%, -130%);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
+      padding: 4px 8px; border-radius: 8px; white-space: nowrap;
+      background: rgba(8,10,16,0.9); border: 1px solid rgba(255,255,255,0.22);
+      color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .route-chip.visible { opacity: 1; }
+    .route-chip .dot {
+      display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      margin-right: 6px; vertical-align: middle;
+    }
 
     .panel-toggle {
       position: absolute; top: 78px; left: calc(var(--panel-w) + 30px); z-index: 11;
@@ -617,7 +635,7 @@
       {% if featured_trips %}
       <div class="group-label featured">Epic Road Trips</div>
       {% for trip in featured_trips %}
-      <div class="trip-item featured" data-id="{{ trip.id }}">
+      <div class="trip-item featured" data-id="{{ trip.id }}" style="color:{{ trip.color }}">
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.name }}</div>
@@ -628,11 +646,11 @@
       {% endif %}
       <div class="group-label">All Trips</div>
       {% for trip in trips if not trip.featured %}
-      <div class="trip-item" data-id="{{ trip.id }}">
+      <div class="trip-item" data-id="{{ trip.id }}" style="color:{{ trip.color }}">
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.name }}</div>
-          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
+          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi · {{ trip.stop_count }} stops{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
         </div>
       </div>
       {% endfor %}
@@ -698,6 +716,8 @@
 
     // ── State ──
     let selectedId = 'all', animTimeMs = 0, animProg = 0, animStopIdx = 0;
+    let hoveredTripId = null;
+    let routeLabelMarkers = [];
     let isPlaying = false, animFrame = null, lastTs = 0;
     let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
@@ -928,7 +948,7 @@
       };
     }
 
-    function addRouteLayers(tripId, coords, color, visible) {
+    function addRouteLayers(tripId, coords, color, visible, overviewOffset, overviewDash) {
       const ids = routeLayerIds(tripId);
       const vis = visible ? 'visible' : 'none';
       const feature = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } };
@@ -937,30 +957,31 @@
         map.addLayer({
           id: ids.shadow, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: { 'line-color': '#000', 'line-width': 18, 'line-opacity': 0.28, 'line-blur': 6 },
+          paint: { 'line-color': '#000', 'line-width': 14, 'line-opacity': 0.22, 'line-blur': 5 },
         });
         map.addLayer({
           id: ids.glowOuter, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: { 'line-color': color, 'line-width': 14, 'line-opacity': 0.22, 'line-blur': 5 },
+          paint: { 'line-color': color, 'line-width': 10, 'line-opacity': 0.18, 'line-blur': 4 },
         });
         map.addLayer({
           id: ids.glowMid, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: { 'line-color': color, 'line-width': 7, 'line-opacity': 0.55, 'line-blur': 1.5 },
+          paint: { 'line-color': color, 'line-width': 4.5, 'line-opacity': 0.55, 'line-blur': 0.5 },
         });
         map.addLayer({
           id: ids.core, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
           paint: {
-            'line-width': 2.2,
-            'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, 'rgba(255,255,255,0.15)', 0.08, color, 1, '#ffffff'],
+            'line-width': 2.4,
+            'line-color': color,
+            'line-opacity': 0.95,
           },
         });
         map.addLayer({
           id: ids.highlight, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: { 'line-color': '#ffffff', 'line-width': 0.8, 'line-opacity': 0.85 },
+          paint: { 'line-color': '#ffffff', 'line-width': 0.7, 'line-opacity': 0.55 },
         });
       } else {
         map.getSource(ids.src).setData(feature);
@@ -969,26 +990,54 @@
         });
         map.setPaintProperty(ids.glowOuter, 'line-color', color);
         map.setPaintProperty(ids.glowMid, 'line-color', color);
-        map.setPaintProperty(ids.core, 'line-gradient', ['interpolate', ['linear'], ['line-progress'], 0, 'rgba(255,255,255,0.15)', 0.08, color, 1, '#ffffff']);
+        map.setPaintProperty(ids.core, 'line-color', color);
       }
+      // Store style hints for setRouteStyle
+      map._tripRouteMeta = map._tripRouteMeta || {};
+      map._tripRouteMeta[tripId] = { offset: overviewOffset || 0, dash: overviewDash || null, color };
     }
 
     function setRouteStyle(tripId, color, mode) {
       const ids = routeLayerIds(tripId);
       if (!map.getLayer(ids.core)) return;
+      const meta = (map._tripRouteMeta && map._tripRouteMeta[tripId]) || { offset: 0, dash: null };
+      const isHover = hoveredTripId === tripId && selectedId === 'all';
       const styles = {
-        overview: { shadow: 0.12, outer: 0.08, mid: 0.18, coreW: 1, hi: 0.2 },
-        active: { shadow: 0.38, outer: 0.32, mid: 0.72, coreW: 2.4, hi: 0.95 },
-        playback: { shadow: 0.06, outer: 0.04, mid: 0.08, coreW: 0.8, hi: 0.12 },
-        hidden: { shadow: 0, outer: 0, mid: 0, coreW: 0, hi: 0 },
-      }[mode] || styles.hidden;
-      map.setPaintProperty(ids.shadow, 'line-opacity', styles.shadow);
-      map.setPaintProperty(ids.glowOuter, 'line-opacity', styles.outer);
-      map.setPaintProperty(ids.glowMid, 'line-opacity', styles.mid);
-      map.setPaintProperty(ids.core, 'line-width', styles.coreW);
-      map.setPaintProperty(ids.highlight, 'line-opacity', styles.hi);
+        overview: { shadow: 0.08, outer: 0.06, mid: 0.28, coreW: 2.2, hi: 0.25, offset: meta.offset, dash: meta.dash },
+        overviewHover: { shadow: 0.35, outer: 0.4, mid: 0.85, coreW: 3.4, hi: 0.9, offset: meta.offset, dash: null },
+        overviewDim: { shadow: 0.03, outer: 0.02, mid: 0.08, coreW: 1.2, hi: 0.08, offset: meta.offset, dash: meta.dash },
+        active: { shadow: 0.38, outer: 0.32, mid: 0.72, coreW: 2.8, hi: 0.95, offset: 0, dash: null },
+        playback: { shadow: 0.06, outer: 0.04, mid: 0.08, coreW: 0.8, hi: 0.12, offset: 0, dash: null },
+        hidden: { shadow: 0, outer: 0, mid: 0, coreW: 0, hi: 0, offset: 0, dash: null },
+      };
+      let key = mode;
+      if (mode === 'overview') {
+        if (hoveredTripId && isHover) key = 'overviewHover';
+        else if (hoveredTripId && !isHover) key = 'overviewDim';
+      }
+      const s = styles[key] || styles.hidden;
+      map.setPaintProperty(ids.shadow, 'line-opacity', s.shadow);
+      map.setPaintProperty(ids.glowOuter, 'line-opacity', s.outer);
+      map.setPaintProperty(ids.glowMid, 'line-opacity', s.mid);
+      map.setPaintProperty(ids.core, 'line-width', s.coreW);
+      map.setPaintProperty(ids.core, 'line-color', color);
+      map.setPaintProperty(ids.highlight, 'line-opacity', s.hi);
       map.setPaintProperty(ids.glowOuter, 'line-color', color);
       map.setPaintProperty(ids.glowMid, 'line-color', color);
+      try {
+        map.setPaintProperty(ids.core, 'line-offset', s.offset || 0);
+        map.setPaintProperty(ids.glowMid, 'line-offset', s.offset || 0);
+        map.setPaintProperty(ids.glowOuter, 'line-offset', s.offset || 0);
+        map.setPaintProperty(ids.shadow, 'line-offset', s.offset || 0);
+        map.setPaintProperty(ids.highlight, 'line-offset', s.offset || 0);
+      } catch (_) {}
+      try {
+        const dash = s.dash;
+        [ids.core, ids.glowMid].forEach(id => {
+          if (dash) map.setPaintProperty(id, 'line-dasharray', dash);
+          else map.setPaintProperty(id, 'line-dasharray', [1, 0]);
+        });
+      } catch (_) {}
     }
 
     function ensureTrailLayers(color) {
@@ -1045,11 +1094,46 @@
         const isSelected = selectedId === trip.id;
         const isOverview = selectedId === 'all';
         const visible = isOverview || isSelected;
-        addRouteLayers(trip.id, coords, trip.color, visible);
+        addRouteLayers(trip.id, coords, trip.color, visible, trip.overview_offset, trip.overview_dash);
         if (!visible) setRouteStyle(trip.id, trip.color, 'hidden');
         else if (isSelected) setRouteStyle(trip.id, trip.color, 'active');
         else setRouteStyle(trip.id, trip.color, 'overview');
       });
+      drawRouteLabels();
+    }
+
+    function shortTripLabel(trip) {
+      const raw = (trip.name || '').split('—').pop()?.trim() || trip.name || '';
+      return raw.replace(/\s*·.*$/, '').slice(0, 42);
+    }
+
+    function drawRouteLabels() {
+      routeLabelMarkers.forEach(m => m.remove());
+      routeLabelMarkers = [];
+      if (selectedId !== 'all') return;
+      TRIPS.forEach(trip => {
+        const start = trip.stops && trip.stops[0];
+        if (!start) return;
+        const el = document.createElement('div');
+        el.className = 'route-chip' + (hoveredTripId === trip.id || !hoveredTripId ? ' visible' : '');
+        if (hoveredTripId && hoveredTripId !== trip.id) el.style.opacity = '0.15';
+        el.innerHTML = `<span class="dot" style="background:${trip.color}"></span>${shortTripLabel(trip)}`;
+        const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([start.lng, start.lat])
+          .addTo(map);
+        routeLabelMarkers.push(m);
+      });
+    }
+
+    function setHoveredTrip(id) {
+      hoveredTripId = id;
+      document.querySelectorAll('.trip-item').forEach(el => {
+        el.classList.toggle('preview', !!id && el.dataset.id === id);
+      });
+      if (selectedId === 'all') {
+        TRIPS.forEach(t => setRouteStyle(t.id, t.color, 'overview'));
+        drawRouteLabels();
+      }
     }
 
     // ── Beacon markers ──
@@ -1076,7 +1160,12 @@
       const single = isSingleTrip();
       activeTrips().forEach(trip => {
         const lastIdx = trip.stops.length - 1;
-        trip.stops.forEach((s, i) => {
+        // Overview: only start + finish pins to cut marker clutter on overlapping corridors
+        const indices = single
+          ? trip.stops.map((_, i) => i)
+          : [...new Set([0, lastIdx])];
+        indices.forEach(i => {
+          const s = trip.stops[i];
           const wrap = document.createElement('div');
           wrap.className = 'beacon-wrap';
           const isStart = i === 0;
@@ -1101,6 +1190,9 @@
             dot.className = 'stop-dot';
             dot.style.background = trip.color;
             dot.style.color = trip.color;
+            dot.style.width = isStart ? '14px' : '10px';
+            dot.style.height = isStart ? '14px' : '10px';
+            dot.style.border = '2px solid rgba(255,255,255,0.85)';
             wrap.appendChild(dot);
             var el = dot, lblRef = null;
           }
@@ -1524,8 +1616,12 @@
     // ── Select trip ──
     function selectTrip(id) {
       selectedId=id;
+      hoveredTripId=null;
       dismissOnboarding();
-      document.querySelectorAll('.trip-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+      document.querySelectorAll('.trip-item').forEach(el=>{
+        el.classList.toggle('active',el.dataset.id===id);
+        el.classList.remove('preview');
+      });
       document.querySelectorAll('.tl-seg').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       resetVisuals(); drawRoutes(); drawStops(); updateHero(); fitTrip();
       setMapLabelsVisible(!isSingleTrip());
@@ -1545,8 +1641,23 @@
     document.getElementById('trip-list').addEventListener('click', e=>{
       const item=e.target.closest('.trip-item'); if(item) selectTrip(item.dataset.id);
     });
+    document.getElementById('trip-list').addEventListener('mouseover', e=>{
+      const item=e.target.closest('.trip-item');
+      if (!item || item.dataset.id === 'all') { if (selectedId==='all') setHoveredTrip(null); return; }
+      if (selectedId==='all') setHoveredTrip(item.dataset.id);
+    });
+    document.getElementById('trip-list').addEventListener('mouseleave', ()=>{
+      if (selectedId==='all') setHoveredTrip(null);
+    });
     document.getElementById('timeline-track').addEventListener('click', e=>{
       const seg=e.target.closest('.tl-seg'); if(seg) selectTrip(seg.dataset.id);
+    });
+    document.getElementById('timeline-track').addEventListener('mouseover', e=>{
+      const seg=e.target.closest('.tl-seg');
+      if (selectedId==='all' && seg) setHoveredTrip(seg.dataset.id);
+    });
+    document.getElementById('timeline-track').addEventListener('mouseleave', ()=>{
+      if (selectedId==='all') setHoveredTrip(null);
     });
     document.getElementById('btn-play').addEventListener('click', startPlayback);
     document.getElementById('btn-pause').addEventListener('click', stopPlayback);
