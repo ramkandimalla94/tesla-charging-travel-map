@@ -104,9 +104,17 @@ def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]])
     all_pois = [p for pois in stop_pois for p in pois]
     visited_count = sum(1 for p in all_pois if p.get("visited"))
     nearby_names = list(dict.fromkeys(p["name"] for p in all_pois))[:6]
+    crew = trip.get("trip_crew") or trip.get("owner_short") or "you"
+    vehicle = trip.get("vehicle_label") or "your Tesla"
+    if trip.get("is_shared"):
+        who = f"{crew} in {vehicle}"
+    elif vehicle == "your Tesla":
+        who = "your Tesla"
+    else:
+        who = vehicle
 
     intro = (
-        f"A {days}-day Tesla road trip from {origin.split(',')[0]} "
+        f"A {days}-day road trip for {who} from {origin.split(',')[0]} "
         f"through {via} — {len(stops)} Supercharger stops powering the journey."
     )
     outro = (
@@ -526,6 +534,12 @@ def prepare_trips(trips_data: dict) -> list[dict]:
             "owner": trip.get("owner", ""),
             "owner_short": trip.get("owner_short", ""),
             "vin": trip.get("vin", ""),
+            "travelers": trip.get("travelers", []),
+            "trip_crew": trip.get("trip_crew", ""),
+            "driver": trip.get("driver", ""),
+            "driver_short": trip.get("driver_short", ""),
+            "vehicle_label": trip.get("vehicle_label", ""),
+            "is_shared": trip.get("is_shared", False),
             "region": "colorado" if trip.get("has_colorado") else (
                 "pnw" if any(s in states for s in ("WA", "OR", "ID")) else "other"
             ),

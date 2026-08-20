@@ -104,7 +104,7 @@
   "trips": [
     {
       "id": "trip_001_2024-06-30_Henrietta_to_Vernon",
-      "name": "Jun 2024 — Henrietta → Colorado · Rama",
+      "name": "Jun 2024 — Henrietta → Colorado",
       "start": "2024-06-30 01:18:54+00:00",
       "end": "2024-07-08 02:26:14+00:00",
       "stops": [
@@ -343,11 +343,19 @@
       "dest_label": "Vernon",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
-      "owner_short": "Rama"
+      "owner_short": "Rama",
+      "travelers": [
+        "Rama"
+      ],
+      "trip_crew": "Rama",
+      "driver": "Rama",
+      "driver_short": "Rama",
+      "vehicle_label": "your Tesla",
+      "is_shared": false
     },
     {
       "id": "trip_002_2024-10-12_Vernon_to_Vernon",
-      "name": "Oct 2024 — Vernon · Rama",
+      "name": "Oct 2024 — Vernon",
       "start": "2024-10-12 15:34:24+00:00",
       "end": "2024-10-16 13:24:19+00:00",
       "stops": [
@@ -468,11 +476,19 @@
       "dest_label": "Vernon",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
-      "owner_short": "Rama"
+      "owner_short": "Rama",
+      "travelers": [
+        "Rama"
+      ],
+      "trip_crew": "Rama",
+      "driver": "Rama",
+      "driver_short": "Rama",
+      "vehicle_label": "your Tesla",
+      "is_shared": false
     },
     {
       "id": "trip_003_2024-11-19_Henrietta_to_Yakima",
-      "name": "Nov 2024 — Henrietta → Yakima (via TX, NM, AZ, UT, ID, OR, WA) · Rama",
+      "name": "Nov 2024 — Henrietta → Yakima (via TX, NM, AZ, UT, ID, OR, WA)",
       "start": "2024-11-19 19:43:54+00:00",
       "end": "2024-11-29 02:38:28+00:00",
       "stops": [
@@ -714,11 +730,19 @@
       "dest_label": "Yakima",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
-      "owner_short": "Rama"
+      "owner_short": "Rama",
+      "travelers": [
+        "Rama"
+      ],
+      "trip_crew": "Rama",
+      "driver": "Rama",
+      "driver_short": "Rama",
+      "vehicle_label": "your Tesla",
+      "is_shared": false
     },
     {
       "id": "trip_004_2025-03-27_Yakima_to_Leavenworth",
-      "name": "Mar 2025 — Yakima → Leavenworth (via WA, OR, ID, NV, UT) · Rama",
+      "name": "Mar 2025 — Yakima → Leavenworth (via WA, OR, ID, NV, UT)",
       "start": "2025-03-27 23:02:21+00:00",
       "end": "2025-04-27 02:26:00+00:00",
       "stops": [
@@ -989,11 +1013,19 @@
       "dest_label": "Leavenworth",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
-      "owner_short": "Rama"
+      "owner_short": "Rama",
+      "travelers": [
+        "Rama"
+      ],
+      "trip_crew": "Rama",
+      "driver": "Rama",
+      "driver_short": "Rama",
+      "vehicle_label": "your Tesla",
+      "is_shared": false
     },
     {
       "id": "trip_005_2025-07-03_Quanah_to_Henrietta",
-      "name": "Jul 2025 — Quanah → Colorado · Akash",
+      "name": "Jul 2025 — Quanah → Colorado · Rama + Akash (Akash's car)",
       "start": "2025-07-03 05:03:42+00:00",
       "end": "2025-07-07 18:40:27+00:00",
       "stops": [
@@ -1167,11 +1199,20 @@
       "dest_label": "Henrietta",
       "owner": "Akash deep Konda",
       "vin": "7SAYGDED1TA438386",
-      "owner_short": "Akash"
+      "owner_short": "Akash",
+      "travelers": [
+        "Rama",
+        "Akash"
+      ],
+      "trip_crew": "Rama + Akash",
+      "driver": "Akash",
+      "driver_short": "Akash",
+      "vehicle_label": "Akash's car",
+      "is_shared": true
     },
     {
       "id": "trip_006_2025-09-25_Henrietta_to_Henrietta",
-      "name": "Sep 2025 — Henrietta → Colorado · Akash",
+      "name": "Sep 2025 — Henrietta → Colorado · Rama + Akash (Akash's car)",
       "start": "2025-09-25 07:19:29+00:00",
       "end": "2025-10-02 15:59:38+00:00",
       "stops": [
@@ -1370,11 +1411,20 @@
       "dest_label": "Henrietta",
       "owner": "Akash deep Konda",
       "vin": "7SAYGDED1TA438386",
-      "owner_short": "Akash"
+      "owner_short": "Akash",
+      "travelers": [
+        "Rama",
+        "Akash"
+      ],
+      "trip_crew": "Rama + Akash",
+      "driver": "Akash",
+      "driver_short": "Akash",
+      "vehicle_label": "Akash's car",
+      "is_shared": true
     },
     {
       "id": "trip_007_2025-12-13_Yakima_to_Rochester",
-      "name": "Dec 2025 — Yakima → Rochester (via WA, OR, ID, NV, UT, AZ, CA) · Rama",
+      "name": "Dec 2025 — Yakima → Rochester (via WA, OR, ID, NV, UT, AZ, CA)",
       "start": "2025-12-13 21:30:40+00:00",
       "end": "2026-01-15 05:52:16+00:00",
       "stops": [
@@ -1880,11 +1930,19 @@
       "dest_label": "Rochester",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
-      "owner_short": "Rama"
+      "owner_short": "Rama",
+      "travelers": [
+        "Rama"
+      ],
+      "trip_crew": "Rama",
+      "driver": "Rama",
+      "driver_short": "Rama",
+      "vehicle_label": "your Tesla",
+      "is_shared": false
     },
     {
       "id": "trip_008_2026-05-25_Kelso_to_Ridgefield",
-      "name": "May 2026 — Kelso → Ridgefield (via WA, OR, CA) · Rama",
+      "name": "May 2026 — Kelso → Ridgefield (via WA, OR, CA)",
       "start": "2026-05-25 19:35:20+00:00",
       "end": "2026-06-08 04:55:57+00:00",
       "stops": [
@@ -2255,7 +2313,15 @@
       "dest_label": "Ridgefield",
       "owner": "Rama Kandimalla",
       "vin": "7SAYGDEEXRA255182",
-      "owner_short": "Rama"
+      "owner_short": "Rama",
+      "travelers": [
+        "Rama"
+      ],
+      "trip_crew": "Rama",
+      "driver": "Rama",
+      "driver_short": "Rama",
+      "vehicle_label": "your Tesla",
+      "is_shared": false
     }
   ],
   "local_charges": [

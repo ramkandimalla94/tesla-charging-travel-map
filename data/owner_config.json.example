@@ -1,8 +1,17 @@
 {
+  "profile_name": "Rama",
   "home_bases": ["Addison, TX", "MAA Market Center"],
   "home_lat": 32.96,
   "home_lng": -96.83,
   "home_label": "Dallas",
   "home_radius_miles": 120,
-  "far_from_home_miles": 350
+  "far_from_home_miles": 350,
+  "shared_trips": [
+    {
+      "match": { "owner_contains": "Akash", "has_colorado": true },
+      "travelers": ["Rama", "Akash"],
+      "driver": "Akash",
+      "vehicle_label": "Akash's car"
+    }
+  ]
 }

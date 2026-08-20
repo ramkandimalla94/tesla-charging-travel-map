@@ -5,7 +5,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_001_2024-06-30_Henrietta_to_Vernon",
-        "name": "Jun 2024 \u2014 Henrietta \u2192 Colorado \u00b7 Rama",
+        "name": "Jun 2024 \u2014 Henrietta \u2192 Colorado",
         "color": "#FF6B6B"
       },
       "geometry": {
@@ -7250,7 +7250,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_002_2024-10-12_Vernon_to_Vernon",
-        "name": "Oct 2024 \u2014 Vernon \u00b7 Rama",
+        "name": "Oct 2024 \u2014 Vernon",
         "color": "#4ECDC4"
       },
       "geometry": {
@@ -10871,7 +10871,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_003_2024-11-19_Henrietta_to_Yakima",
-        "name": "Nov 2024 \u2014 Henrietta \u2192 Yakima (via TX, NM, AZ, UT, ID, OR, WA) \u00b7 Rama",
+        "name": "Nov 2024 \u2014 Henrietta \u2192 Yakima (via TX, NM, AZ, UT, ID, OR, WA)",
         "color": "#45B7D1"
       },
       "geometry": {
@@ -19232,7 +19232,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_004_2025-03-27_Yakima_to_Leavenworth",
-        "name": "Mar 2025 \u2014 Yakima \u2192 Leavenworth (via WA, OR, ID, NV, UT) \u00b7 Rama",
+        "name": "Mar 2025 \u2014 Yakima \u2192 Leavenworth (via WA, OR, ID, NV, UT)",
         "color": "#FFEAA7"
       },
       "geometry": {
@@ -27981,7 +27981,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_005_2025-07-03_Quanah_to_Henrietta",
-        "name": "Jul 2025 \u2014 Quanah \u2192 Colorado \u00b7 Akash",
+        "name": "Jul 2025 \u2014 Quanah \u2192 Colorado \u00b7 Rama + Akash (Akash's car)",
         "color": "#DDA0DD"
       },
       "geometry": {
@@ -33298,7 +33298,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_006_2025-09-25_Henrietta_to_Henrietta",
-        "name": "Sep 2025 \u2014 Henrietta \u2192 Colorado \u00b7 Akash",
+        "name": "Sep 2025 \u2014 Henrietta \u2192 Colorado \u00b7 Rama + Akash (Akash's car)",
         "color": "#98D8C8"
       },
       "geometry": {
@@ -39599,7 +39599,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_007_2025-12-13_Yakima_to_Rochester",
-        "name": "Dec 2025 \u2014 Yakima \u2192 Rochester (via WA, OR, ID, NV, UT, AZ, CA) \u00b7 Rama",
+        "name": "Dec 2025 \u2014 Yakima \u2192 Rochester (via WA, OR, ID, NV, UT, AZ, CA)",
         "color": "#F7DC6F"
       },
       "geometry": {
@@ -53648,7 +53648,7 @@
       "type": "Feature",
       "properties": {
         "trip_id": "trip_008_2026-05-25_Kelso_to_Ridgefield",
-        "name": "May 2026 \u2014 Kelso \u2192 Ridgefield (via WA, OR, CA) \u00b7 Rama",
+        "name": "May 2026 \u2014 Kelso \u2192 Ridgefield (via WA, OR, CA)",
         "color": "#BB8FCE"
       },
       "geometry": {

@@ -621,7 +621,7 @@
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.name }}</div>
-          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d{% if trip.owner_short %} · {{ trip.owner_short }}{% endif %}</div>
+          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
         </div>
       </div>
       {% endfor %}
@@ -632,7 +632,7 @@
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.name }}</div>
-          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi{% if trip.owner_short %} · {{ trip.owner_short }}{% endif %}</div>
+          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
         </div>
       </div>
       {% endfor %}
@@ -1136,7 +1136,11 @@
         const t = trips[0];
         panelTitle.textContent = t.name.split('—').pop()?.trim() || t.name;
         document.getElementById('hero-name').textContent = t.name;
-        const ownerBit = t.owner_short ? ` · <em>${t.owner_short}'s Tesla</em>` : '';
+        const ownerBit = t.is_shared
+          ? ` · <em>${t.trip_crew} in ${t.vehicle_label || "shared car"}</em>`
+          : (t.vehicle_label === 'your Tesla'
+            ? ` · <em>your Tesla</em>`
+            : (t.trip_crew ? ` · <em>${t.trip_crew}</em>` : ''));
         if (t.via_summary) viaEl.innerHTML = `Route via <em>${t.via_summary}</em>${ownerBit}`;
         else viaEl.innerHTML = (t.states.length ? `Through <em>${t.states.join(', ')}</em>` : '') + ownerBit;
         document.getElementById('hero-miles').textContent = t.miles.toLocaleString();

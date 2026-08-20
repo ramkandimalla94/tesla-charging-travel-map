@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from home_config import extract_city, haversine_miles, resolve_home_config
+from home_config import extract_city, haversine_miles, load_owner_config, resolve_home_config
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -431,6 +431,96 @@ def owner_short_name(name: str) -> str:
     return name.strip().split()[0]
 
 
+def trip_base_name(name: str, owner_short: str = "") -> str:
+    """Strip trailing driver suffix added during finalize_trip."""
+    if owner_short and name.endswith(f" · {owner_short}"):
+        return name[: -len(f" · {owner_short}")]
+    return name
+
+
+def trip_matches_shared_rule(trip: dict, rule: dict) -> bool:
+    match = rule.get("match", {})
+    owner = trip.get("owner", "")
+    if match.get("owner") and owner != match["owner"]:
+        return False
+    if match.get("owner_contains") and match["owner_contains"].lower() not in owner.lower():
+        return False
+    if match.get("vin") and trip.get("vin") != match["vin"]:
+        return False
+    if match.get("has_colorado") and not trip.get("has_colorado"):
+        return False
+    return True
+
+
+def default_shared_trip_rules(profile_name: str) -> list[dict]:
+    """Built-in rules when owner_config.json has no shared_trips section."""
+    return [
+        {
+            "match": {"owner_contains": "Akash", "has_colorado": True},
+            "travelers": [profile_name, "Akash"],
+            "driver": "Akash",
+            "vehicle_label": "Akash's car",
+        }
+    ]
+
+
+def apply_trip_crew_labels(trips: list[dict]) -> None:
+    """
+    Label who was on each trip. Charging CSV shows the car account holder (driver);
+    shared_trips config marks when you rode in someone else's car.
+    """
+    cfg = load_owner_config()
+    profile = cfg.get("profile_name", "Rama")
+    rules = cfg.get("shared_trips") or default_shared_trip_rules(profile)
+
+    for trip in trips:
+        matched = False
+        for rule in rules:
+            if not trip_matches_shared_rule(trip, rule):
+                continue
+            travelers = rule.get("travelers") or [profile, trip.get("owner_short", "")]
+            driver = rule.get("driver") or trip.get("owner_short", "")
+            vehicle = rule.get("vehicle_label") or f"{driver}'s car"
+            crew = " + ".join(travelers)
+            base = trip_base_name(trip["name"], trip.get("owner_short", ""))
+            trip.update({
+                "name": f"{base} · {crew} ({vehicle})",
+                "travelers": travelers,
+                "trip_crew": crew,
+                "driver": driver,
+                "driver_short": driver,
+                "vehicle_label": vehicle,
+                "is_shared": True,
+            })
+            matched = True
+            break
+
+        if matched:
+            continue
+
+        driver = trip.get("owner_short") or profile
+        base = trip_base_name(trip["name"], trip.get("owner_short", ""))
+        if driver.lower() == profile.lower():
+            trip.update({
+                "name": base,
+                "travelers": [profile],
+                "trip_crew": profile,
+                "driver": profile,
+                "driver_short": profile,
+                "vehicle_label": "your Tesla",
+                "is_shared": False,
+            })
+        else:
+            trip.update({
+                "travelers": [driver],
+                "trip_crew": driver,
+                "driver": driver,
+                "driver_short": driver,
+                "vehicle_label": f"{driver}'s car",
+                "is_shared": False,
+            })
+
+
 def finalize_trip(
     stops: list[dict],
     trip_index: int,
@@ -569,6 +659,7 @@ def main() -> None:
         print(f"  Vehicle {label}: {len(trips)} trips · {len(local)} local from {len(charges)} charges")
 
     all_trips.sort(key=lambda t: str(t["start"]))
+    apply_trip_crew_labels(all_trips)
     # Re-number trip ids in chronological order after multi-vehicle merge
     for i, trip in enumerate(all_trips, start=1):
         date_part = pd.Timestamp(trip["start"]).strftime("%Y-%m-%d")
