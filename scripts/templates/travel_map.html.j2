@@ -1164,6 +1164,11 @@
         const indices = single
           ? trip.stops.map((_, i) => i)
           : [...new Set([0, lastIdx])];
+        const start = trip.stops[0];
+        const end = trip.stops[lastIdx];
+        const sameHome = lastIdx > 0 && start && end
+          && Math.abs(start.lat - end.lat) < 0.02
+          && Math.abs(start.lng - end.lng) < 0.02;
         indices.forEach(i => {
           const s = trip.stops[i];
           const wrap = document.createElement('div');
@@ -1180,7 +1185,9 @@
             const coreEl = beacon.querySelector('.beacon-core');
             const lbl = document.createElement('div');
             lbl.className = 'beacon-label';
-            lbl.textContent = isStart ? `Start · ${shortLabel(s.location)}` : (isEnd ? `Finish · ${shortLabel(s.location)}` : shortLabel(s.location));
+            if (sameHome && isStart) lbl.textContent = `Home · ${shortLabel(s.location)}`;
+            else if (sameHome && isEnd) lbl.textContent = `Return · ${shortLabel(s.location)}`;
+            else lbl.textContent = isStart ? `Start · ${shortLabel(s.location)}` : (isEnd ? `Finish · ${shortLabel(s.location)}` : shortLabel(s.location));
             wrap.appendChild(beacon);
             if (isMilestone) wrap.appendChild(lbl);
             var el = beacon, lblRef = isMilestone ? lbl : null;
@@ -1196,8 +1203,12 @@
             wrap.appendChild(dot);
             var el = dot, lblRef = null;
           }
+          let lng = s.lng, lat = s.lat;
+          // Nudge stacked home start/end markers so both remain readable
+          if (sameHome && isEnd) { lng += 0.035; lat += 0.02; }
+          if (sameHome && isStart) { lng -= 0.01; }
           const m = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
-            .setLngLat([s.lng, s.lat])
+            .setLngLat([lng, lat])
             .setPopup(new mapboxgl.Popup({ offset: 14, maxWidth: '280px' }).setHTML(popupHtml(s)))
             .addTo(map);
           m._idx = i; m._el = el; m._lbl = lblRef; m._stop = s;
