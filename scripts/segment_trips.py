@@ -13,6 +13,10 @@ Algorithm (in priority order):
      home → regional trip boundary.
   6. Same-location charges within 24 h are merged into one stop.
 
+Every trip start/end pin is forced to Addison, TX or Bellevue, WA (the only two
+home bases). Excursions that never logged a home Supercharge on return still get
+a synthetic home arrival so IDs/labels never show Leavenworth, Tumwater, etc.
+
 Tuned against merged_charges.csv: ~15-22 trips for 240 charges.
 """
 
@@ -270,30 +274,35 @@ def extract_state_code(location: str) -> str | None:
 
 def origin_label(stops: list[dict]) -> str:
     first = stops[0]
+    if is_canonical_home_location(first.get("location", "")):
+        return "Addison" if first["location"].startswith("Addison") else "Bellevue"
     if first.get("is_home_anchor") or first.get("region") == "HOME":
         lbl = nearest_home_label(first.get("lat"), first.get("lng"))
-        if lbl != "Away":
+        if lbl in {"Addison", "Bellevue"}:
             return lbl
     lbl = nearest_home_label(first.get("lat"), first.get("lng"))
-    if lbl != "Away" and first.get("dist_home") is not None:
+    if lbl in {"Addison", "Bellevue"} and first.get("dist_home") is not None:
         dh = dist_to_nearest_home(first.get("lat"), first.get("lng"))
         if dh is not None and dh < HOME_RADIUS_MILES:
             return lbl
-    return extract_city(first["location"])
+    # Endpoints are constrained to the two home pins only.
+    return lbl if lbl in {"Addison", "Bellevue"} else "Addison"
 
 
 def dest_label(stops: list[dict]) -> str:
     last = stops[-1]
+    if is_canonical_home_location(last.get("location", "")):
+        return "Addison" if last["location"].startswith("Addison") else "Bellevue"
     if last.get("is_home_anchor") or last.get("region") == "HOME":
         lbl = nearest_home_label(last.get("lat"), last.get("lng"))
-        if lbl != "Away":
+        if lbl in {"Addison", "Bellevue"}:
             return lbl
     lbl = nearest_home_label(last.get("lat"), last.get("lng"))
-    if lbl != "Away" and last.get("dist_home") is not None:
+    if lbl in {"Addison", "Bellevue"} and last.get("dist_home") is not None:
         dh = dist_to_nearest_home(last.get("lat"), last.get("lng"))
         if dh is not None and dh < HOME_RADIUS_MILES:
             return lbl
-    return extract_city(last["location"])
+    return lbl if lbl in {"Addison", "Bellevue"} else origin_label(stops)
 
 
 def ordered_via_states(stops: list[dict]) -> list[str]:
@@ -603,9 +612,9 @@ def finalize_trip(
     owner: str = "",
     vin: str = "",
 ) -> dict:
-    merged = merge_consecutive_stops(stops)
+    merged = ensure_canonical_home_endpoints(merge_consecutive_stops(stops))
     start = merged[0]["datetime"]
-    end = end_dt or merged[-1]["datetime"]
+    end = merged[-1]["datetime"]
     co_stops = [s for s in merged if s.get("in_colorado")]
     via = ordered_via_states(merged)
     name = make_trip_name(start, merged)
@@ -636,41 +645,83 @@ def nearest_home_region(lat: float | None, lng: float | None) -> dict | None:
     return min(HOME_REGIONS, key=lambda r: haversine_miles(lat, lng, r["lat"], r["lng"]))
 
 
-def synthesize_home_anchor(near_charge: dict, last_home: dict | None) -> dict | None:
+def is_canonical_home_location(location: str) -> bool:
+    """Trip endpoints may only be Addison, TX or Bellevue, WA."""
+    loc = (location or "").strip()
+    return loc.startswith("Addison") or loc.startswith("Bellevue")
+
+
+def canonical_location_for_region(region: dict) -> str:
+    region_label = region.get("label") or ""
+    if "Addison" in region_label or region_label == "Addison":
+        return "Addison, TX"
+    if "Bellevue" in region_label or region_label == "Bellevue":
+        return "Bellevue, WA - Northeast 8th Street"
+    explicit = region.get("canonical_location")
+    if explicit and is_canonical_home_location(explicit):
+        return explicit
+    # Fall back to whichever configured home matches the only two allowed pins
+    for base in region.get("bases") or []:
+        if is_canonical_home_location(base):
+            return base
+    return "Addison, TX" if "TX" in region_label or "Dallas" in region_label else (
+        "Bellevue, WA - Northeast 8th Street"
+    )
+
+
+def region_for_canonical_return(stops: list[dict]) -> dict | None:
     """
-    Build a trip start stop at the canonical home pin (Addison / Bellevue).
+    Choose Addison or Bellevue for a missing trip end pin.
+
+    Prefer a home region the last real stop is already inside (relocation /
+    true return). Otherwise round-trip back to the origin home region.
+    """
+    if not HOME_REGIONS:
+        return None
+
+    real_stops = [s for s in stops if not (s.get("is_home_anchor") and s.get("synthetic"))]
+    probe = real_stops[-1] if real_stops else stops[-1]
+    lat, lng = probe.get("lat"), probe.get("lng")
+    if lat is not None and lng is not None:
+        for region in HOME_REGIONS:
+            radius = float(region.get("radius_miles") or HOME_RADIUS_MILES)
+            if haversine_miles(lat, lng, region["lat"], region["lng"]) <= radius:
+                return region
+
+    first = stops[0]
+    origin = nearest_home_region(first.get("lat"), first.get("lng"))
+    return origin or HOME_REGIONS[0]
+
+
+def synthesize_home_anchor(
+    near_charge: dict,
+    last_home: dict | None,
+    *,
+    region: dict | None = None,
+    as_return: bool = False,
+) -> dict | None:
+    """
+    Build a trip start/end stop at the canonical home pin (Addison / Bellevue).
     Timing comes from the last real home Supercharge when recent; otherwise
-    a short synthetic departure before the first away stop.
+    a short synthetic departure before the first away stop (or arrival after
+    the last away stop when as_return=True).
     """
-    region = nearest_home_region(near_charge.get("lat"), near_charge.get("lng"))
-    if region is None and HOME_REGIONS:
-        # Prefer the region matching the last home charge when available
-        if last_home is not None:
-            region = nearest_home_region(last_home.get("lat"), last_home.get("lng"))
-        if region is None:
-            region = HOME_REGIONS[0]
+    if region is None:
+        region = nearest_home_region(near_charge.get("lat"), near_charge.get("lng"))
+        if region is None and HOME_REGIONS:
+            # Prefer the region matching the last home charge when available
+            if last_home is not None:
+                region = nearest_home_region(last_home.get("lat"), last_home.get("lng"))
+            if region is None:
+                region = HOME_REGIONS[0]
     if region is None:
         return None
 
-    bases = set(region.get("bases") or [])
-    region_label = region.get("label") or ""
-    label = region.get("canonical_location") or next(iter(bases), region_label)
-    preferred_candidates = [
-        "Addison, TX" if "Addison" in region_label else "",
-        "Bellevue, WA - Northeast 8th Street" if "Bellevue" in region_label else "",
-        f"{region_label}, TX",
-        f"{region_label}, WA",
-    ]
-    for preferred in preferred_candidates:
-        if preferred and (preferred in bases or preferred.startswith(region_label)):
-            label = preferred
-            break
-    if "Addison" in region_label:
-        label = "Addison, TX"
-    elif "Bellevue" in region_label:
-        label = "Bellevue, WA - Northeast 8th Street"
+    label = canonical_location_for_region(region)
 
-    if last_home is not None:
+    if as_return:
+        dt = (pd.Timestamp(near_charge["datetime"]) + timedelta(hours=2)).isoformat()
+    elif last_home is not None:
         gap = pd.Timestamp(near_charge["datetime"]) - pd.Timestamp(last_home["datetime"])
         if gap <= timedelta(days=HOME_ANCHOR_LOOKBACK_DAYS):
             dt = last_home["datetime"]
@@ -694,6 +745,56 @@ def synthesize_home_anchor(near_charge: dict, last_home: dict | None) -> dict | 
         "is_home_anchor": True,
         "synthetic": True,
     }
+
+
+def ensure_canonical_home_endpoints(stops: list[dict]) -> list[dict]:
+    """
+    Force every trip to start and end at Addison or Bellevue only.
+
+    Excursions that never logged a home Supercharge on return still get a
+    synthetic home arrival so map pins / IDs / labels never show Leavenworth,
+    Chehalis, Tumwater, etc. as endpoints.
+    """
+    if not stops:
+        return stops
+
+    out = [s.copy() for s in stops]
+
+    first = out[0]
+    if not (first.get("is_home_anchor") and is_canonical_home_location(first.get("location", ""))):
+        start_region = nearest_home_region(first.get("lat"), first.get("lng")) or (
+            HOME_REGIONS[0] if HOME_REGIONS else None
+        )
+        if start_region is not None:
+            anchor = synthesize_home_anchor(first, None, region=start_region)
+            if anchor is not None:
+                if is_canonical_home_location(first.get("location", "")) and first.get("is_home_anchor"):
+                    out[0] = {**first, **{k: anchor[k] for k in ("location", "lat", "lng", "region", "dist_home")}}
+                else:
+                    out.insert(0, anchor)
+
+    last = out[-1]
+    if last.get("is_home_anchor") and is_canonical_home_location(last.get("location", "")):
+        return out
+
+    # Snap a non-canonical near-home last stop (Kirkland, Plano, …) to Addison/Bellevue
+    if last.get("is_home_anchor") or last.get("region") == "HOME" or is_near_any_home(last):
+        end_region = nearest_home_region(last.get("lat"), last.get("lng"))
+        end_home = synthesize_home_anchor(last, last, region=end_region)
+        if end_home is not None:
+            end_home["datetime"] = last["datetime"]
+            end_home["kwh"] = float(last.get("kwh", 0))
+            end_home["invoice_url"] = last.get("invoice_url", "")
+            end_home["synthetic"] = last.get("location") != end_home.get("location")
+            out[-1] = end_home
+        return out
+
+    end_region = region_for_canonical_return(out)
+    end_home = synthesize_home_anchor(last, None, region=end_region, as_return=True)
+    if end_home is None:
+        return out
+    out.append(end_home)
+    return out
 
 
 def segment_trips(
@@ -745,8 +846,9 @@ def segment_trips(
                     pd.Timestamp(charge["datetime"]) - pd.Timestamp(prev["datetime"])
                 ).days
                 if gap_days >= TIME_GAP_DAYS:
-                    # Long pause away, then a home charge — end the trip at the
-                    # last away stop rather than stretching to a distant home pin.
+                    # Long pause away, then a home charge — close the open trip
+                    # with a synthetic Addison/Bellevue return (finalize_trip),
+                    # and keep the later home Supercharge as local charging.
                     flush_trip(end_dt=prev["datetime"])
                     local.append(charge)
                 else:

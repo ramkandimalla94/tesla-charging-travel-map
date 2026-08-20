@@ -6,12 +6,14 @@
   "home_label": "Addison",
   "home_radius_miles": 55,
   "far_from_home_miles": 350,
+  "home_canonical": "Addison, TX",
   "secondary_regions": [
     {
       "label": "Bellevue",
       "lat": 47.6168,
       "lng": -122.1116,
       "radius_miles": 26,
+      "canonical_location": "Bellevue, WA - Northeast 8th Street",
       "bases": ["Bellevue, WA - Northeast 8th Street", "Kirkland, WA", "Seattle, WA"]
     }
   ],
