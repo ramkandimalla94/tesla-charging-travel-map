@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Detect or load home-base configuration for any Tesla charging history."""
+"""Detect or load home-base configuration for travel diary home hubs."""
 
 from __future__ import annotations
 

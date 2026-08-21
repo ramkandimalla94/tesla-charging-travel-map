@@ -93,7 +93,7 @@
       box-shadow: 0 0 8px currentColor;
     }
 
-    /* ── Vehicle (red Tesla) ── */
+    /* ── Vehicle marker ── */
     .vehicle-wrap { position: relative; width: 56px; height: 56px; }
     .vehicle-glow {
       position: absolute; inset: -14px; border-radius: 50%;
@@ -195,7 +195,6 @@
     body.cinema-mode #onboarding,
     body.cinema-mode .map-legend,
     body.cinema-mode .atlas-cta,
-    body.cinema-mode .memory-badge,
     body.cinema-mode .mapboxgl-ctrl-group,
     body.cinema-mode .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
     body.cinema-mode .location-hud { opacity: 0 !important; }
@@ -319,7 +318,6 @@
       .map-legend { top: 56px; right: 12px; }
       .onboard-card { margin-left: 0 !important; max-width: calc(100vw - 32px); }
       .atlas-cta { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 18px); right: 12px; left: 64px; max-width: none; }
-      .memory-badge { top: 56px; max-width: calc(100vw - 24px); }
       .era-rail { max-width: 58vw; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
       .era-chip { min-height: 34px; padding: 5px 12px; flex-shrink: 0; }
       .transport-dock {

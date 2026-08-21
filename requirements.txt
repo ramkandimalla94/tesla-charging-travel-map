@@ -3,3 +3,6 @@ geopy
 playwright
 jinja2
 python-dotenv
+Pillow
+pillow-heif
+piexif

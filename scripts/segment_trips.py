@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Segment charging history into road trips using multi-signal boundary detection.
+Segment travel history into road trips using multi-signal boundary detection.
 
 Algorithm (in priority order):
   1. Home charge (MAA Market Center / Addison, TX) ends the current away trip.
@@ -590,7 +590,7 @@ def apply_trip_crew_labels(trips: list[dict]) -> None:
                 "trip_crew": profile,
                 "driver": profile,
                 "driver_short": profile,
-                "vehicle_label": "your Tesla",
+                "vehicle_label": "",
                 "is_shared": False,
             })
         else:

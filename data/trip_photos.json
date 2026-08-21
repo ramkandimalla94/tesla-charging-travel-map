@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-08-21T16:48:03.554771+00:00",
+  "pad_hours": 18,
+  "unmatched_photos": 0,
+  "trips": {
+    "trip_006_2024-06-29_Addison_to_Addison": {
+      "photos": [
+        {
+          "id": "aspen_overlook_cfa71bb40c0d",
+          "kind": "photo",
+          "datetime": "2024-07-01T18:20:00+00:00",
+          "location": "Photo \u00b7 colorado",
+          "lat": 39.1911,
+          "lng": -106.8175,
+          "album": "colorado",
+          "thumb": "photos/thumbs/colorado/aspen_overlook_cfa71bb40c0d.jpg",
+          "source_name": "aspen_overlook.jpg",
+          "kwh": 0,
+          "is_photo": true
+        },
+        {
+          "id": "maroon_bells_trail_dcdea58ad3dc",
+          "kind": "photo",
+          "datetime": "2024-07-02T14:10:00+00:00",
+          "location": "Photo \u00b7 colorado",
+          "lat": 39.0685,
+          "lng": -106.9801,
+          "album": "colorado",
+          "thumb": "photos/thumbs/colorado/maroon_bells_trail_dcdea58ad3dc.jpg",
+          "source_name": "maroon_bells_trail.jpg",
+          "kwh": 0,
+          "is_photo": true
+        },
+        {
+          "id": "maroon_bells_lake_ef36d0c5abe8",
+          "kind": "photo",
+          "datetime": "2024-07-02T15:42:00+00:00",
+          "location": "Photo \u00b7 colorado",
+          "lat": 39.0708,
+          "lng": -106.9878,
+          "album": "colorado",
+          "thumb": "photos/thumbs/colorado/maroon_bells_lake_ef36d0c5abe8.jpg",
+          "source_name": "maroon_bells_lake.jpg",
+          "kwh": 0,
+          "is_photo": true
+        }
+      ],
+      "photo_count": 3
+    }
+  }
+}

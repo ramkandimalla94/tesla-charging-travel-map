@@ -103,40 +103,37 @@ def main() -> int:
         page.evaluate("setYearFilter('all')")
         page.wait_for_timeout(400)
 
-        # Memory reel + featured CTA
-        page.evaluate("localStorage.setItem('tesla-map-onboarded','1'); startMemoryReel()")
+        # Featured CTA + spokes (memory reel removed)
+        page.evaluate("localStorage.setItem('mymilediary-onboarded','1')")
         page.wait_for_timeout(500)
         reel = page.evaluate(
             """() => {
               let spokeCount = 0;
-              let hotCount = 0;
-              let bandHot = false;
               try {
                 const raw = map.getSource('atlas-spokes')?._data;
                 const feats = raw?.features || [];
                 spokeCount = feats.length || map.querySourceFeatures('atlas-spokes')?.length || 0;
-                hotCount = feats.filter(f => f.properties?.hot === 1).length;
-                bandHot = feats.some(f => f.properties?.kind === 'band' && f.properties?.hot === 1);
               } catch (e) {
                 try {
                   spokeCount = map.querySourceFeatures('atlas-spokes')?.length || 0;
                 } catch (e2) {}
               }
-              const bandOpacity = map.getPaintProperty('atlas-spokes-band', 'line-opacity');
+              const brand = document.querySelector('.brand')?.textContent || '';
               return {
-                badge: document.getElementById('memory-badge')?.classList.contains('visible'),
+                badge: !!document.getElementById('memory-badge'),
                 cta: document.getElementById('atlas-cta')?.classList.contains('visible'),
                 spokes: !!map.getLayer('atlas-spokes-line'),
                 spokeBand: !!map.getLayer('atlas-spokes-band'),
                 spokeCount,
-                hotCount,
-                bandHot,
-                zoomPaint: JSON.stringify(bandOpacity || '').includes('zoom'),
+                brand,
+                photosStat: (DASHBOARD.total_photos || 0),
+                noKwh: !document.body.innerText.includes('kWh'),
               };
             }"""
         )
-        print(f"Memory/CTA/spokes: {reel}")
-        page.screenshot(path=str(SCREENSHOTS / "07-memory-reel.png"))
+        print(f"CTA/spokes/brand: {reel}")
+        page.screenshot(path=str(SCREENSHOTS / "02-featured-cta.png"))
+        page.screenshot(path=str(SCREENSHOTS / "07-photo-memories.png"))
 
         # Colorado trip
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
@@ -370,13 +367,13 @@ def main() -> int:
               const blurb = typeof tripShareBlurb === 'function' ? tripShareBlurb(trip) : '';
               const dwellSegs = (trip?.playback?.segments || []).filter(s => s.type === 'dwell');
               const rich = dwellSegs.filter(s =>
-                /kWh|Pit stop|Halfway|Final charge|✓|nearby:/i.test(s.caption || '')
-                || /kWh|Stop \\d|nearby|Homeward|halfway/i.test(s.subcaption || '')
+                /Memory|Passing through|Departing|Final stop|nearby:|✓/i.test(s.caption || '')
+                || /Stop \\d|nearby|Homeward|Photo|places/i.test(s.subcaption || '')
               );
               return {
                 btn: !!btn,
                 enabled: btn && !btn.disabled,
-                hasBlurb: blurb.includes('Relive it:') && blurb.includes('tesla-charging-travel-map'),
+                hasBlurb: blurb.includes('Relive it:') && blurb.includes('mymilediary'),
                 hasStoryShare: !!(trip?.story?.share_blurb),
                 sampleCaption: dwellSegs[0]?.caption || '',
                 dwellCount: dwellSegs.length,
@@ -459,11 +456,14 @@ def main() -> int:
     # querySourceFeatures can be empty at low zoom; layer presence is enough
     if reel.get("spokes") and reel.get("spokeCount", 0) == 0:
         print(f"WARN: Spokes layer present but no features queried at this zoom: {reel}")
-    if reel.get("badge") and reel.get("hotCount", 0) < 1:
-        print(f"FAIL: Memory reel should hot-highlight a corridor: {reel}")
+    if reel.get("badge"):
+        print(f"FAIL: Memory reel badge should be removed: {reel}")
         ok = False
-    if not reel.get("zoomPaint"):
-        print(f"FAIL: Corridor band should use zoom-aware width: {reel}")
+    if "Mile Diary" not in (reel.get("brand") or ""):
+        print(f"FAIL: Brand should be My Mile Diary: {reel}")
+        ok = False
+    if not reel.get("noKwh"):
+        print(f"FAIL: UI still shows kWh: {reel}")
         ok = False
     if not play_state.get("playing"):
         print(f"FAIL: Playback did not start: {play_state}")

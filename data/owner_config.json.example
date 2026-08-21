@@ -28,7 +28,7 @@
   "story_overrides": {
     "2024-06-29_Addison": {
       "intro": "Optional custom intro for the Colorado epic (id prefix match).",
-      "share_blurb": "Optional custom share text\\nRelive it: https://ramkandimalla94.github.io/tesla-charging-travel-map/",
+      "share_blurb": "Optional custom share text\\nRelive it: https://ramkandimalla94.github.io/mymilediary/",
       "stop_captions": [
         { "index": 0, "caption": "Optional first-stop caption", "sub": "Optional subtitle" }
       ]
