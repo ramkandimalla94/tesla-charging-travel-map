@@ -352,6 +352,8 @@
       const when = state.datetime
         ? new Date(state.datetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
         : (state.label || '');
+      const cached = (typeof thumbCache !== 'undefined') ? thumbCache.get(src) : null;
+      const resolvedSrc = (cached && cached.complete && cached.naturalWidth) ? cached.src : src;
 
       if (memoryMapMarker) {
         const root = memoryMapMarker.getElement();
@@ -360,7 +362,7 @@
         const capMeta = root.querySelector('.cap span');
         if (img && img.dataset.src !== src) {
           img.dataset.src = src;
-          img.src = src;
+          img.src = resolvedSrc;
         }
         if (capStrong) capStrong.textContent = title;
         if (capMeta) capMeta.textContent = when;
@@ -371,12 +373,26 @@
 
       const el = document.createElement('div');
       el.className = 'memory-map-pin visible';
-      el.innerHTML = `
-        <div class="memory-map-frame">
-          <img data-src="${src}" src="${src}" alt="${title}">
-          <div class="cap"><strong>${title}</strong><span>${when}</span></div>
-        </div>
-        <div class="memory-map-stem"></div>`;
+      const frame = document.createElement('div');
+      frame.className = 'memory-map-frame';
+      const img = document.createElement('img');
+      img.dataset.src = src;
+      img.src = resolvedSrc;
+      img.alt = title;
+      const cap = document.createElement('div');
+      cap.className = 'cap';
+      const strong = document.createElement('strong');
+      strong.textContent = title;
+      const meta = document.createElement('span');
+      meta.textContent = when;
+      cap.appendChild(strong);
+      cap.appendChild(meta);
+      frame.appendChild(img);
+      frame.appendChild(cap);
+      const stem = document.createElement('div');
+      stem.className = 'memory-map-stem';
+      el.appendChild(frame);
+      el.appendChild(stem);
       memoryMapMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom', offset: [0, -6] })
         .setLngLat([state.lng, state.lat])
         .addTo(map);
