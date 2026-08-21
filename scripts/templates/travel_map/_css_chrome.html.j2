@@ -299,9 +299,10 @@
     .memory-map-pin {
       display: flex; flex-direction: column; align-items: center;
       pointer-events: none;
+      z-index: 20;
       opacity: 0; transform: translateY(8px) scale(0.94);
-      transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
-      filter: none;
+      transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,0.45));
     }
     .memory-map-pin.visible { opacity: 1; transform: translateY(0) scale(1); }
     .memory-map-frame {

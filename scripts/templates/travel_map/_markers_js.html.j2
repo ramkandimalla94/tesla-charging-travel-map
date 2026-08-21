@@ -402,6 +402,7 @@
         img.alt = photo.album || 'Photo';
         img.title = photo.album || 'Memory';
         img.addEventListener('mouseenter', () => {
+          if (isPlaying || isRecording) return;
           if (map && photo.lng != null) {
             map.easeTo({ center: [photo.lng, photo.lat], duration: 600, bearing: 0 });
           }

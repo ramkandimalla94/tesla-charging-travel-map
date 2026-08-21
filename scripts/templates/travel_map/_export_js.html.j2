@@ -1,4 +1,4 @@
-{# Instagram 9:16 export — title hold, outro card, chrome-free canvas #}
+{# Instagram 9:16 export — composite canvas (map + titles + car + memories) #}
     function tripShareBlurb(trip) {
       if (!trip) return '';
       const story = trip.story || {};
@@ -56,7 +56,6 @@
           }
         } catch (err) {
           if (err && err.name === 'AbortError') return;
-          // Fall through to clipboard when share sheet is unavailable
         }
       }
 
@@ -96,7 +95,41 @@
       offerShareAfterPlay._t = setTimeout(() => hideShareToast(), 8000);
     }
 
+    let exportComposite = null;
+    let exportCompositeCtx = null;
+    let exportMemoryImg = null;
+    let exportMemorySrc = '';
+    let exportTitlePhase = ''; // '', 'intro', 'outro'
+    let lastExportPaintState = null;
+
+    function ensureExportComposite() {
+      const mapCanvas = map?.getCanvas();
+      if (!mapCanvas) return null;
+      const w = mapCanvas.width;
+      const h = mapCanvas.height;
+      if (!exportComposite) {
+        exportComposite = document.createElement('canvas');
+        exportCompositeCtx = exportComposite.getContext('2d');
+      }
+      if (exportComposite.width !== w || exportComposite.height !== h) {
+        exportComposite.width = w;
+        exportComposite.height = h;
+      }
+      return exportComposite;
+    }
+
+    function preloadExportMemory(src) {
+      if (!src || src === exportMemorySrc) return;
+      exportMemorySrc = src;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => { exportMemoryImg = img; };
+      img.onerror = () => { exportMemoryImg = null; };
+      img.src = src;
+    }
+
     function showExportTitleCard(trip, phase) {
+      exportTitlePhase = phase || 'intro';
       const title = document.getElementById('cinema-title');
       if (!title || !trip) return;
       const story = trip.story || {};
@@ -115,13 +148,204 @@
         title.classList.remove('outro');
       }
       title.classList.add('visible');
+      paintExportComposite(lastExportPaintState);
     }
 
     function hideExportTitleCard() {
+      exportTitlePhase = '';
       const title = document.getElementById('cinema-title');
       if (!title) return;
       title.classList.remove('visible', 'outro');
       document.getElementById('cinema-highlights').innerHTML = '';
+    }
+
+    function paintExportComposite(state) {
+      if (!isRecording || !map) return;
+      lastExportPaintState = state;
+      const canvas = ensureExportComposite();
+      const ctx = exportCompositeCtx;
+      const mapCanvas = map.getCanvas();
+      if (!canvas || !ctx || !mapCanvas) return;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(mapCanvas, 0, 0, w, h);
+
+      // Soft vignette for cinema feel (skip during solid title cards)
+      if (!exportTitlePhase) {
+        const grd = ctx.createLinearGradient(0, 0, 0, h);
+        grd.addColorStop(0, 'rgba(0,0,0,0.35)');
+        grd.addColorStop(0.18, 'rgba(0,0,0,0)');
+        grd.addColorStop(0.72, 'rgba(0,0,0,0)');
+        grd.addColorStop(1, 'rgba(0,0,0,0.45)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // Vehicle chevron at projected map position
+      if (!exportTitlePhase && state && state.lat != null && state.lng != null
+          && state.phase !== 'intro' && state.phase !== 'outro') {
+        const pt = map.project([state.lng, state.lat]);
+        const scale = mapCanvas.width / Math.max(1, mapCanvas.clientWidth);
+        const x = pt.x * scale;
+        const y = pt.y * scale;
+        const bearing = (state.phase === 'travel' ? (state.bearing || 0) : lastTravelBearing) || 0;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate((bearing * Math.PI) / 180);
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+        ctx.lineWidth = 3 * scale;
+        ctx.beginPath();
+        ctx.moveTo(0, -16 * scale);
+        ctx.lineTo(11 * scale, 14 * scale);
+        ctx.lineTo(0, 8 * scale);
+        ctx.lineTo(-11 * scale, 14 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Memory photo frame (baked into the recording)
+      if (state && state.phase === 'memory' && state.thumb) {
+        const src = (typeof photoThumbUrl === 'function') ? photoThumbUrl(state.thumb) : state.thumb;
+        preloadExportMemory(src);
+        const pinLng = state.photo_lng != null ? state.photo_lng : state.lng;
+        const pinLat = state.photo_lat != null ? state.photo_lat : state.lat;
+        if (pinLng != null && exportMemoryImg && exportMemoryImg.complete) {
+          const pt = map.project([pinLng, pinLat]);
+          const scale = mapCanvas.width / Math.max(1, mapCanvas.clientWidth);
+          const fw = Math.min(w * 0.42, 220 * scale);
+          const fh = fw * 0.72;
+          const x = pt.x * scale - fw / 2;
+          const y = pt.y * scale - fh - 18 * scale;
+          ctx.save();
+          ctx.fillStyle = 'rgba(18,32,28,0.92)';
+          ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+          ctx.lineWidth = 2 * scale;
+          roundRect(ctx, x - 6 * scale, y - 6 * scale, fw + 12 * scale, fh + 36 * scale, 10 * scale);
+          ctx.fill();
+          ctx.stroke();
+          ctx.drawImage(exportMemoryImg, x, y, fw, fh);
+          ctx.fillStyle = '#fff';
+          ctx.font = `600 ${Math.round(13 * scale)}px system-ui,sans-serif`;
+          ctx.fillText(String(state.album || 'Memory').slice(0, 28), x, y + fh + 18 * scale);
+          ctx.restore();
+        }
+      }
+
+      // Story caption
+      if (state && (state.phase === 'dwell' || state.phase === 'memory' || state.phase === 'travel')) {
+        const caption = state.phase === 'travel'
+          ? ((state.frac || 0) <= 0.1
+              ? `En route · ${state.label || ''}`
+              : ((state.frac || 0) >= 0.78 ? `Approaching ${state.label || ''}` : ''))
+          : (state.caption || state.label || '');
+        if (caption) {
+          const scale = mapCanvas.width / Math.max(1, mapCanvas.clientWidth);
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.fillStyle = 'rgba(0,0,0,0.45)';
+          ctx.font = `600 ${Math.round(22 * scale)}px Georgia,serif`;
+          const cy = h * 0.86;
+          ctx.fillText(caption.slice(0, 48), w / 2 + scale, cy + scale);
+          ctx.fillStyle = '#f5f7f4';
+          ctx.fillText(caption.slice(0, 48), w / 2, cy);
+          if (state.subcaption && state.phase !== 'travel') {
+            ctx.font = `400 ${Math.round(14 * scale)}px system-ui,sans-serif`;
+            ctx.fillStyle = 'rgba(220,230,224,0.85)';
+            ctx.fillText(String(state.subcaption).slice(0, 56), w / 2, cy + 26 * scale);
+          }
+          ctx.restore();
+        }
+      }
+
+      // Title cards — solid plate so text never ghosts over the map
+      if (exportTitlePhase) {
+        const trip = activeTrip();
+        ctx.save();
+        ctx.fillStyle = '#0a1210';
+        ctx.fillRect(0, 0, w, h);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const scale = mapCanvas.width / Math.max(1, mapCanvas.clientWidth);
+        if (exportTitlePhase === 'outro') {
+          ctx.fillStyle = '#f7faf7';
+          ctx.font = `600 ${Math.round(36 * scale)}px Georgia,serif`;
+          ctx.fillText('Journey Complete', w / 2, h * 0.42);
+          if (trip) {
+            ctx.font = `400 ${Math.round(16 * scale)}px system-ui,sans-serif`;
+            ctx.fillStyle = 'rgba(220,230,224,0.9)';
+            ctx.fillText(
+              `${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} places · ${trip.duration_days}d`,
+              w / 2, h * 0.42 + 40 * scale
+            );
+          }
+        } else if (trip) {
+          const raw = String(trip.name || 'My Mile Diary');
+          // Prefer clean two-line title: "Sep 2025 — Addison → Colorado" / crew
+          const parts = raw.split(/\s·\s/);
+          const main = parts[0] || raw;
+          const crew = parts.slice(1).join(' · ');
+          ctx.fillStyle = '#f7faf7';
+          ctx.font = `600 ${Math.round(30 * scale)}px Georgia,serif`;
+          const lines = [];
+          if (ctx.measureText(main).width > w * 0.86 && main.includes('—')) {
+            const [a, b] = main.split('—').map(s => s.trim());
+            lines.push(a + ' —');
+            lines.push(b);
+          } else {
+            lines.push(main);
+          }
+          let yy = h * 0.36;
+          lines.forEach((ln, i) => {
+            ctx.fillText(ln, w / 2, yy + i * 36 * scale);
+          });
+          yy += lines.length * 36 * scale + 10 * scale;
+          if (crew) {
+            ctx.font = `500 ${Math.round(16 * scale)}px system-ui,sans-serif`;
+            ctx.fillStyle = 'rgba(180,210,190,0.95)';
+            ctx.fillText(crew, w / 2, yy);
+            yy += 28 * scale;
+          }
+          ctx.font = `400 ${Math.round(15 * scale)}px system-ui,sans-serif`;
+          ctx.fillStyle = 'rgba(220,230,224,0.9)';
+          ctx.fillText(
+            `${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} places · ${trip.duration_days}d`,
+            w / 2, yy + 8 * scale
+          );
+        }
+        ctx.restore();
+      }
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = String(text).split(/\s+/);
+      let line = '';
+      let yy = y;
+      for (let n = 0; n < words.length; n++) {
+        const test = line ? `${line} ${words[n]}` : words[n];
+        if (ctx.measureText(test).width > maxWidth && line) {
+          ctx.fillText(line, x, yy);
+          line = words[n];
+          yy += lineHeight;
+        } else {
+          line = test;
+        }
+      }
+      if (line) ctx.fillText(line, x, yy);
     }
 
     async function exportTripVideo() {
@@ -140,43 +364,84 @@
       resetVisuals();
       drawStops();
       fitTrip(false);
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, 900));
 
       document.body.classList.add('cinema-mode', 'portrait-export');
-      showExportTitleCard(trip, 'intro');
       map.resize();
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => {
+        map.once('idle', () => r());
+        setTimeout(r, 1200);
+      });
 
-      const canvas = map.getCanvas();
-      const stream = canvas.captureStream(30);
+      const composite = ensureExportComposite();
+      if (!composite) {
+        status.textContent = 'Could not start recorder';
+        document.body.classList.remove('cinema-mode', 'portrait-export');
+        return;
+      }
+      showExportTitleCard(trip, 'intro');
+      paintExportComposite(null);
+
       recordedChunks = [];
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9' : 'video/webm';
-      mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+      let mimeType = 'video/webm';
+      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mimeType = 'video/webm;codecs=vp9';
+      else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) mimeType = 'video/webm;codecs=vp8';
+
+      let stream;
+      try {
+        stream = composite.captureStream(30);
+        mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 10_000_000 });
+      } catch (err) {
+        status.textContent = 'Recording failed to start';
+        document.body.classList.remove('cinema-mode', 'portrait-export');
+        hideExportTitleCard();
+        setTimeout(() => status.classList.remove('visible'), 2800);
+        return;
+      }
       mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${trip.id}_road_trip.webm`;
-        a.click();
-        URL.revokeObjectURL(url);
+      mediaRecorder.onerror = () => {
         isRecording = false;
+        document.body.classList.remove('cinema-mode', 'portrait-export');
+        hideExportTitleCard();
+        status.textContent = 'Recording error';
+        setTimeout(() => status.classList.remove('visible'), 2800);
+        map.resize();
+      };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: mimeType });
+        if (!blob.size) {
+          status.textContent = 'Export produced an empty file';
+          setTimeout(() => status.classList.remove('visible'), 2800);
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${trip.id}_road_trip.webm`;
+          a.click();
+          URL.revokeObjectURL(url);
+          showShareToast('Video saved — Share copies a caption with the live link');
+        }
+        isRecording = false;
+        exportTitlePhase = '';
+        exportMemoryImg = null;
+        exportMemorySrc = '';
         document.body.classList.remove('cinema-mode', 'portrait-export');
         hideExportTitleCard();
         status.classList.remove('visible');
         document.getElementById('story-overlay')?.classList.remove('visible');
         map.resize();
         fitTrip(false);
-        showShareToast('Video saved — Share copies a caption with the live link');
       };
 
       isRecording = true;
       status.textContent = 'Recording title card…';
       mediaRecorder.start(250);
-      // Hold intro title on-canvas so Instagram export opens with branding
-      await new Promise(r => setTimeout(r, 2400));
+      // Hold intro title on the composite canvas
+      const introHold = performance.now();
+      while (performance.now() - introHold < 2400) {
+        paintExportComposite(null);
+        await new Promise(r => setTimeout(r, 33));
+      }
       hideExportTitleCard();
       status.textContent = 'Recording road trip story…';
       startPlayback(true);
@@ -188,13 +453,18 @@
       showExportTitleCard(trip, 'outro');
       const status = document.getElementById('export-status');
       if (status) status.textContent = 'Recording outro…';
-      // Brief outro hold on the canvas before stopping the recorder
-      setTimeout(() => {
+      const outroStart = performance.now();
+      const outroTick = () => {
+        paintExportComposite(lastExportPaintState);
+        if (performance.now() - outroStart < 2200) {
+          requestAnimationFrame(outroTick);
+          return;
+        }
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
           if (status) status.textContent = 'Saving video…';
           mediaRecorder.stop();
         }
         stopPlayback();
-      }, 2200);
+      };
+      requestAnimationFrame(outroTick);
     }
-

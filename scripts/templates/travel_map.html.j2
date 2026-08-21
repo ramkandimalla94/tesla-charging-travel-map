@@ -373,8 +373,11 @@
         }
         if (seg.type === 'travel' && seg.path?.length >= 2) {
           const frac = Math.max(0, Math.min(1, (elapsedMs - t) / seg.duration_ms));
+          // Arc-length aware trail tip
+          const tip = pointOnPath(seg.path, frac);
           const endIdx = Math.max(1, Math.ceil(frac * (seg.path.length - 1)));
           const leg = seg.path.slice(0, endIdx + 1).map(p => [p[1], p[0]]);
+          if (tip) leg.push([tip.lng, tip.lat]);
           if (coords.length) leg.shift();
           coords.push(...leg);
         }
@@ -414,6 +417,20 @@
               bearing: lastTravelBearing, seg,
               is_photo: !!seg.is_photo, thumb: seg.thumb || '', album: seg.album || '',
               photo_id: seg.photo_id || '',
+            };
+          }
+          if (seg.type === 'memory') {
+            return {
+              lat: seg.lat, lng: seg.lng, phase: 'memory', label: seg.label,
+              caption: seg.caption || '', subcaption: seg.subcaption || '',
+              pois: [], stopIndex: seg.stop_index, frac,
+              bearing: lastTravelBearing, seg,
+              is_photo: true, thumb: seg.thumb || '', album: seg.album || '',
+              photo_id: seg.photo_id || '',
+              photo_lat: seg.photo_lat != null ? seg.photo_lat : seg.lat,
+              photo_lng: seg.photo_lng != null ? seg.photo_lng : seg.lng,
+              spur_miles: seg.spur_miles || 0,
+              on_corridor: seg.on_corridor !== false,
             };
           }
           const path = seg.path || [];
@@ -457,6 +474,7 @@
         antialias: true,
         maxPitch: MAX_PITCH,
         projection: 'mercator',
+        preserveDrawingBuffer: true, // required so export composite can read GL pixels
       });
       map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
       map.on('load', onMapLoad);
@@ -496,16 +514,40 @@
       if (!path.length) return null;
       if (prog <= 0) return {lat:path[0][0], lng:path[0][1]};
       if (prog >= 1) return {lat:path[path.length-1][0], lng:path[path.length-1][1]};
-      const ex = prog*(path.length-1), idx = Math.floor(ex), frac = ex-idx;
-      const a=path[idx], b=path[Math.min(idx+1,path.length-1)];
-      return {lat:lerp(a[0],b[0],frac), lng:lerp(a[1],b[1],frac)};
+      // Arc-length interpolation so long highway legs crawl evenly (not by vertex index).
+      const lens = [];
+      let total = 0;
+      for (let i = 1; i < path.length; i++) {
+        const a = path[i - 1], b = path[i];
+        const d = haversineKm(a[0], a[1], b[0], b[1]);
+        lens.push(d);
+        total += d;
+      }
+      if (total <= 1e-6) {
+        const ex = prog * (path.length - 1), idx = Math.floor(ex), frac = ex - idx;
+        const a = path[idx], b = path[Math.min(idx + 1, path.length - 1)];
+        return { lat: lerp(a[0], b[0], frac), lng: lerp(a[1], b[1], frac) };
+      }
+      let target = prog * total;
+      for (let i = 0; i < lens.length; i++) {
+        if (target <= lens[i] || i === lens.length - 1) {
+          const frac = lens[i] > 0 ? Math.min(1, target / lens[i]) : 0;
+          const a = path[i], b = path[i + 1];
+          return { lat: lerp(a[0], b[0], frac), lng: lerp(a[1], b[1], frac) };
+        }
+        target -= lens[i];
+      }
+      const last = path[path.length - 1];
+      return { lat: last[0], lng: last[1] };
     }
     function pathBearing(path, prog) {
-      const ex = prog*(path.length-1), idx = Math.min(Math.floor(ex), path.length-2);
-      const a=path[idx], b=path[idx+1];
-      const dLng=(b[1]-a[1])*Math.PI/180, lat1=a[0]*Math.PI/180, lat2=b[0]*Math.PI/180;
-      const y=Math.sin(dLng)*Math.cos(lat2), x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLng);
-      return (Math.atan2(y,x)*180/Math.PI+360)%360;
+      if (!path || path.length < 2) return 0;
+      const a = pointOnPath(path, Math.max(0, prog - 0.01)) || { lat: path[0][0], lng: path[0][1] };
+      const b = pointOnPath(path, Math.min(1, prog + 0.01)) || { lat: path[path.length - 1][0], lng: path[path.length - 1][1] };
+      const dLng = (b.lng - a.lng) * Math.PI / 180, lat1 = a.lat * Math.PI / 180, lat2 = b.lat * Math.PI / 180;
+      const y = Math.sin(dLng) * Math.cos(lat2);
+      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
     }
     function findStopIdx(stops, path, prog) {
       const pos = pointOnPath(path, prog); if (!pos||!stops.length) return 0;
@@ -703,7 +745,7 @@
       }
       hud.classList.add('visible');
       const stop = activeStops()[state.stopIndex ?? 0];
-      if (state.phase === 'dwell') {
+      if (state.phase === 'dwell' || state.phase === 'memory') {
         const copy = dwellUiCopy(state, stop);
         icon.textContent = copy.icon;
         icon.classList.toggle('halt', copy.mode === 'halt');
@@ -746,18 +788,18 @@
               ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
               : '',
           };
-        } else if (state.phase === 'dwell' && (state.caption || state.pois?.length || state.label || state.thumb)) {
-          // Hold dwell captions; reveal POI chips after a short settle-in beat
+        } else if ((state.phase === 'dwell' || state.phase === 'memory') && (state.caption || state.pois?.length || state.label || state.thumb)) {
+          // Hold dwell/memory captions; reveal POI chips after a short settle-in beat
           const frac = state.frac || 0;
           const stop = activeStops()[state.stopIndex ?? 0];
           const copy = dwellUiCopy(state, stop);
-          const poisHtml = (!state.is_photo && frac >= 0.14)
+          const poisHtml = (!state.is_photo && state.phase === 'dwell' && frac >= 0.14)
             ? (state.pois || []).map(p =>
                 `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
               ).join('')
             : '';
           next = {
-            visible: true, mode: state.is_photo ? 'dwell memory' : 'dwell',
+            visible: true, mode: state.is_photo || state.phase === 'memory' ? 'dwell memory' : 'dwell',
             caption: copy.caption,
             sub: state.subcaption || '',
             pois: poisHtml,
@@ -905,14 +947,31 @@
       }
 
       if (state.phase === 'dwell') {
-        const photo = !!state.is_photo;
         return {
           center: [state.lng, state.lat],
-          zoom: photo ? 12.4 : (state.pois?.length ? 10.0 : 8.8),
-          pitch: Math.min(MAX_PITCH, photo ? 55 : 42),
+          zoom: state.pois?.length ? 9.6 : 8.6,
+          pitch: Math.min(MAX_PITCH, 40),
           bearing: directorMode ? camBearing : 0,
           padding,
-          duration: photo ? 980 : 720,
+          duration: 640,
+        };
+      }
+      if (state.phase === 'memory') {
+        // Soft punch-in on the corridor — never slam to street-level photo GPS.
+        const glance = state.on_corridor !== false && (state.spur_miles || 0) < 18;
+        const center = glance && state.photo_lng != null
+          ? [
+              state.lng + (state.photo_lng - state.lng) * 0.35,
+              state.lat + (state.photo_lat - state.lat) * 0.35,
+            ]
+          : [state.lng, state.lat];
+        return {
+          center,
+          zoom: glance ? 9.4 : 8.8,
+          pitch: Math.min(MAX_PITCH, 46),
+          bearing: directorMode ? camBearing : 0,
+          padding,
+          duration: 720,
         };
       }
       return null;
@@ -928,21 +987,27 @@
       const camKey = `${state.phase}|${state.stopIndex}|${state.is_photo ? 'p' : 'r'}|${directorMode ? 'd' : 'n'}`;
       const phaseChanged = camKey !== lastCamKey;
       const now = performance.now();
-      const throttle = state.phase === 'travel' ? 100 : 380;
+      // Longer throttle = less thrash; memory holds don't fight travel follow.
+      const throttle = state.phase === 'travel' ? 140 : (state.phase === 'memory' ? 420 : 360);
       if (!force && !phaseChanged && now - lastDirectorMove < throttle) return;
       lastCamKey = camKey;
       lastDirectorMove = now;
 
       if (directorMode && state.phase === 'travel') {
-        camBearing = smoothAngle(camBearing, target.bearing, phaseChanged ? 0.45 : 0.1);
+        camBearing = smoothAngle(camBearing, target.bearing, phaseChanged ? 0.35 : 0.08);
         target.bearing = camBearing;
       } else if (!directorMode) {
         camBearing = smoothAngle(camBearing, 0, 0.15);
         target.bearing = camBearing;
-      } else if (state.phase === 'dwell') {
+      } else {
         target.bearing = camBearing;
       }
 
+      // Soft-follow zoom — never jump more than ~0.8 levels per update
+      if (!force && !phaseChanged && state.phase === 'travel') {
+        const dz = target.zoom - camZoom;
+        target.zoom = camZoom + Math.max(-0.35, Math.min(0.35, dz));
+      }
       camZoom = target.zoom;
       const cam = {
         center: target.center,
@@ -952,16 +1017,17 @@
         padding: target.padding,
       };
 
-      // Cancel any overview ease (fitTrip) so follow/zoom actually sticks.
-      try { map.stop(); } catch (e) { /* ignore */ }
+      // Only cancel in-flight overview eases on phase changes — not every travel tick.
+      if (phaseChanged || force) {
+        try { map.stop(); } catch (e) { /* ignore */ }
+      }
 
-      // Travel: hard-follow so the car visibly crawls. Dwell/photo: ease into the close-up.
-      if (isRecording || force || (state.phase === 'travel' && !phaseChanged)) {
+      if (state.phase === 'travel' && !phaseChanged) {
         map.jumpTo(cam);
       } else if (state.phase === 'travel' && phaseChanged) {
-        map.easeTo({ ...cam, duration: 700, essential: true });
+        map.easeTo({ ...cam, duration: Math.min(560, target.duration || 560), essential: true });
       } else {
-        map.easeTo({ ...cam, duration: target.duration, essential: true });
+        map.easeTo({ ...cam, duration: Math.min(720, target.duration || 640), essential: true });
       }
     }
 
@@ -982,6 +1048,7 @@
         updateLocationHud(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'intro', state);
         setPlaybackChrome(animProg, state.label || 'Opening…');
+        if (typeof paintExportComposite === 'function') paintExportComposite(state);
         return;
       }
       if (state.phase === 'outro') {
@@ -992,6 +1059,7 @@
         updateLocationHud(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'outro', state);
         setPlaybackChrome(animProg, 'Journey complete');
+        if (typeof paintExportComposite === 'function') paintExportComposite(state);
         return;
       }
       if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), state.phase, state);
@@ -1003,7 +1071,7 @@
         lastTravelBearing = smoothAngle(lastTravelBearing, state.bearing || 0, 0.18);
         smoothBearing = lastTravelBearing;
       }
-      const bearing = state.phase === 'dwell' ? lastTravelBearing : smoothBearing;
+      const bearing = (state.phase === 'dwell' || state.phase === 'memory') ? lastTravelBearing : smoothBearing;
 
       ensureTrailLayers(color);
       if (trailCoords.length >= 2) {
@@ -1016,8 +1084,7 @@
         if (vehicleMarker) {
           vehicleMarker.setLngLat([pos.lng, pos.lat]);
           const body = vehicleMarker.getElement().querySelector('.vehicle-body');
-          if (body && state.phase === 'travel') body.style.transform = `rotate(${bearing}deg)`;
-          else if (body) body.style.transform = 'rotate(0deg)';
+          if (body) body.style.transform = `rotate(${bearing}deg)`;
         } else {
           const el = document.createElement('div');
           el.innerHTML = carHtml;
@@ -1029,12 +1096,12 @@
 
       updatePoiMarkers(state.pois, state.phase === 'dwell' && !state.is_photo);
 
-      if (state.phase === 'dwell' && state.is_photo && state.thumb) {
+      if ((state.phase === 'memory' || (state.phase === 'dwell' && state.is_photo)) && state.thumb) {
         const stop = stops[state.stopIndex ?? 0];
         showMemoryOnMap({
           ...state,
-          lat: state.lat ?? stop?.lat,
-          lng: state.lng ?? stop?.lng,
+          lat: state.photo_lat ?? state.lat ?? stop?.lat,
+          lng: state.photo_lng ?? state.lng ?? stop?.lng,
           datetime: stop?.datetime || state.datetime,
           album: state.album || stop?.album || '',
           label: state.label || shortLabel(stop?.location || ''),
@@ -1044,7 +1111,7 @@
       }
 
       const cur = stops[animStopIdx];
-      if (cur && state.phase === 'dwell') {
+      if (cur && (state.phase === 'dwell' || state.phase === 'memory')) {
         const pct = Math.round((state.frac || 0) * 100);
         const copy = dwellUiCopy(state, cur);
         setPlaybackChrome(
@@ -1071,6 +1138,7 @@
       }
       updateLocationHud(state);
       updateStoryOverlay(state);
+      if (typeof paintExportComposite === 'function') paintExportComposite(state);
     }
 
     function updateTrail(prog) {
