@@ -32,6 +32,13 @@ Destination constellation, year era filter, snappier dwell + dock %, a11y 44px c
 18. **Denser corridor polish** — stronger bands + more filaments for multi-visit dests
 19. **README screenshot gallery** — watch / memory / mobile captions; removed duplicate Quick start
 
+## Sprint 4 (this branch — started)
+
+1. **Export title/outro holds** — record intro card ~2.4s + outro ~2.2s on-canvas
+2. **9:16 safe margins** — portrait title in upper third; caption plate mid-lower
+3. **Export chrome hide** — CTA/memory/dock/timeline fully suppressed in cinema-mode
+4. **Export JS partial** — `travel_map/_export_js.html.j2`
+
 ## Later
 
-Sprint 4 share/export cinema polish.
+Further share polish; caption pacing per dwell.

@@ -917,67 +917,7 @@
 
     {% include 'travel_map/_playback_js.html.j2' %}
 
-    async function exportTripVideo() {
-      if (!isSingleTrip() || !map) return;
-      const trip = activeTrip();
-      const story = trip.story || {};
-      const status = document.getElementById('export-status');
-      status.textContent = 'Preparing cinematic recording…';
-      status.classList.add('visible');
-      resetVisuals();
-      drawStops();
-      fitTrip(false);
-      await new Promise(r => setTimeout(r, 1600));
-
-      document.body.classList.add('cinema-mode', 'portrait-export');
-      const title = document.getElementById('cinema-title');
-      document.getElementById('cinema-title-text').textContent = trip.name;
-      document.getElementById('cinema-subtitle').textContent =
-        `${trip.miles.toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days} days`;
-      const hlEl = document.getElementById('cinema-highlights');
-      hlEl.innerHTML = (story.highlights || []).slice(0, 4).map(h => `<span>${h}</span>`).join('');
-      title.classList.add('visible');
-      map.resize();
-      await new Promise(r => setTimeout(r, 500));
-
-      const canvas = map.getCanvas();
-      const stream = canvas.captureStream(30);
-      recordedChunks = [];
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9' : 'video/webm';
-      mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
-      mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${trip.id}_road_trip.webm`;
-        a.click();
-        URL.revokeObjectURL(url);
-        isRecording = false;
-        document.body.classList.remove('cinema-mode', 'portrait-export');
-        title.classList.remove('visible');
-        hlEl.innerHTML = '';
-        status.classList.remove('visible');
-        document.getElementById('story-overlay').classList.remove('visible');
-        map.resize();
-        fitTrip(false);
-      };
-
-      isRecording = true;
-      status.textContent = 'Recording road trip story…';
-      mediaRecorder.start(250);
-      startPlayback(true);
-    }
-
-    function finishRecording() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        document.getElementById('export-status').textContent = 'Saving video…';
-        mediaRecorder.stop();
-      }
-      stopPlayback();
-    }
+    {% include 'travel_map/_export_js.html.j2' %}
 
     function setBasemapTripFocus(on) {
       if (!map || !map.isStyleLoaded()) return;

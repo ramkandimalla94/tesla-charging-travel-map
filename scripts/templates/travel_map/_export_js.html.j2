@@ -1,0 +1,102 @@
+{# Instagram 9:16 export — title hold, outro card, chrome-free canvas #}
+    function showExportTitleCard(trip, phase) {
+      const title = document.getElementById('cinema-title');
+      if (!title || !trip) return;
+      const story = trip.story || {};
+      if (phase === 'outro') {
+        document.getElementById('cinema-title-text').textContent = 'Journey Complete';
+        document.getElementById('cinema-subtitle').textContent =
+          `${trip.miles.toLocaleString()} mi · ${trip.stop_count} stops · ${trip.duration_days} days`;
+        document.getElementById('cinema-highlights').innerHTML = '';
+        title.classList.add('outro');
+      } else {
+        document.getElementById('cinema-title-text').textContent = trip.name;
+        document.getElementById('cinema-subtitle').textContent =
+          `${trip.miles.toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days} days`;
+        const hlEl = document.getElementById('cinema-highlights');
+        hlEl.innerHTML = (story.highlights || []).slice(0, 4).map(h => `<span>${h}</span>`).join('');
+        title.classList.remove('outro');
+      }
+      title.classList.add('visible');
+    }
+
+    function hideExportTitleCard() {
+      const title = document.getElementById('cinema-title');
+      if (!title) return;
+      title.classList.remove('visible', 'outro');
+      document.getElementById('cinema-highlights').innerHTML = '';
+    }
+
+    async function exportTripVideo() {
+      if (!isSingleTrip() || !map) return;
+      if (typeof MediaRecorder === 'undefined') {
+        const status = document.getElementById('export-status');
+        status.textContent = 'Recording not supported in this browser';
+        status.classList.add('visible');
+        setTimeout(() => status.classList.remove('visible'), 2800);
+        return;
+      }
+      const trip = activeTrip();
+      const status = document.getElementById('export-status');
+      status.textContent = 'Preparing cinematic recording…';
+      status.classList.add('visible');
+      resetVisuals();
+      drawStops();
+      fitTrip(false);
+      await new Promise(r => setTimeout(r, 1200));
+
+      document.body.classList.add('cinema-mode', 'portrait-export');
+      showExportTitleCard(trip, 'intro');
+      map.resize();
+      await new Promise(r => setTimeout(r, 400));
+
+      const canvas = map.getCanvas();
+      const stream = canvas.captureStream(30);
+      recordedChunks = [];
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9' : 'video/webm';
+      mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+      mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${trip.id}_road_trip.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        isRecording = false;
+        document.body.classList.remove('cinema-mode', 'portrait-export');
+        hideExportTitleCard();
+        status.classList.remove('visible');
+        document.getElementById('story-overlay')?.classList.remove('visible');
+        map.resize();
+        fitTrip(false);
+      };
+
+      isRecording = true;
+      status.textContent = 'Recording title card…';
+      mediaRecorder.start(250);
+      // Hold intro title on-canvas so Instagram export opens with branding
+      await new Promise(r => setTimeout(r, 2400));
+      hideExportTitleCard();
+      status.textContent = 'Recording road trip story…';
+      startPlayback(true);
+    }
+
+    function finishRecording() {
+      if (!isRecording) { stopPlayback(); return; }
+      const trip = activeTrip();
+      showExportTitleCard(trip, 'outro');
+      const status = document.getElementById('export-status');
+      if (status) status.textContent = 'Recording outro…';
+      // Brief outro hold on the canvas before stopping the recorder
+      setTimeout(() => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          if (status) status.textContent = 'Saving video…';
+          mediaRecorder.stop();
+        }
+        stopPlayback();
+      }, 2200);
+    }
+

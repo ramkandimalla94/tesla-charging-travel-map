@@ -660,10 +660,19 @@
     }
     .story-poi-chip.visited { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.4); color: #6ee7b7; }
     body.cinema-mode .story-overlay { bottom: 14%; }
-    body.cinema-mode.portrait-export .story-overlay { bottom: 16%; width: min(88%, 420px); }
+    body.cinema-mode.portrait-export .story-overlay {
+      bottom: 18%; width: min(84%, 400px); left: 50%; transform: translateX(-50%);
+      padding: 0;
+    }
     body.cinema-mode .story-caption {
       background: rgba(8,10,16,0.62); padding: 10px 16px;
     }
+    body.cinema-mode.portrait-export .story-caption {
+      background: rgba(8,10,16,0.78); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+      padding: 12px 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+    }
+    body.cinema-mode.portrait-export .story-sub { margin-top: 6px; }
 
     /* ── Cinema / export ── */
     body.cinema-mode .trip-panel,
@@ -673,6 +682,8 @@
     body.cinema-mode .timeline-bar,
     body.cinema-mode #onboarding,
     body.cinema-mode .map-legend,
+    body.cinema-mode .atlas-cta,
+    body.cinema-mode .memory-badge,
     body.cinema-mode .mapboxgl-ctrl-group,
     body.cinema-mode .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
     body.cinema-mode .location-hud { opacity: 0 !important; }
@@ -685,10 +696,20 @@
     }
     .cinema-title {
       position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); z-index: 15;
-      text-align: center; display: none; pointer-events: none;
+      text-align: center; display: none; pointer-events: none; width: min(90%, 520px);
+      transition: opacity 0.45s ease;
     }
     body.cinema-mode .cinema-title.visible { display: block; }
     body.watching .cinema-title.visible { display: block; }
+    body.cinema-mode.portrait-export .cinema-title {
+      bottom: auto; top: 11%; width: min(86%, 380px); padding: 0 3%;
+    }
+    body.cinema-mode.portrait-export .cinema-title h2 {
+      font-size: clamp(20px, 5vw, 28px); line-height: 1.15;
+    }
+    body.cinema-mode.portrait-export .cinema-title.outro {
+      top: auto; bottom: 22%;
+    }
     .cinema-title h2 {
       font-family: var(--font-display); font-size: clamp(22px, 4vw, 32px); font-weight: 800;
       text-shadow: 0 4px 24px rgba(0,0,0,0.95);

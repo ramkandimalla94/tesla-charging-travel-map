@@ -21,7 +21,7 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **Cinematic watch mode** — Play hides chrome for a passenger-seat replay (Export still uses 9:16 cinema)
 - **Time-accurate playback** — overnight halts pace charging beats without long freezes; dwell progress in the dock
 - **Location labels on map** — city/state names appear at each stop during replay
-- **Instagram video export** — one-click `.webm` download per trip (9:16 cinema mode)
+- **Instagram video export** — one-click `.webm` with intro/outro title cards and 9:16 safe margins
 - **Works for any Tesla owner** — drop in your CSV exports; home base auto-detected (or override via config)
 - Trip segmentation, timeline scrubber, director camera, night mode, GPX export
 

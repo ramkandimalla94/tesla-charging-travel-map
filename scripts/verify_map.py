@@ -265,6 +265,45 @@ def main() -> int:
         page.evaluate("stopPlayback()")
         print(f"Mobile playback: {mobile_play}")
 
+        # Sprint 4 — export cinema framing smoke (no MediaRecorder download)
+        page.set_viewport_size({"width": 1440, "height": 900})
+        page.evaluate(f"selectTrip({json.dumps(trip_co)})")
+        page.wait_for_timeout(500)
+        cinema = page.evaluate(
+            """() => {
+              const trip = activeTrip();
+              document.body.classList.add('cinema-mode', 'portrait-export');
+              if (typeof showExportTitleCard === 'function') showExportTitleCard(trip, 'intro');
+              map.resize();
+              const title = document.getElementById('cinema-title');
+              const wrap = document.getElementById('map-wrap');
+              const mapEl = document.getElementById('map');
+              const tr = title?.getBoundingClientRect();
+              const mr = mapEl?.getBoundingClientRect();
+              const aspect = mr.width && mr.height ? mr.width / mr.height : 0;
+              return {
+                cinema: document.body.classList.contains('cinema-mode'),
+                portrait: document.body.classList.contains('portrait-export'),
+                titleVisible: title?.classList.contains('visible'),
+                titleTop: tr?.top ?? -1,
+                titleInUpper: (tr?.top ?? 9999) < window.innerHeight * 0.35,
+                mapAspect: Math.round(aspect * 100) / 100,
+                portraitish: aspect > 0 && aspect < 0.75,
+                dockHidden: getComputedStyle(document.getElementById('transport-dock')).opacity === '0',
+                titleText: document.getElementById('cinema-title-text')?.textContent || '',
+              };
+            }"""
+        )
+        page.screenshot(path=str(SCREENSHOTS / "09-export-cinema.png"))
+        page.evaluate(
+            """() => {
+              document.body.classList.remove('cinema-mode', 'portrait-export');
+              if (typeof hideExportTitleCard === 'function') hideExportTitleCard();
+              map.resize();
+            }"""
+        )
+        print(f"Export cinema: {cinema}")
+
         browser.close()
 
     critical_errors = [
@@ -362,6 +401,18 @@ def main() -> int:
         ok = False
     if not mobile_play.get("playing") or not mobile_play.get("panelCollapsed"):
         print(f"FAIL: Mobile watch/play sheet state bad: {mobile_play}")
+        ok = False
+    if not cinema.get("cinema") or not cinema.get("portrait"):
+        print(f"FAIL: Export cinema classes missing: {cinema}")
+        ok = False
+    if not cinema.get("titleVisible") or not cinema.get("titleInUpper"):
+        print(f"FAIL: Export title card not in 9:16 safe upper zone: {cinema}")
+        ok = False
+    if not cinema.get("dockHidden"):
+        print(f"FAIL: Dock should hide in cinema mode: {cinema}")
+        ok = False
+    if not cinema.get("portraitish"):
+        print(f"FAIL: Map frame not portrait-ish for export: {cinema}")
         ok = False
     if critical_errors:
         print("WARN: Console errors detected")
