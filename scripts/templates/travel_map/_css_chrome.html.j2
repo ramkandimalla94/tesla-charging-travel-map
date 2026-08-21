@@ -339,7 +339,10 @@
       transition: opacity 0.25s, transform 0.25s; max-width: min(420px, calc(100vw - 32px));
       text-align: center;
     }
-    .share-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .share-toast.visible {
+      opacity: 1; transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
 
     .scrub-track {
       position: relative; height: 6px; background: rgba(255,255,255,0.06);

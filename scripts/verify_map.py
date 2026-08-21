@@ -383,6 +383,15 @@ def main() -> int:
                 richCaptionCount: rich.length,
                 hasNativeShareHelper: typeof shareTripBlurb === 'function',
                 hasOfferShare: typeof offerShareAfterPlay === 'function',
+                hasHideShare: typeof hideShareToast === 'function',
+                toastClickable: (() => {
+                  const t = document.getElementById('share-toast');
+                  if (!t) return false;
+                  t.classList.add('visible');
+                  const pe = getComputedStyle(t).pointerEvents;
+                  t.classList.remove('visible');
+                  return pe === 'auto';
+                })(),
               };
             }"""
         )
@@ -515,6 +524,12 @@ def main() -> int:
         ok = False
     if not share_state.get("hasOfferShare"):
         print(f"FAIL: offerShareAfterPlay missing: {share_state}")
+        ok = False
+    if not share_state.get("toastClickable"):
+        print(f"FAIL: Share toast must accept clicks when visible: {share_state}")
+        ok = False
+    if not share_state.get("hasHideShare"):
+        print(f"FAIL: hideShareToast missing: {share_state}")
         ok = False
     if story_pacing.get("ok"):
         if story_pacing.get("midTravelVisible"):

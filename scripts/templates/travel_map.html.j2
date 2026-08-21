@@ -1129,6 +1129,11 @@
     document.addEventListener('keydown', e=>{
       if (e.target.tagName==='INPUT') return;
       if (e.code==='Escape') {
+        const toast = document.getElementById('share-toast');
+        if (toast?.classList.contains('visible') && typeof hideShareToast === 'function') {
+          hideShareToast();
+          return;
+        }
         if (isPlaying) { stopPlayback(); return; }
         if (selectedId !== 'all') { selectTrip('all'); return; }
         if (!memoryPaused) {
