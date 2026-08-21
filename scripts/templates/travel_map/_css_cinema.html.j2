@@ -1,27 +1,14 @@
-    /* ── Location HUD (cinema) ── */
-    .location-hud {
-      position: absolute; top: 68px; left: 50%; transform: translateX(-50%); z-index: 13;
-      display: none; align-items: center; gap: 12px;
-      background: rgba(8,10,16,0.82); backdrop-filter: blur(24px);
-      border: 1px solid var(--border-bright); border-radius: 16px;
-      padding: 12px 20px; box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-      max-width: min(92vw, 560px);
+    /* ── Live trip clock (quiet HUD) ── */
+    .trip-clock {
+      position: absolute; top: 64px; left: 18px; z-index: 13;
+      display: none; pointer-events: none;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+      color: rgba(243, 239, 230, 0.78);
+      text-shadow: 0 1px 8px rgba(0,0,0,0.85);
+      font-variant-numeric: tabular-nums;
     }
-    .location-hud.visible { display: flex; }
-    .hud-icon {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(94,234,212,0.12); border: 1px solid rgba(94,234,212,0.25);
-      font-size: 16px;
-    }
-    .hud-icon.halt { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.3); }
-    .hud-icon.memory { background: rgba(125, 211, 252, 0.14); border-color: rgba(125, 211, 252, 0.35); }
-    .hud-body { min-width: 0; }
-    .hud-phase { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-    .hud-text {
-      font-family: var(--font-display); font-size: 17px; font-weight: 700;
-      letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
+    .trip-clock.visible { display: block; }
+    body.watching .trip-clock { top: 18px; left: 16px; color: rgba(243, 239, 230, 0.88); }
 
     /* ── Beacons disabled — path stays clean ── */
     .beacon-wrap, .beacon, .beacon-label, .stop-dot { display: none !important; }
@@ -132,7 +119,7 @@
     body.cinema-mode .atlas-cta,
     body.cinema-mode .mapboxgl-ctrl-group,
     body.cinema-mode .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
-    body.cinema-mode .location-hud { opacity: 0 !important; }
+    body.cinema-mode .trip-clock { opacity: 0 !important; }
     body.cinema-mode .beacon-ring { animation: none !important; }
     body.cinema-mode.portrait-export #map-wrap {
       display: flex; align-items: center; justify-content: center; background: #000;
@@ -248,19 +235,16 @@
       .trip-panel.collapsed { transform: translateY(110%); opacity: 0; pointer-events: none; }
       .panel-toggle { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 20px); left: 18px; width: 44px; height: 44px; }
       .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
-      .location-hud { top: 56px; left: 12px; right: 12px; max-width: none; }
+      .trip-clock { top: 52px; left: 12px; font-size: 10px; }
       .onboard-card { margin-left: 0 !important; max-width: calc(100vw - 32px); }
       .atlas-cta { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 18px); right: 12px; left: 64px; max-width: none; }
       .era-rail { max-width: 58vw; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
       .era-chip { min-height: 34px; padding: 5px 12px; flex-shrink: 0; }
       .transport-dock {
-        width: calc(100vw - 16px); left: 50%; bottom: calc(var(--timeline-h) + 14px);
-        padding: 12px 12px 12px; border-radius: 16px;
+        width: calc(100vw - 16px); left: 50%; bottom: calc(var(--timeline-h) + 12px);
+        padding: 8px 10px 9px; border-radius: 14px;
       }
-      .dock-actions { gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 58%; }
-      .icon-btn.export { padding: 0 10px; font-size: 10px; }
-      .dock-sliders { gap: 8px; }
-      .queue-badge { font-size: 9px; padding: 3px 8px; }
+      .speed-wrap { width: 72px; }
       .timeline-bar { left: 10px; right: 10px; bottom: 10px; padding: 8px 10px 10px; }
-      body.watching .transport-dock { opacity: 0.92; }
+      body.watching .transport-dock { opacity: 0.88; }
     }

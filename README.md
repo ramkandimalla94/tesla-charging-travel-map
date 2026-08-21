@@ -23,6 +23,8 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **3D satellite map** with Mapbox terrain and elevated route lines
 - **Watch mode** — Play hides chrome for a passenger-seat replay
 - **Steady journey playback** — distance-paced travel along chargers and photo GPS; memory holds park at the shot (default **0.15×**, range **0.05×–2×**)
+- **Slim transport dock** — single play/pause toggle, thin scrubber, quiet speed control (map-first)
+- **Live trip clock** — date/time tracks the playhead in the trip’s local timezone; map shifts day→night overnight
 - **Navigation-style chase** — heading-up follow camera (Apple/Google Maps feel): look-ahead course, capped turn rate, car glued to the path; end-of-trip pulls back to a north-up route recap
 - **Large memory stage** — replay photos appear as a large, stable overlay (no map-marker shake)
 - **Location labels** — city/state names during replay

@@ -41,37 +41,48 @@
         document.getElementById('prog-text').textContent = 'Select a trip first';
         return;
       }
-      if (!activePlayback()?.total_video_ms) return;
-      if (animTimeMs >= activePlayback().total_video_ms) { animTimeMs = 0; resetVisuals(false); drawStops(); }
+      const pb = activePlayback();
+      if (!pb?.total_video_ms) return;
+      if (animTimeMs >= pb.total_video_ms) {
+        animTimeMs = 0;
+        resetVisuals(false);
+        drawStops();
+      }
+      // Interactive play: skip title card / early dwell so the car moves immediately.
+      // Recording keeps the full cinematic intro.
+      if (!forRecording && animTimeMs <= 120) {
+        const jump = firstTravelOffsetMs(pb);
+        if (jump > 0) animTimeMs = jump + 24;
+      }
       isPlaying = true; lastTs = 0;
+      syncPlayToggle(true);
       resetNavChase();
       setPanelCollapsed(true);
       if (!forRecording) setWatching(true);
       setPlaybackVisuals(true);
-      const playBtn = ui('btn-play');
-      const pauseBtn = ui('btn-pause');
-      if (playBtn) playBtn.disabled = true;
-      if (pauseBtn) pauseBtn.disabled = false;
-      ui('location-hud')?.classList.remove('visible');
       ui('transport-dock')?.classList.remove('idle');
       updateQueueBadge();
-      // Dive from overview into the first moving frame so the car is readable immediately.
-      const warm = positionAtTime(Math.max(animTimeMs, 80));
+      const trip = activeTrip();
+      if (trip?.color) {
+        try { ensureTrailLayers(trip.color); } catch (_) {}
+      }
+      // Paint first motion frame synchronously — no wait for RAF / intro settle.
+      const warm = positionAtTime(animTimeMs);
       if (warm?.bearing != null) {
         navBearing = warm.bearing;
         lastTravelBearing = warm.bearing;
         camBearing = directorMode ? warm.bearing : 0;
       }
-      if (warm) applyPlaybackCamera(warm, true);
+      if (warm) {
+        updateTrailFromState(warm);
+        applyPlaybackCamera(warm, true);
+      }
       animFrame = requestAnimationFrame(animate);
     }
     function stopPlayback() {
       isPlaying=false;
       if (animFrame) cancelAnimationFrame(animFrame);
-      const playBtn = ui('btn-play');
-      const pauseBtn = ui('btn-pause');
-      if (playBtn) playBtn.disabled = !isSingleTrip();
-      if (pauseBtn) pauseBtn.disabled = true;
+      syncPlayToggle(false);
       if (!isRecording) {
         setPlaybackVisuals(false);
         setWatching(false);
@@ -87,8 +98,9 @@
       applyIdleStopVisuals();
       setPlaybackChrome(0, isSingleTrip() ? 'Ready to replay' : 'Select a trip to replay');
       if (clearHud) {
-        ui('location-hud')?.classList.remove('visible');
+        ui('trip-clock')?.classList.remove('visible');
         ui('story-overlay')?.classList.remove('visible');
+        setNightMode(false);
       }
       hideMemoryCard();
       storyOverlayKey = '';

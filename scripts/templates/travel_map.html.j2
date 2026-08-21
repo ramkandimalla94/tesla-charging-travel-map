@@ -81,13 +81,7 @@
     </div>
   </header>
 
-  <div class="location-hud" id="location-hud">
-    <div class="hud-icon" id="hud-icon">🚗</div>
-    <div class="hud-body">
-      <div class="hud-phase" id="hud-phase">Driving</div>
-      <div class="hud-text" id="hud-text"></div>
-    </div>
-  </div>
+  <div class="trip-clock" id="trip-clock" aria-live="off"></div>
 
   <div class="story-overlay" id="story-overlay">
     <div class="story-caption" id="story-caption"></div>
@@ -183,27 +177,23 @@
     </div>
   </aside>
 
-  <!-- Transport dock -->
+  <!-- Transport dock — minimal: play/pause toggle + scrub + speed -->
   <div class="transport-dock" id="transport-dock">
-    <div class="dock-top">
+    <div class="dock-row">
+      <button class="icon-btn primary" id="btn-play" disabled title="Play" aria-label="Play">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+      </button>
       <div class="dock-info">
         <div class="dock-location" id="prog-text">Select a trip to replay</div>
-        <div class="dock-sub"><span id="prog-start">—</span> → <span id="prog-end">—</span></div>
       </div>
-      <div class="dock-actions">
-        <button class="icon-btn primary" id="btn-play" disabled title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></button>
-        <button class="icon-btn" id="btn-pause" disabled title="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg></button>
+      <div class="speed-wrap">
+        <span class="speed-val" id="speed-label">0.15×</span>
+        <input type="range" id="speed" min="0.05" max="2" step="0.05" value="0.15" aria-label="Playback speed">
       </div>
     </div>
     <div class="scrub-track">
       <div class="scrub-fill" id="scrub-fill"></div>
-      <input type="range" id="scrubber" min="0" max="1000" value="0">
-    </div>
-    <div class="dock-sliders">
-      <div class="speed-wrap">
-        <label>Playback speed · <span class="speed-val" id="speed-label">0.15×</span></label>
-        <input type="range" id="speed" min="0.05" max="2" step="0.05" value="0.15">
-      </div>
+      <input type="range" id="scrubber" min="0" max="1000" value="0" aria-label="Scrub timeline">
     </div>
   </div>
 
@@ -251,7 +241,7 @@
       if (cached && cached.isConnected) return cached;
       return (uiCache[id] = document.getElementById(id));
     }
-    function setPlaybackChrome(prog, label, startText, endText, endHtml) {
+    function setPlaybackChrome(prog, label) {
       const scrub = ui('scrubber');
       const fill = ui('scrub-fill');
       const tl = ui('timeline-scrub');
@@ -260,17 +250,6 @@
       if (fill) fill.style.width = (prog * 100) + '%';
       if (tl) tl.style.left = (prog * 100) + '%';
       if (label != null && pt) pt.textContent = label;
-      if (startText != null) {
-        const ps = ui('prog-start');
-        if (ps) ps.textContent = startText;
-      }
-      if (endHtml != null) {
-        const pe = ui('prog-end');
-        if (pe) pe.innerHTML = endHtml;
-      } else if (endText != null) {
-        const pe = ui('prog-end');
-        if (pe) pe.textContent = endText;
-      }
     }
 
     // ── State ──
@@ -837,29 +816,102 @@
       if (typeof hideMemoryStage === 'function') hideMemoryStage();
     }
 
-    function updateLocationHud(state) {
-      const hud = document.getElementById('location-hud');
-      const icon = document.getElementById('hud-icon');
-      // While watching, story captions own the narrative — hide the competing HUD.
-      if (!state || !isSingleTrip() || state.phase === 'intro' || state.phase === 'outro'
-          || document.body.classList.contains('watching') || isRecording) {
-        hud.classList.remove('visible');
+    const PLAY_ICON = '<path d="M8 5v14l11-7L8 5z"/>';
+    const PAUSE_ICON = '<path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/>';
+
+    function syncPlayToggle(playing) {
+      const btn = ui('btn-play');
+      if (!btn) return;
+      btn.classList.toggle('is-playing', !!playing);
+      btn.title = playing ? 'Pause' : 'Play';
+      btn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+      btn.disabled = !playing && !isSingleTrip();
+      const svg = btn.querySelector('svg');
+      if (svg) svg.innerHTML = playing ? PAUSE_ICON : PLAY_ICON;
+    }
+
+    function tripTzFromLng(lng) {
+      if (lng == null || !Number.isFinite(lng)) return 'America/Chicago';
+      if (lng <= -112.5) return 'America/Los_Angeles';
+      if (lng <= -100) return 'America/Denver';
+      if (lng <= -85) return 'America/Chicago';
+      return 'America/New_York';
+    }
+
+    function clockFromState(state) {
+      const seg = state?.seg;
+      if (seg?.clock_start) {
+        const t0 = Date.parse(seg.clock_start);
+        const t1 = Date.parse(seg.clock_end || seg.clock_start);
+        if (Number.isFinite(t0)) {
+          const frac = state.frac || 0;
+          const end = Number.isFinite(t1) ? t1 : t0;
+          return new Date(t0 + (end - t0) * frac);
+        }
+      }
+      const trip = activeTrip();
+      const stops = trip?.stops || [];
+      const idx = Math.max(0, Math.min(stops.length - 1, state?.stopIndex ?? 0));
+      const raw = stops[idx]?.datetime || trip?.start;
+      const ms = raw ? Date.parse(raw) : NaN;
+      return Number.isFinite(ms) ? new Date(ms) : null;
+    }
+
+    function setNightMode(on) {
+      if (nightMode === !!on) return;
+      nightMode = !!on;
+      document.body.classList.toggle('night', nightMode);
+    }
+
+    function updateTripClock(state) {
+      const el = ui('trip-clock');
+      if (!el) return;
+      if (!state || !isSingleTrip() || isRecording) {
+        el.classList.remove('visible');
+        if (!isSingleTrip()) setNightMode(false);
         return;
       }
-      hud.classList.add('visible');
-      const stop = activeStops()[state.stopIndex ?? 0];
-      if (state.phase === 'dwell' || state.phase === 'memory') {
-        const copy = dwellUiCopy(state, stop);
-        icon.textContent = copy.icon;
-        icon.classList.toggle('halt', copy.mode === 'halt');
-        icon.classList.toggle('memory', copy.mode === 'memory');
-        document.getElementById('hud-phase').textContent = copy.phase;
-      } else {
-        icon.textContent = '🚗';
-        icon.classList.remove('halt', 'memory');
-        document.getElementById('hud-phase').textContent = 'En Route';
+      const dt = clockFromState(state);
+      if (!dt) {
+        el.classList.remove('visible');
+        return;
       }
-      document.getElementById('hud-text').textContent = state.label || '';
+      const lng = state.lng != null ? state.lng : (activeTrip()?.stops?.[0]?.lng);
+      const tz = tripTzFromLng(lng);
+      el.textContent = dt.toLocaleString('en-US', {
+        timeZone: tz,
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+      el.classList.add('visible');
+      let hour = 12;
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz, hour: 'numeric', hourCycle: 'h23',
+        }).formatToParts(dt);
+        hour = parseInt(parts.find(p => p.type === 'hour')?.value || '12', 10);
+      } catch (_) {
+        hour = dt.getUTCHours();
+      }
+      setNightMode(hour < 6 || hour >= 20);
+    }
+
+    function firstTravelOffsetMs(pb) {
+      let cursor = 0;
+      for (const seg of pb?.segments || []) {
+        if (seg.type === 'travel') return cursor;
+        cursor += seg.duration_ms || 0;
+      }
+      // Fall back: skip intro only
+      cursor = 0;
+      for (const seg of pb?.segments || []) {
+        if (seg.type !== 'intro') return cursor;
+        cursor += seg.duration_ms || 0;
+      }
+      return 0;
     }
 
     let storyOverlayKey = '';
@@ -1139,7 +1191,7 @@
         ensureTrailLayers(color);
         map.getSource('active-trail').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
         updateStoryOverlay(state);
-        updateLocationHud(state);
+        updateTripClock(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'intro', state);
         setPlaybackChrome(animProg, state.label || 'Opening…');
         if (typeof paintExportComposite === 'function') paintExportComposite(state);
@@ -1158,7 +1210,7 @@
           map.setPaintProperty('active-trail-line', 'line-gradient', ['interpolate', ['linear'], ['line-progress'], 0, color, 0.85, '#ffffff', 1, '#ffffff']);
         }
         updateStoryOverlay(state);
-        updateLocationHud(state);
+        updateTripClock(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'outro', state);
         setPlaybackChrome(animProg, 'Journey complete');
         applyPlaybackCamera(state); // recap overview
@@ -1245,31 +1297,15 @@
 
       const cur = stops[animStopIdx];
       if (cur && (state.phase === 'dwell' || state.phase === 'memory')) {
-        const pct = Math.round((state.frac || 0) * 100);
         const copy = dwellUiCopy(state, cur);
-        setPlaybackChrome(
-          animProg,
-          copy.dock,
-          stops[0]?.datetime?.slice(0, 10) || '',
-          null,
-          `<span class="dwell-pct">${pct}%</span>`
-        );
+        setPlaybackChrome(animProg, copy.dock);
       } else {
         const label = cur
           ? `Driving · ${state.label || shortLabel(cur.location)}`
           : 'Ready to replay';
-        if (cur) {
-          setPlaybackChrome(
-            animProg,
-            label,
-            stops[0]?.datetime?.slice(0, 10) || '',
-            cur.datetime?.slice(0, 10) || ''
-          );
-        } else {
-          setPlaybackChrome(animProg, label);
-        }
+        setPlaybackChrome(animProg, label);
       }
-      updateLocationHud(state);
+      updateTripClock(state);
       updateStoryOverlay(state);
       if (typeof paintExportComposite === 'function') paintExportComposite(state);
     }
@@ -1347,11 +1383,18 @@
       setMapLabelsVisible(!isSingleTrip());
       updateMapLegend(activeTrip());
       document.getElementById('btn-play').disabled = !isSingleTrip();
+      syncPlayToggle(false);
       updateDockIdle();
       updateAtlasCta();
       preloadTripThumbs(activeTrip());
+      const trip = activeTrip();
+      if (trip?.color && typeof ensureTrailLayers === 'function') {
+        try { ensureTrailLayers(trip.color); } catch (_) {}
+      }
       if (id === 'all') {
         applyEraFilter();
+        setNightMode(false);
+        ui('trip-clock')?.classList.remove('visible');
       } else {
         drawAtlasSpokes();
       }
@@ -1382,8 +1425,10 @@
     document.getElementById('timeline-track').addEventListener('mouseleave', ()=>{
       if (selectedId==='all') setHoveredTrip(null);
     });
-    document.getElementById('btn-play').addEventListener('click', startPlayback);
-    document.getElementById('btn-pause').addEventListener('click', stopPlayback);
+    document.getElementById('btn-play').addEventListener('click', () => {
+      if (isPlaying) stopPlayback();
+      else startPlayback();
+    });
     document.getElementById('speed').addEventListener('input', e=>{
       speed = parseFloat(e.target.value);
       const label = Number.isInteger(speed) ? String(speed) : speed.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');

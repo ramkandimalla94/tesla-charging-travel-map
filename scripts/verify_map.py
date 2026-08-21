@@ -186,18 +186,80 @@ def main() -> int:
         # Playback smoke + watch mode
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
         page.wait_for_timeout(800)
-        page.evaluate("startPlayback()")
-        page.wait_for_timeout(1500)
+        page.evaluate("animTimeMs = 0; startPlayback()")
+        page.wait_for_timeout(400)
         play_state = page.evaluate(
-            """() => ({
-              playing: isPlaying,
-              watching: document.body.classList.contains('watching'),
-              panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
-              t0: animTimeMs,
-            })"""
+            """() => {
+              const st = typeof positionAtTime === 'function' ? positionAtTime(animTimeMs) : null;
+              const clock = document.getElementById('trip-clock');
+              return {
+                playing: isPlaying,
+                watching: document.body.classList.contains('watching'),
+                panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
+                t0: animTimeMs,
+                phase: st?.phase || '',
+                hasLocationHud: !!document.getElementById('location-hud'),
+                clockVisible: !!clock?.classList.contains('visible'),
+                clockText: (clock?.textContent || '').trim(),
+                playToggle: document.getElementById('btn-play')?.classList.contains('is-playing'),
+                pauseGone: !document.getElementById('btn-pause'),
+              };
+            }"""
         )
         page.wait_for_timeout(800)
         play_state["t1"] = page.evaluate("animTimeMs")
+        cinema_ux = page.evaluate(
+            """() => {
+              const pb = activePlayback();
+              const dwells = (pb?.segments || []).filter(s => s.type === 'dwell');
+              const avgDwell = dwells.length
+                ? dwells.reduce((a, s) => a + (s.duration_ms || 0), 0) / dwells.length
+                : 0;
+              const maxDwell = dwells.length
+                ? Math.max(...dwells.map(s => s.duration_ms || 0))
+                : 0;
+              // Sample dwell chrome — must not show %
+              let dwellPct = false;
+              const dSeg = dwells[0];
+              if (dSeg) {
+                let cursor = 0;
+                for (const seg of pb.segments) {
+                  if (seg === dSeg) break;
+                  cursor += seg.duration_ms || 0;
+                }
+                updateTrailFromState(positionAtTime(cursor + (dSeg.duration_ms || 0) * 0.5));
+                const sub = document.getElementById('prog-end')?.textContent
+                  || document.querySelector('.dwell-pct')?.textContent
+                  || document.getElementById('prog-text')?.textContent
+                  || '';
+                dwellPct = /\\d+%/.test(sub);
+              }
+              // Night from overnight clock
+              let nightOk = null;
+              const nightSeg = (pb?.segments || []).find(s => {
+                const h = s.clock_start ? new Date(s.clock_start).getUTCHours() : -1;
+                return h >= 20 || h < 5;
+              });
+              if (nightSeg) {
+                let cursor = 0;
+                for (const seg of pb.segments) {
+                  if (seg === nightSeg) break;
+                  cursor += seg.duration_ms || 0;
+                }
+                updateTrailFromState(positionAtTime(cursor + 10));
+                nightOk = document.body.classList.contains('night');
+              }
+              return {
+                avgDwell,
+                maxDwell,
+                dwellPct,
+                nightOk,
+                hasClockFields: !!(pb?.segments || []).some(s => s.clock_start),
+                introMs: (pb?.segments || []).find(s => s.type === 'intro')?.duration_ms || 0,
+              };
+            }"""
+        )
+        print(f"Cinema UX: {cinema_ux}")
         story_state = page.evaluate(
             """() => {
               const ov = document.getElementById('story-overlay');
@@ -251,17 +313,20 @@ def main() -> int:
         print(f"Playback: {play_state}")
         page.screenshot(path=str(SCREENSHOTS / "06-watch-mode.png"))
 
-        # Minimal transport dock (play/pause + scrub + speed only)
+        # Minimal transport dock (single play/pause toggle + scrub + speed)
         dock_state = page.evaluate(
             """() => ({
               play: !!document.getElementById('btn-play'),
-              pause: !!document.getElementById('btn-pause'),
+              pauseGone: !document.getElementById('btn-pause'),
+              toggleWorks: typeof syncPlayToggle === 'function',
               speed: !!document.getElementById('speed'),
               scrubber: !!document.getElementById('scrubber'),
               exportGone: !document.getElementById('btn-export'),
               shareGone: !document.getElementById('btn-share'),
               loopGone: !document.getElementById('btn-loop'),
               legendGone: !document.getElementById('map-legend'),
+              locationHudGone: !document.getElementById('location-hud'),
+              tripClock: !!document.getElementById('trip-clock'),
               memoryStage: !!document.getElementById('memory-stage'),
               defaultSpeed: parseFloat(document.getElementById('speed')?.value || '0'),
               speedMin: parseFloat(document.getElementById('speed')?.min || '0'),
@@ -477,8 +542,35 @@ def main() -> int:
     if play_state.get("t1", 0) <= play_state.get("t0", 0):
         print(f"FAIL: animTimeMs not advancing: {play_state}")
         ok = False
-    if not dock_state.get("play") or not dock_state.get("pause") or not dock_state.get("speed"):
+    if play_state.get("phase") not in ("travel", "dwell", "memory"):
+        print(f"FAIL: Play should skip intro and start in motion soon: {play_state}")
+        ok = False
+    if play_state.get("hasLocationHud"):
+        print(f"FAIL: EN ROUTE location-hud should be removed: {play_state}")
+        ok = False
+    if not play_state.get("pauseGone") or not play_state.get("playToggle"):
+        print(f"FAIL: Single play/pause toggle expected: {play_state}")
+        ok = False
+    if not play_state.get("clockVisible") or not play_state.get("clockText"):
+        print(f"FAIL: Live trip clock should show during play: {play_state}")
+        ok = False
+    if cinema_ux.get("maxDwell", 9999) > 1200:
+        print(f"FAIL: Dwell segments should be short (<=1.2s): {cinema_ux}")
+        ok = False
+    if cinema_ux.get("dwellPct"):
+        print(f"FAIL: Dock must not show dwell percentage: {cinema_ux}")
+        ok = False
+    if cinema_ux.get("hasClockFields") is False:
+        print(f"FAIL: Playback segments need clock_start for live time: {cinema_ux}")
+        ok = False
+    if cinema_ux.get("introMs", 9999) > 1000:
+        print(f"FAIL: Intro should be short for faster start: {cinema_ux}")
+        ok = False
+    if not dock_state.get("play") or not dock_state.get("pauseGone") or not dock_state.get("speed"):
         print(f"FAIL: Minimal dock controls missing: {dock_state}")
+        ok = False
+    if not dock_state.get("locationHudGone") or not dock_state.get("tripClock"):
+        print(f"FAIL: Location HUD removed / trip clock required: {dock_state}")
         ok = False
     if not dock_state.get("exportGone") or not dock_state.get("shareGone") or not dock_state.get("loopGone"):
         print(f"FAIL: Extra dock controls should be removed: {dock_state}")

@@ -459,14 +459,15 @@ def _renormalize_segment_durations(
     raw = sum(max(1, int(s.get("duration_ms") or 0)) for s in body) or 1
     scale = body_budget / raw
     floors = {
-        "dwell": 1_400,
+        # Keep stop holds brief — long dwell % bars felt like waiting.
+        "dwell": 450,
         "travel": 3_200,
-        "memory": 3_600,
+        "memory": 1_400,
     }
     ceilings = {
-        "dwell": 3_200,
+        "dwell": 1_000,
         "travel": 22_000,
-        "memory": 6_500,
+        "memory": 2_800,
     }
     for s in body:
         kind = s.get("type") or "travel"
@@ -1094,10 +1095,20 @@ def build_playback_timeline(
             int(n_road * 6_500 + n_mem * 5_500 + road_miles * 14),
         ),
     )
-    intro_ms, outro_ms = 2_800, 3_200
+    # Short title card — interactive play also skips intro for instant motion.
+    intro_ms, outro_ms = 700, 1_600
 
     body: list[dict] = []
     road_i = -1
+
+    def _clock_iso(dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).isoformat()
+
+    def _lerp_clock(t0: datetime, t1: datetime, frac: float) -> datetime:
+        span = (t1 - t0).total_seconds()
+        return t0 + timedelta(seconds=span * max(0.0, min(1.0, float(frac))))
 
     def append_travel(
         path: list[list[float]],
@@ -1113,6 +1124,7 @@ def build_playback_timeline(
             return
         sub_mi = path_miles(sub)
         dur = max(2_800, min(20_000, int(sub_mi * 65 + 1_800)))
+        t0, t1 = leg["t0"], leg["t1"]
         body.append({
             "type": "travel",
             "duration_ms": dur,
@@ -1124,6 +1136,8 @@ def build_playback_timeline(
             "to_label": leg["to_label"],
             "stop_index": stop_index,
             "leg_miles": round(sub_mi, 1),
+            "clock_start": _clock_iso(_lerp_clock(t0, t1, f0)),
+            "clock_end": _clock_iso(_lerp_clock(t0, t1, f1)),
         })
 
     def append_memory_at(
@@ -1135,9 +1149,10 @@ def build_playback_timeline(
         leg_frac: float | None = None,
     ) -> None:
         album = mem.get("album") or "memory"
+        ts = parse_waypoint_ts(mem.get("datetime"))
         row = {
             "type": "memory",
-            "duration_ms": 5_200 if spur <= MEMORY_ROUTE_SNAP_MI else 4_000,
+            "duration_ms": 2_400 if spur <= MEMORY_ROUTE_SNAP_MI else 1_800,
             "lat": lat,
             "lng": lng,
             "photo_lat": mem["lat"],
@@ -1153,6 +1168,8 @@ def build_playback_timeline(
             "spur_miles": round(float(spur), 2),
             "on_corridor": float(spur) <= MEMORY_ROUTE_SNAP_MI,
             "pois": [],
+            "clock_start": _clock_iso(ts),
+            "clock_end": _clock_iso(ts + timedelta(minutes=2)),
         }
         if leg_frac is not None:
             row["leg_frac"] = leg_frac
@@ -1174,9 +1191,10 @@ def build_playback_timeline(
             label = short_location_label(stop["location"])
             pois = stop_pois[i] if i < len(stop_pois) else []
             cap = captions[road_i] if road_i < len(captions) else {}
-            dwell_ms = 2_200 if not is_last else 2_800
+            dwell_ms = 750 if not is_last else 950
             if pois:
-                dwell_ms = int(dwell_ms * 1.15)
+                dwell_ms = int(dwell_ms * 1.08)
+            stop_ts = parse_waypoint_ts(stop.get("datetime"))
             body.append({
                 "type": "dwell",
                 "duration_ms": dwell_ms,
@@ -1191,6 +1209,8 @@ def build_playback_timeline(
                 ),
                 "subcaption": cap.get("sub", "Journey complete" if is_last else ""),
                 "is_photo": False,
+                "clock_start": _clock_iso(stop_ts),
+                "clock_end": _clock_iso(stop_ts + timedelta(minutes=12)),
             })
 
         if is_last:
@@ -1243,12 +1263,17 @@ def build_playback_timeline(
 
     body = _renormalize_segment_durations(body, target_ms, intro_ms, outro_ms)
 
+    anchor = road_only or journey
+    t_start = parse_waypoint_ts(anchor[0].get("datetime") if anchor else None)
+    t_end = parse_waypoint_ts(anchor[-1].get("datetime") if anchor else None)
     intro_seg = {
         "type": "intro",
         "duration_ms": intro_ms,
         "title": story.get("intro_title", ""),
         "caption": story.get("intro", "Road trip replay"),
         "highlights": story.get("highlights", [])[:4],
+        "clock_start": _clock_iso(t_start),
+        "clock_end": _clock_iso(t_start),
     }
     outro_seg = {
         "type": "outro",
@@ -1256,6 +1281,8 @@ def build_playback_timeline(
         "caption": story.get("outro", "Journey complete"),
         "visited_count": story.get("visited_count", 0),
         "nearby_count": story.get("nearby_count", 0),
+        "clock_start": _clock_iso(t_end),
+        "clock_end": _clock_iso(t_end),
     }
     all_segments = [intro_seg, *body, outro_seg]
 
