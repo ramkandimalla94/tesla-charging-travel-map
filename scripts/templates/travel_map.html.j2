@@ -373,10 +373,16 @@
         }
         if (seg.type === 'travel' && seg.path?.length >= 2) {
           const frac = Math.max(0, Math.min(1, (elapsedMs - t) / seg.duration_ms));
-          // Arc-length aware trail tip
+          // Trail MUST follow arc-length tip only — never index-slice ahead of the car.
           const tip = pointOnPath(seg.path, frac);
-          const endIdx = Math.max(1, Math.ceil(frac * (seg.path.length - 1)));
-          const leg = seg.path.slice(0, endIdx + 1).map(p => [p[1], p[0]]);
+          const cum = pathCumMiles(seg.path);
+          const total = cum[cum.length - 1] || 0;
+          const target = frac * total;
+          const leg = [];
+          leg.push([seg.path[0][1], seg.path[0][0]]);
+          for (let i = 1; i < seg.path.length - 1; i++) {
+            if (cum[i] < target) leg.push([seg.path[i][1], seg.path[i][0]]);
+          }
           if (tip) leg.push([tip.lng, tip.lat]);
           if (coords.length) leg.shift();
           coords.push(...leg);
@@ -510,32 +516,35 @@
       return t ? (t.route_path || []) : [];
     }
     function lerp(a,b,t) { return a+(b-a)*t; }
+    function pathCumMiles(path) {
+      const cum = [0];
+      if (!path || path.length < 2) return cum;
+      for (let i = 1; i < path.length; i++) {
+        const a = path[i - 1], b = path[i];
+        cum.push(cum[i - 1] + haversineKm(a[0], a[1], b[0], b[1]) * 0.621371);
+      }
+      return cum;
+    }
     function pointOnPath(path, prog) {
       if (!path.length) return null;
       if (prog <= 0) return {lat:path[0][0], lng:path[0][1]};
       if (prog >= 1) return {lat:path[path.length-1][0], lng:path[path.length-1][1]};
       // Arc-length interpolation so long highway legs crawl evenly (not by vertex index).
-      const lens = [];
-      let total = 0;
-      for (let i = 1; i < path.length; i++) {
-        const a = path[i - 1], b = path[i];
-        const d = haversineKm(a[0], a[1], b[0], b[1]);
-        lens.push(d);
-        total += d;
-      }
-      if (total <= 1e-6) {
+      const cum = pathCumMiles(path);
+      const total = cum[cum.length - 1] || 0;
+      if (total <= 1e-9) {
         const ex = prog * (path.length - 1), idx = Math.floor(ex), frac = ex - idx;
         const a = path[idx], b = path[Math.min(idx + 1, path.length - 1)];
         return { lat: lerp(a[0], b[0], frac), lng: lerp(a[1], b[1], frac) };
       }
       let target = prog * total;
-      for (let i = 0; i < lens.length; i++) {
-        if (target <= lens[i] || i === lens.length - 1) {
-          const frac = lens[i] > 0 ? Math.min(1, target / lens[i]) : 0;
-          const a = path[i], b = path[i + 1];
+      for (let i = 1; i < path.length; i++) {
+        if (target <= cum[i] || i === path.length - 1) {
+          const segLen = cum[i] - cum[i - 1];
+          const frac = segLen > 0 ? Math.min(1, (target - cum[i - 1]) / segLen) : 0;
+          const a = path[i - 1], b = path[i];
           return { lat: lerp(a[0], b[0], frac), lng: lerp(a[1], b[1], frac) };
         }
-        target -= lens[i];
       }
       const last = path[path.length - 1];
       return { lat: last[0], lng: last[1] };
@@ -1100,8 +1109,9 @@
         const stop = stops[state.stopIndex ?? 0];
         showMemoryOnMap({
           ...state,
-          lat: state.photo_lat ?? state.lat ?? stop?.lat,
-          lng: state.photo_lng ?? state.lng ?? stop?.lng,
+          // Pin rides with the car on the corridor so photo never appears "behind" the vehicle.
+          lat: state.lat ?? stop?.lat,
+          lng: state.lng ?? stop?.lng,
           datetime: stop?.datetime || state.datetime,
           album: state.album || stop?.album || '',
           label: state.label || shortLabel(stop?.location || ''),
@@ -1189,11 +1199,31 @@
     }
 
     // ── Select trip ──
+    const thumbCache = new Map();
+    function preloadTripThumbs(trip) {
+      if (!trip) return;
+      const urls = new Set();
+      (trip.photos || []).forEach(p => {
+        if (p.thumb) urls.add(photoThumbUrl(p.thumb));
+      });
+      (trip.playback?.segments || []).forEach(s => {
+        if ((s.type === 'memory' || s.is_photo) && s.thumb) urls.add(photoThumbUrl(s.thumb));
+      });
+      urls.forEach(src => {
+        if (!src || thumbCache.has(src)) return;
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = src;
+        thumbCache.set(src, img);
+      });
+    }
+
     function selectTrip(id) {
       if (selectedId === id && id !== 'all') {
         // Re-clicking the same trip should feel instant — just refit, don't rebuild layers.
         resetVisuals(); drawStops(); updateHero(); fitTrip();
         updateDockIdle();
+        preloadTripThumbs(activeTrip());
         return;
       }
       selectedId=id;
@@ -1217,6 +1247,7 @@
       updateDockIdle();
       updateAtlasCta();
       updateQueueBadge();
+      preloadTripThumbs(activeTrip());
       if (id === 'all') {
         applyEraFilter();
       } else {

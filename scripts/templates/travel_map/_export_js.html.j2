@@ -208,13 +208,16 @@
         ctx.restore();
       }
 
-      // Memory photo frame (baked into the recording)
+      // Memory photo frame — anchored on the car (same lat/lng as vehicle)
       if (state && state.phase === 'memory' && state.thumb) {
         const src = (typeof photoThumbUrl === 'function') ? photoThumbUrl(state.thumb) : state.thumb;
         preloadExportMemory(src);
-        const pinLng = state.photo_lng != null ? state.photo_lng : state.lng;
-        const pinLat = state.photo_lat != null ? state.photo_lat : state.lat;
-        if (pinLng != null && exportMemoryImg && exportMemoryImg.complete) {
+        const cached = (typeof thumbCache !== 'undefined') ? thumbCache.get(src) : null;
+        const img = (cached && cached.complete && cached.naturalWidth) ? cached
+          : (exportMemoryImg && exportMemoryImg.complete ? exportMemoryImg : null);
+        const pinLng = state.lng;
+        const pinLat = state.lat;
+        if (pinLng != null && img) {
           const pt = map.project([pinLng, pinLat]);
           const scale = mapCanvas.width / Math.max(1, mapCanvas.clientWidth);
           const fw = Math.min(w * 0.42, 220 * scale);
@@ -228,7 +231,7 @@
           roundRect(ctx, x - 6 * scale, y - 6 * scale, fw + 12 * scale, fh + 36 * scale, 10 * scale);
           ctx.fill();
           ctx.stroke();
-          ctx.drawImage(exportMemoryImg, x, y, fw, fh);
+          ctx.drawImage(img, x, y, fw, fh);
           ctx.fillStyle = '#fff';
           ctx.font = `600 ${Math.round(13 * scale)}px system-ui,sans-serif`;
           ctx.fillText(String(state.album || 'Memory').slice(0, 28), x, y + fh + 18 * scale);
@@ -364,7 +367,15 @@
       resetVisuals();
       drawStops();
       fitTrip(false);
-      await new Promise(r => setTimeout(r, 900));
+      preloadTripThumbs(trip);
+      // Wait for memory thumbs so export never shows car-ahead / blank-image lag
+      await Promise.race([
+        Promise.all(
+          [...thumbCache.values()].map(img => img.decode?.().catch(() => {}) || Promise.resolve())
+        ),
+        new Promise(r => setTimeout(r, 2500)),
+      ]);
+      await new Promise(r => setTimeout(r, 400));
 
       document.body.classList.add('cinema-mode', 'portrait-export');
       map.resize();
