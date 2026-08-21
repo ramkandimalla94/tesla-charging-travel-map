@@ -38,7 +38,20 @@ Destination constellation, year era filter, snappier dwell + dock %, a11y 44px c
 2. **9:16 safe margins** — portrait title in upper third; caption plate mid-lower
 3. **Export chrome hide** — CTA/memory/dock/timeline fully suppressed in cinema-mode
 4. **Export JS partial** — `travel_map/_export_js.html.j2`
+5. **Caption pacing** — travel captions only at segment edges; dwell POIs after settle-in; DOM-diff overlay
+
+## Sprint 3 DoD (ready for review)
+
+- [x] Atlas declutter: hubs + dest stars (no per-trip stop soup)
+- [x] Memory reel + Pause; featured CTA; spokes + corridor banding
+- [x] Era filter chips work and are discoverable
+- [x] Watch mode collapses panel; Esc returns to atlas
+- [x] Epic queue Loop state + dock badge `i/n`
+- [x] Mobile 390×844 sheet + grab + 44px toggle (`verify_map`)
+- [x] `verify_map.py` green (desktop + mobile + cinema framing)
+- [x] README live URL + screenshot gallery current
+- [ ] Human review of PR #15 / merge to `main` (Pages deploy)
 
 ## Later
 
-Further share polish; caption pacing per dwell.
+Further share polish (optional dwell caption copy from trip story).

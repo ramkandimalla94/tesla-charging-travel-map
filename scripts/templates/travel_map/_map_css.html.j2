@@ -640,6 +640,13 @@
       opacity: 0; transition: opacity 0.6s ease;
     }
     .story-overlay.visible { opacity: 1; }
+    .story-overlay.travel { opacity: 0.88; }
+    .story-overlay.approaching .story-caption {
+      border-color: rgba(94,234,212,0.28);
+    }
+    .story-overlay.dwell .story-caption {
+      background: rgba(8,10,16,0.72);
+    }
     .story-caption {
       font-family: var(--font-display); font-size: clamp(16px, 2.8vw, 22px); font-weight: 800;
       letter-spacing: -0.02em; line-height: 1.35;

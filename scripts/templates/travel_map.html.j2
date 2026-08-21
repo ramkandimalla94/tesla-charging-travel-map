@@ -662,55 +662,79 @@
       document.getElementById('hud-text').textContent = state.label || '';
     }
 
+    let storyOverlayKey = '';
     function updateStoryOverlay(state) {
       const overlay = document.getElementById('story-overlay');
       const captionEl = document.getElementById('story-caption');
       const subEl = document.getElementById('story-sub');
       const poisEl = document.getElementById('story-pois');
-      if (!state || !isSingleTrip()) {
-        overlay.classList.remove('visible');
-        return;
-      }
-      const show = isPlaying || isRecording;
-      if (!show) { overlay.classList.remove('visible'); return; }
+      if (!overlay) return;
 
-      if (state.phase === 'intro') {
-        overlay.classList.add('visible');
-        captionEl.textContent = state.label || activeTrip()?.name || '';
-        subEl.textContent = state.caption || '';
-        poisEl.innerHTML = (state.highlights || []).map(h =>
-          `<span class="story-poi-chip">${h}</span>`
-        ).join('');
-        return;
+      let next = { visible: false, mode: '', caption: '', sub: '', pois: '' };
+
+      if (state && isSingleTrip() && (isPlaying || isRecording)) {
+        if (state.phase === 'intro') {
+          next = {
+            visible: true, mode: 'intro',
+            caption: state.label || activeTrip()?.name || '',
+            sub: state.caption || '',
+            pois: (state.highlights || []).map(h => `<span class="story-poi-chip">${h}</span>`).join(''),
+          };
+        } else if (state.phase === 'outro') {
+          const vc = state.visitedCount || 0;
+          const nc = state.nearbyCount || 0;
+          next = {
+            visible: true, mode: 'outro',
+            caption: 'Journey Complete',
+            sub: state.caption || '',
+            pois: nc
+              ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
+              : '',
+          };
+        } else if (state.phase === 'dwell' && (state.caption || state.pois?.length || state.label)) {
+          // Hold dwell captions; reveal POI chips after a short settle-in beat
+          const frac = state.frac || 0;
+          const poisHtml = frac >= 0.14
+            ? (state.pois || []).map(p =>
+                `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
+              ).join('')
+            : '';
+          next = {
+            visible: true, mode: 'dwell',
+            caption: state.caption || `Charging · ${state.label}`,
+            sub: state.subcaption || '',
+            pois: poisHtml,
+          };
+        } else if (state.phase === 'travel') {
+          // Pace travel captions: only at segment start / approach — avoid mid-drive spam
+          const frac = state.frac || 0;
+          if (frac <= 0.1) {
+            next = {
+              visible: true, mode: 'travel',
+              caption: `En route · ${state.label || 'next stop'}`,
+              sub: '', pois: '',
+            };
+          } else if (frac >= 0.78) {
+            next = {
+              visible: true, mode: 'travel approaching',
+              caption: `Approaching ${state.label || 'next stop'}`,
+              sub: '', pois: '',
+            };
+          }
+        }
       }
-      if (state.phase === 'outro') {
-        overlay.classList.add('visible');
-        captionEl.textContent = 'Journey Complete';
-        subEl.textContent = state.caption || '';
-        const vc = state.visitedCount || 0;
-        const nc = state.nearbyCount || 0;
-        poisEl.innerHTML = nc
-          ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
-          : '';
-        return;
-      }
-      if (state.phase === 'dwell' && (state.caption || state.pois?.length)) {
-        overlay.classList.add('visible');
-        captionEl.textContent = state.caption || `Charging · ${state.label}`;
-        subEl.textContent = state.subcaption || '';
-        poisEl.innerHTML = (state.pois || []).map(p =>
-          `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
-        ).join('');
-        return;
-      }
-      if (state.phase === 'travel') {
-        overlay.classList.add('visible');
-        captionEl.textContent = `Driving to ${state.label || 'next stop'}`;
-        subEl.textContent = '';
-        poisEl.innerHTML = '';
-        return;
-      }
-      overlay.classList.remove('visible');
+
+      const key = `${next.visible}|${next.mode}|${next.caption}|${next.sub}|${next.pois}`;
+      if (key === storyOverlayKey) return;
+      storyOverlayKey = key;
+
+      overlay.classList.toggle('visible', next.visible);
+      overlay.classList.toggle('dwell', next.mode === 'dwell');
+      overlay.classList.toggle('travel', next.mode.startsWith('travel'));
+      overlay.classList.toggle('approaching', next.mode.includes('approaching'));
+      if (captionEl) captionEl.textContent = next.caption;
+      if (subEl) subEl.textContent = next.sub;
+      if (poisEl) poisEl.innerHTML = next.pois;
     }
 
     function clearPoiMarkers() {
