@@ -172,17 +172,19 @@
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(mapCanvas, 0, 0, w, h);
 
-      // Soft vignette for cinema feel
-      const grd = ctx.createLinearGradient(0, 0, 0, h);
-      grd.addColorStop(0, 'rgba(0,0,0,0.35)');
-      grd.addColorStop(0.18, 'rgba(0,0,0,0)');
-      grd.addColorStop(0.72, 'rgba(0,0,0,0)');
-      grd.addColorStop(1, 'rgba(0,0,0,0.45)');
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, w, h);
+      // Soft vignette for cinema feel (skip during solid title cards)
+      if (!exportTitlePhase) {
+        const grd = ctx.createLinearGradient(0, 0, 0, h);
+        grd.addColorStop(0, 'rgba(0,0,0,0.35)');
+        grd.addColorStop(0.18, 'rgba(0,0,0,0)');
+        grd.addColorStop(0.72, 'rgba(0,0,0,0)');
+        grd.addColorStop(1, 'rgba(0,0,0,0.45)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+      }
 
       // Vehicle chevron at projected map position
-      if (state && state.lat != null && state.lng != null
+      if (!exportTitlePhase && state && state.lat != null && state.lng != null
           && state.phase !== 'intro' && state.phase !== 'outro') {
         const pt = map.project([state.lng, state.lat]);
         const scale = mapCanvas.width / Math.max(1, mapCanvas.clientWidth);
@@ -193,13 +195,13 @@
         ctx.translate(x, y);
         ctx.rotate((bearing * Math.PI) / 180);
         ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-        ctx.lineWidth = 2 * scale;
+        ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+        ctx.lineWidth = 3 * scale;
         ctx.beginPath();
-        ctx.moveTo(0, -10 * scale);
-        ctx.lineTo(7 * scale, 9 * scale);
-        ctx.lineTo(0, 5 * scale);
-        ctx.lineTo(-7 * scale, 9 * scale);
+        ctx.moveTo(0, -16 * scale);
+        ctx.lineTo(11 * scale, 14 * scale);
+        ctx.lineTo(0, 8 * scale);
+        ctx.lineTo(-11 * scale, 14 * scale);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -260,34 +262,59 @@
         }
       }
 
-      // Title cards drawn onto the recorded canvas (DOM titles never appear in GL capture)
+      // Title cards — solid plate so text never ghosts over the map
       if (exportTitlePhase) {
         const trip = activeTrip();
         ctx.save();
-        ctx.fillStyle = 'rgba(6,12,10,0.55)';
+        ctx.fillStyle = '#0a1210';
         ctx.fillRect(0, 0, w, h);
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#f7faf7';
+        ctx.textBaseline = 'middle';
         const scale = mapCanvas.width / Math.max(1, mapCanvas.clientWidth);
         if (exportTitlePhase === 'outro') {
-          ctx.font = `600 ${Math.round(34 * scale)}px Georgia,serif`;
+          ctx.fillStyle = '#f7faf7';
+          ctx.font = `600 ${Math.round(36 * scale)}px Georgia,serif`;
           ctx.fillText('Journey Complete', w / 2, h * 0.42);
           if (trip) {
             ctx.font = `400 ${Math.round(16 * scale)}px system-ui,sans-serif`;
             ctx.fillStyle = 'rgba(220,230,224,0.9)';
             ctx.fillText(
               `${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} places · ${trip.duration_days}d`,
-              w / 2, h * 0.42 + 36 * scale
+              w / 2, h * 0.42 + 40 * scale
             );
           }
         } else if (trip) {
-          ctx.font = `600 ${Math.round(28 * scale)}px Georgia,serif`;
-          wrapCanvasText(ctx, trip.name || 'My Mile Diary', w / 2, h * 0.38, w * 0.82, 34 * scale);
+          const raw = String(trip.name || 'My Mile Diary');
+          // Prefer clean two-line title: "Sep 2025 — Addison → Colorado" / crew
+          const parts = raw.split(/\s·\s/);
+          const main = parts[0] || raw;
+          const crew = parts.slice(1).join(' · ');
+          ctx.fillStyle = '#f7faf7';
+          ctx.font = `600 ${Math.round(30 * scale)}px Georgia,serif`;
+          const lines = [];
+          if (ctx.measureText(main).width > w * 0.86 && main.includes('—')) {
+            const [a, b] = main.split('—').map(s => s.trim());
+            lines.push(a + ' —');
+            lines.push(b);
+          } else {
+            lines.push(main);
+          }
+          let yy = h * 0.36;
+          lines.forEach((ln, i) => {
+            ctx.fillText(ln, w / 2, yy + i * 36 * scale);
+          });
+          yy += lines.length * 36 * scale + 10 * scale;
+          if (crew) {
+            ctx.font = `500 ${Math.round(16 * scale)}px system-ui,sans-serif`;
+            ctx.fillStyle = 'rgba(180,210,190,0.95)';
+            ctx.fillText(crew, w / 2, yy);
+            yy += 28 * scale;
+          }
           ctx.font = `400 ${Math.round(15 * scale)}px system-ui,sans-serif`;
           ctx.fillStyle = 'rgba(220,230,224,0.9)';
           ctx.fillText(
             `${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} places · ${trip.duration_days}d`,
-            w / 2, h * 0.38 + 64 * scale
+            w / 2, yy + 8 * scale
           );
         }
         ctx.restore();

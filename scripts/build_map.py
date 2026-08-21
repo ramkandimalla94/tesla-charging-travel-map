@@ -41,12 +41,12 @@ MIN_ROUTE_MILES = 0.3
 ROUTE_FETCH_DELAY_S = 0.25
 WALK_SPUR_MILES = 18.0
 # Playback: photos are memories on the charge corridor — never route vertices.
-MAX_PLAYBACK_MEMORIES = 12
+MAX_PLAYBACK_MEMORIES = 8
 PHOTO_CLUSTER_MI = 3.5
 PHOTO_CLUSTER_GAP_S = 40 * 60
 MEMORY_ROUTE_SNAP_MI = 45.0  # if farther, still show card but keep car on corridor
-PLAYBACK_TARGET_MIN_MS = 36_000
-PLAYBACK_TARGET_MAX_MS = 110_000
+PLAYBACK_TARGET_MIN_MS = 40_000
+PLAYBACK_TARGET_MAX_MS = 120_000
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -407,13 +407,13 @@ def _renormalize_segment_durations(
     raw = sum(max(1, int(s.get("duration_ms") or 0)) for s in body) or 1
     scale = body_budget / raw
     floors = {
-        "dwell": 700,
-        "travel": 1_200,
-        "memory": 1_800,
+        "dwell": 750,
+        "travel": 1_600,
+        "memory": 2_400,
     }
     ceilings = {
-        "dwell": 1_600,
-        "travel": 9_000,
+        "dwell": 1_500,
+        "travel": 10_000,
         "memory": 3_200,
     }
     for s in body:
@@ -421,20 +421,37 @@ def _renormalize_segment_durations(
         dur = int(s["duration_ms"] * scale)
         lo = floors.get(kind, 800)
         hi = ceilings.get(kind, 8_000)
-        # Long drives keep more time even after scale
-        if kind == "travel" and (s.get("leg_miles") or 0) > 180:
-            lo = max(lo, 2_200)
+        miles = float(s.get("leg_miles") or 0)
+        if kind == "travel":
+            if miles > 250:
+                lo = max(lo, 3_200)
+            elif miles > 120:
+                lo = max(lo, 2_400)
+            elif miles > 60:
+                lo = max(lo, 1_900)
         s["duration_ms"] = int(max(lo, min(hi, dur)))
 
-    # Second pass: if still over budget, shrink travels first, then dwells, keep memories readable
+    # Second pass: if still over budget, shrink short travels first; protect long drives
     total = sum(s["duration_ms"] for s in body)
     if total > body_budget * 1.02:
         overflow = total - body_budget
         travels = [s for s in body if s["type"] == "travel"]
-        travel_pool = sum(max(0, s["duration_ms"] - floors["travel"]) for s in travels) or 1
-        for s in travels:
-            cut = overflow * (max(0, s["duration_ms"] - floors["travel"]) / travel_pool)
-            s["duration_ms"] = int(max(floors["travel"], s["duration_ms"] - cut))
+
+        def travel_floor(s: dict) -> int:
+            miles = float(s.get("leg_miles") or 0)
+            if miles > 250:
+                return 3_000
+            if miles > 120:
+                return 2_200
+            if miles > 60:
+                return 1_800
+            return floors["travel"]
+
+        soft = [s for s in travels if s["duration_ms"] > travel_floor(s)]
+        pool = sum(max(0, s["duration_ms"] - travel_floor(s)) for s in soft) or 1
+        for s in soft:
+            cut = overflow * (max(0, s["duration_ms"] - travel_floor(s)) / pool)
+            s["duration_ms"] = int(max(travel_floor(s), s["duration_ms"] - cut))
     return body
 
 
@@ -982,9 +999,13 @@ def build_playback_timeline(
 
     n_road = len(road)
     n_mem = sum(len(b) for b in leg_memories)
+    road_miles = sum(float(leg.get("miles") or 0) for leg in legs)
     target_ms = min(
         PLAYBACK_TARGET_MAX_MS,
-        max(PLAYBACK_TARGET_MIN_MS, n_road * 2_600 + n_mem * 2_000),
+        max(
+            PLAYBACK_TARGET_MIN_MS,
+            int(n_road * 3_000 + n_mem * 2_400 + road_miles * 6),
+        ),
     )
     intro_ms, outro_ms = 2_000, 2_400
 
@@ -1064,7 +1085,7 @@ def build_playback_timeline(
             album = mem.get("album") or "memory"
             body.append({
                 "type": "memory",
-                "duration_ms": 2_400 if mem.get("on_corridor", True) else 2_000,
+                "duration_ms": 2_800 if mem.get("on_corridor", True) else 2_200,
                 "lat": route_lat if route_lat is not None else mem["lat"],
                 "lng": route_lng if route_lng is not None else mem["lng"],
                 "photo_lat": mem["lat"],
