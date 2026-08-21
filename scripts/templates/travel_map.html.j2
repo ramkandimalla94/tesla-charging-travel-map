@@ -96,6 +96,7 @@
     <div class="cinema-highlights" id="cinema-highlights"></div>
   </div>
   <div class="export-status" id="export-status">Recording…</div>
+  <div class="share-toast" id="share-toast" role="status" aria-live="polite"></div>
 
   <button class="panel-toggle" id="sidebar-toggle" title="Toggle trips panel" aria-label="Toggle panel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
@@ -194,6 +195,9 @@
         <button class="icon-btn export" id="btn-export" disabled title="Export video">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
           Export
+        </button>
+        <button class="icon-btn share" id="btn-share" disabled title="Copy share blurb" aria-label="Copy share text">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
         </button>
       </div>
     </div>
@@ -1004,6 +1008,7 @@
       updateMapLegend(activeTrip());
       document.getElementById('btn-play').disabled = !isSingleTrip();
       document.getElementById('btn-export').disabled = !isSingleTrip();
+      document.getElementById('btn-share').disabled = !isSingleTrip();
       updateDockIdle();
       updateAtlasCta();
       updateQueueBadge();
@@ -1151,6 +1156,7 @@
     });
 
     document.getElementById('btn-export').addEventListener('click', exportTripVideo);
+    document.getElementById('btn-share')?.addEventListener('click', shareTripBlurb);
     document.getElementById('onboard-featured').addEventListener('click', startWithFeatured);
     document.getElementById('onboard-dismiss').addEventListener('click', dismissOnboarding);
     document.getElementById('onboarding').addEventListener('click', e=>{

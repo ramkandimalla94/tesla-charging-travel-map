@@ -1,4 +1,43 @@
 {# Instagram 9:16 export — title hold, outro card, chrome-free canvas #}
+    function tripShareBlurb(trip) {
+      if (!trip) return '';
+      const story = trip.story || {};
+      if (story.share_blurb) return story.share_blurb;
+      return (
+        `${trip.name} — ${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days}d\n` +
+        'Relive it: https://ramkandimalla94.github.io/tesla-charging-travel-map/'
+      );
+    }
+
+    function showShareToast(msg) {
+      const toast = document.getElementById('share-toast');
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.add('visible');
+      clearTimeout(showShareToast._t);
+      showShareToast._t = setTimeout(() => toast.classList.remove('visible'), 2600);
+    }
+
+    async function shareTripBlurb() {
+      if (!isSingleTrip()) {
+        showShareToast('Select a trip to share');
+        return;
+      }
+      const trip = activeTrip();
+      const text = tripShareBlurb(trip);
+      try {
+        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+        else {
+          const ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); ta.remove();
+        }
+        showShareToast('Share blurb copied — paste anywhere');
+      } catch (_) {
+        showShareToast('Could not copy — try Export instead');
+      }
+    }
+
     function showExportTitleCard(trip, phase) {
       const title = document.getElementById('cinema-title');
       if (!title || !trip) return;
@@ -72,6 +111,7 @@
         document.getElementById('story-overlay')?.classList.remove('visible');
         map.resize();
         fitTrip(false);
+        showShareToast('Video saved — Share copies a caption with the live link');
       };
 
       isRecording = true;

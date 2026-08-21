@@ -353,6 +353,23 @@ def main() -> int:
         )
         print(f"Export cinema: {cinema}")
 
+        # Share blurb button
+        share_state = page.evaluate(
+            """() => {
+              const btn = document.getElementById('btn-share');
+              const trip = activeTrip();
+              const blurb = typeof tripShareBlurb === 'function' ? tripShareBlurb(trip) : '';
+              return {
+                btn: !!btn,
+                enabled: btn && !btn.disabled,
+                hasBlurb: blurb.includes('Relive it:') && blurb.includes('tesla-charging-travel-map'),
+                hasStoryShare: !!(trip?.story?.share_blurb),
+                sampleCaption: trip?.playback?.segments?.find(s => s.type === 'dwell')?.caption || '',
+              };
+            }"""
+        )
+        print(f"Share blurb: {share_state}")
+
         browser.close()
 
     critical_errors = [
@@ -462,6 +479,12 @@ def main() -> int:
         ok = False
     if not cinema.get("portraitish"):
         print(f"FAIL: Map frame not portrait-ish for export: {cinema}")
+        ok = False
+    if not share_state.get("btn") or not share_state.get("enabled"):
+        print(f"FAIL: Share button missing/disabled on trip: {share_state}")
+        ok = False
+    if not share_state.get("hasBlurb"):
+        print(f"FAIL: Share blurb missing live URL: {share_state}")
         ok = False
     if story_pacing.get("ok"):
         if story_pacing.get("midTravelVisible"):
