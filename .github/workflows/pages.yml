@@ -64,11 +64,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # build_map.py may rewrite routes_cache / trips.geojson in the worktree.
           # Preserve the built site, then reset so checkout to gh-pages can proceed.
           mkdir -p /tmp/pages-deploy
           cp output/index.html /tmp/pages-deploy/index.html
           test -s /tmp/pages-deploy/index.html
+          if [ -d output/photos ]; then
+            rm -rf /tmp/pages-deploy/photos
+            cp -a output/photos /tmp/pages-deploy/photos
+          fi
 
           git reset --hard HEAD
           git clean -fd
@@ -77,6 +80,11 @@ jobs:
 
           cp /tmp/pages-deploy/index.html index.html
           git add index.html
+          if [ -d /tmp/pages-deploy/photos ]; then
+            rm -rf photos
+            cp -a /tmp/pages-deploy/photos photos
+            git add -A photos
+          fi
           if git diff --staged --quiet; then
             echo "No site changes to deploy"
           else

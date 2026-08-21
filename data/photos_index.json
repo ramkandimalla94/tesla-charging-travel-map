@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-08-21T16:48:03.438918+00:00",
+  "photo_count": 3,
+  "skipped_no_gps": 0,
+  "errors": 0,
+  "photos": [
+    {
+      "id": "aspen_overlook_cfa71bb40c0d",
+      "album": "colorado",
+      "source_name": "aspen_overlook.jpg",
+      "lat": 39.1911,
+      "lng": -106.8175,
+      "captured_at": "2024-07-01T18:20:00+00:00",
+      "thumb": "photos/thumbs/colorado/aspen_overlook_cfa71bb40c0d.jpg"
+    },
+    {
+      "id": "maroon_bells_trail_dcdea58ad3dc",
+      "album": "colorado",
+      "source_name": "maroon_bells_trail.jpg",
+      "lat": 39.0685,
+      "lng": -106.9801,
+      "captured_at": "2024-07-02T14:10:00+00:00",
+      "thumb": "photos/thumbs/colorado/maroon_bells_trail_dcdea58ad3dc.jpg"
+    },
+    {
+      "id": "maroon_bells_lake_ef36d0c5abe8",
+      "album": "colorado",
+      "source_name": "maroon_bells_lake.jpg",
+      "lat": 39.0708,
+      "lng": -106.9878,
+      "captured_at": "2024-07-02T15:42:00+00:00",
+      "thumb": "photos/thumbs/colorado/maroon_bells_lake_ef36d0c5abe8.jpg"
+    }
+  ]
+}

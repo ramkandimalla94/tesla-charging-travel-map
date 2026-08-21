@@ -162,11 +162,7 @@
       });
       if (selectedId !== 'all') return;
       if (id) {
-        // User browsing — pause reel highlight takeover
-        document.getElementById('memory-badge')?.classList.remove('visible');
-      } else if (!memoryPaused && memoryTimer) {
-        const list = memoryPlaylist();
-        const trip = list[memoryIndex % Math.max(list.length, 1)];
+        const trip = TRIPS.find(t => t.id === id);
         if (trip) showMemoryHighlight(trip);
       }
       if (hoverRaf) cancelAnimationFrame(hoverRaf);
@@ -292,25 +288,26 @@
 
     function drawStops() {
       stopMarkers.forEach(m => m.remove()); stopMarkers = [];
+      clearPhotoPins();
       clearHubMarkers();
       clearDestMarkers();
       const single = isSingleTrip();
       if (!single) {
         drawAtlasMarkers();
+        drawPhotoPins();
         applyIdleStopVisuals();
         return;
       }
       activeTrips().forEach(trip => {
-        const lastIdx = trip.stops.length - 1;
-        const indices = trip.stops.map((_, i) => i);
-        const sameHome = isSameHomeTrip(trip);
-        const startLngLat = sameHome ? endpointLngLat(trip, true, false, null) : null;
-        const endLngLat = sameHome ? endpointLngLat(trip, false, true, startLngLat) : null;
+        const roadStops = trip.stops.filter(s => !(s.is_photo || s.kind === 'photo'));
+        const lastIdx = roadStops.length - 1;
+        const sameHome = isSameHomeTrip({ ...trip, stops: roadStops });
+        const startLngLat = sameHome && roadStops.length ? endpointLngLat({ ...trip, stops: roadStops }, true, false, null) : null;
+        const endLngLat = sameHome && roadStops.length ? endpointLngLat({ ...trip, stops: roadStops }, false, true, startLngLat) : null;
         const homeGeoSep = (startLngLat && endLngLat)
           ? Math.hypot(endLngLat[0] - startLngLat[0], endLngLat[1] - startLngLat[1])
           : null;
-        indices.forEach(i => {
-          const s = trip.stops[i];
+        roadStops.forEach((s, i) => {
           const wrap = document.createElement('div');
           wrap.className = 'beacon-wrap';
           const isStart = i === 0;
@@ -349,6 +346,88 @@
           stopMarkers.push(m);
         });
       });
+      drawPhotoPins();
       applyIdleStopVisuals();
+    }
+
+    let photoMarkers = [];
+    function clearPhotoPins() {
+      photoMarkers.forEach(m => m.remove());
+      photoMarkers = [];
+      hidePhotoHover();
+    }
+
+    function photoThumbUrl(thumb) {
+      if (!thumb) return '';
+      if (thumb.startsWith('http') || thumb.startsWith('data:')) return thumb;
+      // travel_map.html is under /output/; Pages serves index.html at root with photos/ beside it
+      const base = location.pathname.includes('/output/') ? '../' : '';
+      return base + thumb.replace(/^\//, '');
+    }
+
+    function showPhotoHover(photo, x, y) {
+      const card = document.getElementById('photo-hover');
+      if (!card || !photo?.thumb) return;
+      const img = document.getElementById('photo-hover-img');
+      img.src = photoThumbUrl(photo.thumb);
+      document.getElementById('photo-hover-title').textContent =
+        (photo.album ? photo.album : 'Memory');
+      const when = photo.datetime
+        ? new Date(photo.datetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+        : '';
+      document.getElementById('photo-hover-meta').textContent = when;
+      card.style.left = Math.min(window.innerWidth - 180, Math.max(8, x + 16)) + 'px';
+      card.style.top = Math.min(window.innerHeight - 180, Math.max(8, y - 40)) + 'px';
+      card.classList.add('visible');
+    }
+
+    function hidePhotoHover() {
+      document.getElementById('photo-hover')?.classList.remove('visible');
+    }
+
+    function drawPhotoPins() {
+      clearPhotoPins();
+      const trips = isSingleTrip() ? activeTrips() : TRIPS.filter(t => tripInEra(t));
+      const seen = new Set();
+      trips.forEach(trip => {
+        (trip.photos || []).forEach(photo => {
+          if (!photo?.lat || !photo?.lng || !photo.thumb) return;
+          const key = photo.id || `${photo.lat},${photo.lng},${photo.thumb}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          const el = document.createElement('div');
+          el.className = 'photo-pin';
+          const img = document.createElement('img');
+          img.src = photoThumbUrl(photo.thumb);
+          img.alt = photo.album || 'Photo';
+          el.appendChild(img);
+          el.addEventListener('mouseenter', (ev) => showPhotoHover(photo, ev.clientX, ev.clientY));
+          el.addEventListener('mousemove', (ev) => showPhotoHover(photo, ev.clientX, ev.clientY));
+          el.addEventListener('mouseleave', hidePhotoHover);
+          const m = new mapboxgl.Marker({ element: el, anchor: 'center' })
+            .setLngLat([photo.lng, photo.lat])
+            .addTo(map);
+          photoMarkers.push(m);
+        });
+      });
+    }
+
+    function renderFilmstrip(photos) {
+      const strip = document.getElementById('trip-filmstrip');
+      if (!strip) return;
+      strip.innerHTML = '';
+      (photos || []).slice(0, 24).forEach(photo => {
+        if (!photo.thumb) return;
+        const img = document.createElement('img');
+        img.src = photoThumbUrl(photo.thumb);
+        img.alt = photo.album || 'Photo';
+        img.title = photo.album || 'Memory';
+        img.addEventListener('mouseenter', () => {
+          if (map && photo.lng != null) {
+            map.easeTo({ center: [photo.lng, photo.lat], duration: 600 });
+          }
+        });
+        strip.appendChild(img);
+      });
     }
 

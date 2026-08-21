@@ -1,36 +1,36 @@
-# Tesla Charging Travel Map
+# My Mile Diary
 
-Turn your Tesla Supercharger history into **Instagram-ready trip videos** — cinematic 3D satellite replay with time-accurate pacing, location labels, and one-click export.
+A personal **travel diary** on a 3D satellite map — replay road trips, enrich paths with Apple Photos GPS, and hover memories along the route.
 
 ![Overview](docs/screenshots/01-overview.png)
 
 ## Live demo
 
-**https://ramkandimalla94.github.io/tesla-charging-travel-map/**
+**https://ramkandimalla94.github.io/mymilediary/**
 
-Opens the map immediately — the Mapbox **public** token (`pk.…`) is baked into the Pages build as base64 (decoded in the browser) so GitHub push protection does not block `gh-pages` deploys. Do not use a secret `sk.…` token.
+> **Rename step:** In GitHub → Settings → General, rename the repository to `mymilediary` so this Pages URL resolves. Until then the old Pages path may still be active.
 
-Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/pages.yml`) and publishes to the `gh-pages` branch. The URL above stays the same; the map content updates after a successful deploy.
+The Mapbox **public** token (`pk.…`) is baked into the Pages build as base64 (decoded in the browser) so GitHub push protection does not block `gh-pages` deploys. Do not use a secret `sk.…` token.
+
+Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/pages.yml`) and publishes to the `gh-pages` branch (HTML + photo thumbs).
 
 ## Features
 
-- **Atlas overview** — home hubs + destination constellation + hub→destination spokes with zoom-aware corridor banding (hot band on memory reel / hover); destination-grouped trip list
-- **Memory reel** — atlas quietly cycles featured journeys until you pick one (Pause anytime); Loop cycles epics when queued (dock shows `Epic queue · i/n`)
-- **Year era filter** — labeled Era chips on the journey timeline isolate atlas chapters by year
+- **Atlas overview** — home hubs + destination constellation + corridor spokes; destination-grouped trip list
+- **Featured journey CTA** — one clear “open a journey” action on the atlas (no mystery auto-reel)
+- **Photo memories** — dump albums into `data/photos/<album>/`; EXIF GPS + time enrich the trip path to the **exact** photo location (hike destinations included); hover shows thumbnail previews
+- **Year era filter** — isolate diary chapters by year
 - **3D satellite map** with Mapbox terrain and elevated route lines
-- **Cinematic watch mode** — Play hides chrome for a passenger-seat replay (Export still uses 9:16 cinema)
-- **Time-accurate playback** — overnight halts pace charging beats without long freezes; dwell progress in the dock
-- **Location labels on map** — city/state names appear at each stop during replay
-- **Instagram video export** — one-click `.webm` with intro/outro title cards and 9:16 safe margins
-- **Share blurb** — Share uses the system sheet when available, otherwise copies a caption + live demo link; prompted after a replay finishes (toast stays clickable ~8s; Esc dismisses)
-- **Works for any Tesla owner** — drop in your CSV exports; home base auto-detected (or override via config)
-- Trip segmentation, timeline scrubber, director camera, night mode, GPX export
+- **Watch mode** — Play hides chrome for a passenger-seat replay
+- **Time-accurate playback** — overnight halts pace without long freezes
+- **Location labels** — city/state names during replay
+- **Video export** — one-click `.webm` with intro/outro title cards (9:16)
 
 ## Quick start (local)
 
 ```bash
-git clone https://github.com/ramkandimalla94/tesla-charging-travel-map.git
-cd tesla-charging-travel-map
+git clone https://github.com/ramkandimalla94/mymilediary.git
+cd mymilediary
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
@@ -42,9 +42,9 @@ python -m http.server 8765
 open http://127.0.0.1:8765/output/travel_map.html
 ```
 
-### Full pipeline (your own Tesla CSV exports)
+### Trip history (CSV backbone)
 
-Place exports in the project root (`Tesla_Charging_History_*.csv`) or in `data/imports/`:
+Place travel/charging history CSV exports in the project root or `data/imports/`, then:
 
 ```bash
 python scripts/merge_csvs.py
@@ -53,81 +53,55 @@ python scripts/segment_trips.py
 python scripts/build_map.py
 ```
 
-Optional: copy `data/owner_config.json.example` → `data/owner_config.json` to pin your home base if auto-detection isn't right. You can also set `story_overrides` (by trip id / id prefix / name) to customize intro, outro, share blurb, or individual stop captions.
+Optional: copy `data/owner_config.json.example` → `data/owner_config.json` to pin home bases.
 
-### Export a trip video for Instagram
+### Apple Photos → path enrichment
 
-1. Select any trip from the sidebar (try **Epic Road Trips** for long journeys)
-2. Click **🎥 Export** — enters cinema mode and records the replay
-3. A `.webm` file downloads when playback finishes (~20–90 seconds)
-4. Convert to MP4 if needed: `ffmpeg -i trip_xxx_instagram.webm -c:v libx264 trip.mp4`
+```bash
+# data/photos/colorado/*.HEIC|jpg|png   (album folders)
+python scripts/ingest_photos.py
+python scripts/enrich_trips_with_photos.py
+python scripts/build_map.py
+```
 
-Use **▶ Play** for preview; adjust speed with the slider. **🎬 Director** keeps the camera chasing the car. Click **Loop** once to repeat a trip, twice to **queue all Epic Road Trips** in sequence.
+- Originals stay in `data/photos/` (gitignored)
+- Hover thumbs live in `output/photos/thumbs/<album>/`
+- Metadata: `data/photos_index.json`, `data/trip_photos.json`
+
+See [`data/photos/README.md`](data/photos/README.md).
 
 ## Screenshots
 
-| Atlas overview (hubs + corridor spokes) | Colorado epic | Bellevue relocate |
+| Atlas overview | Colorado journey | Photo memories |
 |----------|---------------|--------------|
-| ![Overview](docs/screenshots/01-overview.png) | ![Colorado](docs/screenshots/04-colorado-fixed.png) | ![Seattle](docs/screenshots/05-seattle-fixed.png) |
+| ![Overview](docs/screenshots/01-overview.png) | ![Colorado](docs/screenshots/04-colorado-fixed.png) | ![Photos](docs/screenshots/07-photo-memories.png) |
 
-| Watch mode | Memory reel | Mobile bottom sheet |
+| Watch mode | Featured CTA | Mobile sheet |
 |------------|-------------|---------------------|
-| ![Watch mode](docs/screenshots/06-watch-mode.png) | ![Memory reel](docs/screenshots/07-memory-reel.png) | ![Mobile sheet](docs/screenshots/08-mobile-sheet.png) |
-
-| Export cinema (9:16 title card) |
-|---------------------------------|
-| ![Export cinema](docs/screenshots/09-export-cinema.png) |
+| ![Watch mode](docs/screenshots/06-watch-mode.png) | ![Featured](docs/screenshots/02-featured-cta.png) | ![Mobile sheet](docs/screenshots/08-mobile-sheet.png) |
 
 ## GitHub Pages setup
 
-**Already live** at https://ramkandimalla94.github.io/tesla-charging-travel-map/ (Mapbox token embedded at build time — no in-browser paste).
+1. Repo secret `MAPBOX_TOKEN` = public `pk.` token
+2. Rename repo to `mymilediary` (Pages URL follows)
+3. Merge to `main` → Actions deploys `gh-pages`
 
-**Auto-deploy:** any push/merge to `main` runs **Deploy GitHub Pages**, builds the map, and updates that same URL. No README link change is needed when the site content changes.
+## Project layout
 
-Pages settings should use **Deploy from a branch** → `gh-pages` / `(root)`.
-
-**Required:** repository secret `MAPBOX_TOKEN` must be a **public** token (`pk.…` from Mapbox). CI embeds it into `index.html` as base64 so the live demo launches immediately without a paste prompt, and without tripping GitHub push protection (which rejects literal Mapbox tokens on `gh-pages`). Secret tokens (`sk.…`) are rejected by the build.
-
-Manual re-deploy: Actions → **Deploy GitHub Pages** → **Run workflow**.
-
-## Browser verification
-
-```bash
-python -m http.server 8765 &
-python scripts/verify_map.py
-```
-
-Playwright captures screenshots to `docs/screenshots/` (including mobile `08-mobile-sheet.png`) and asserts hubs, era filter, spokes, watch mode, and epic-queue badge.
-
-## Project structure
-
-```
-scripts/
-  merge_csvs.py       # Dedupe Tesla CSV exports
-  geocode_locations.py
-  segment_trips.py    # Multi-signal trip segmentation
-  build_map.py        # Generate HTML + GeoJSON + GPX
-  verify_map.py       # Playwright browser tests
-  templates/
-    travel_map.html.j2
-    travel_map/       # Jinja partials (_map_css → _css_base/_chrome/_cinema, _atlas_js, _playback_js, …)
+```text
 data/
-  trips.json          # Segmented trips (committed)
-  locations_cache.json
-output/               # Generated (gitignored except GPX/GeoJSON)
+  photos/<album>/     # your dumps (gitignored)
+  photos_index.json   # EXIF index
+  trip_photos.json    # photos matched to trips
+  trips.json
+scripts/
+  ingest_photos.py
+  enrich_trips_with_photos.py
+  build_map.py
+  segment_trips.py
+output/
+  travel_map.html
+  photos/thumbs/      # hover thumbnails (committed)
 ```
 
-## Keyboard shortcuts
-
-| Key | Action |
-|-----|--------|
-| Space | Play / pause |
-| ← → | Step stops |
-| Esc | Stop play → atlas · pause memory reel |
-| S | Copy share blurb (selected trip) |
-| R | Reset |
-| D | Director camera |
-
-## License
-
-Personal project — charging location data is derived from your own Tesla account exports.
+Personal travel diary — trip geometry may be derived from your own exports; photos are yours.

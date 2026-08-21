@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Road Replay — Tesla Trip Cinema</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <title>My Mile Diary</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
   {% include 'travel_map/_map_css.html.j2' %}
 </head>
 <body>
 
   <!-- Token gate (shown when no token baked in at build time) -->
   <div id="token-gate">
-    <div class="logo" style="font-size:48px;margin-bottom:12px">⚡</div>
+    <div class="logo" style="font-size:42px;margin-bottom:12px;font-family:var(--font-display)">My Mile Diary</div>
     <h2>Mapbox Token Required</h2>
     <p>Paste your free <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener">Mapbox public token</a> to load satellite terrain. Stored locally in your browser only.</p>
     <input type="password" id="token-input" placeholder="pk.eyJ..." autocomplete="off">
@@ -23,20 +23,20 @@
   <!-- Onboarding -->
   <div id="onboarding">
     <div class="onboard-card">
-      <h2>Start Your Replay</h2>
-      <p>Pick a journey from the trip panel — start with an <span class="highlight">Epic Road Trip</span> for the full cinematic experience with location labels and video export.</p>
+      <h2>Open a journey</h2>
+      <p>Your miles become a diary — pick a trip from the panel, or start with a <span class="highlight">featured road trip</span> and press Play.</p>
       <div class="onboard-actions">
-        <button class="btn gold" id="onboard-featured">🎬 Epic Trip</button>
-        <button class="btn" id="onboard-dismiss">Explore Overview</button>
+        <button class="btn gold" id="onboard-featured">Open a journey</button>
+        <button class="btn" id="onboard-dismiss">Explore the atlas</button>
       </div>
     </div>
   </div>
 
   <!-- Splash -->
   <div id="splash">
-    <div class="brand-mark">Supercharger Cinema</div>
-    <h1>Road Replay</h1>
-    <p>Loading terrain · {{ trips|length }} journeys · {{ "{:,}".format(dashboard.total_miles) }} miles driven</p>
+    <div class="brand-mark">Travel diary</div>
+    <h1>My Mile Diary</h1>
+    <p>Miles become memories · {{ trips|length }} journeys · {{ "{:,}".format(dashboard.total_miles) }} miles</p>
     <div class="splash-bar"><div class="splash-fill" id="splash-fill"></div></div>
   </div>
 
@@ -52,27 +52,27 @@
     <div class="leg-row"><span class="pin end"></span><span id="legend-end-label">Return</span></div>
   </div>
 
-  <button type="button" class="atlas-cta" id="atlas-cta" aria-label="Replay featured epic trip">
+  <button type="button" class="atlas-cta" id="atlas-cta" aria-label="Open a featured journey">
     <span class="atlas-cta-swatch" id="atlas-cta-swatch"></span>
     <span class="atlas-cta-body">
-      <div class="atlas-cta-eyebrow">Featured epic</div>
-      <div class="atlas-cta-title" id="atlas-cta-title">Replay a road trip</div>
+      <div class="atlas-cta-eyebrow">Featured journey</div>
+      <div class="atlas-cta-title" id="atlas-cta-title">Open a road trip</div>
       <div class="atlas-cta-meta" id="atlas-cta-meta">Tap to focus · then Play</div>
     </span>
   </button>
-  <div class="memory-badge" id="memory-badge" aria-live="polite">
-    <span>Memory reel · <strong id="memory-label">—</strong></span>
-    <button type="button" id="memory-pause" title="Pause memory reel">Pause</button>
+  <div class="photo-hover" id="photo-hover" aria-hidden="true">
+    <img id="photo-hover-img" alt="">
+    <div class="cap"><strong id="photo-hover-title">Memory</strong><span id="photo-hover-meta"></span></div>
   </div>
 
   <!-- Top bar -->
   <header class="top-bar">
-    <div class="brand">ROAD<span>REPLAY</span></div>
+    <div class="brand">My <span>Mile</span> Diary</div>
     <div class="stat-rail">
-      <div class="stat-chip">{{ dashboard.trip_count }}<strong>trips</strong></div>
       <div class="stat-chip">{{ "{:,}".format(dashboard.total_miles) }}<strong>mi</strong></div>
-      <div class="stat-chip">{{ dashboard.total_kwh|int }}<strong>kWh</strong></div>
-      <div class="stat-chip">{{ dashboard.states|length }}<strong>states</strong></div>
+      <div class="stat-chip">{{ dashboard.total_places|default(0) }}<strong>places</strong></div>
+      <div class="stat-chip">{{ dashboard.total_photos|default(0) }}<strong>photos</strong></div>
+      <div class="stat-chip">{{ dashboard.total_days|default(dashboard.trip_count) }}<strong>days</strong></div>
     </div>
   </header>
 
@@ -105,9 +105,9 @@
   <aside class="trip-panel" id="sidebar">
     <div class="panel-grab" aria-hidden="true"></div>
     <div class="panel-head">
-      <div class="eyebrow">Your Journeys</div>
-      <h2 id="panel-title">Select a Trip</h2>
-      <div class="sub" id="panel-sub">{{ dashboard.trip_count }} road trips from your Supercharger history</div>
+      <div class="eyebrow">Your diary</div>
+      <h2 id="panel-title">Select a journey</h2>
+      <div class="sub" id="panel-sub">{{ dashboard.trip_count }} road trips · miles become memories</div>
     </div>
 
     <div class="trip-hero" id="hero-card">
@@ -115,27 +115,29 @@
       <div class="trip-hero-via" id="hero-via">Choose a journey to begin cinematic playback.</div>
       <div class="metric-grid">
         <div class="metric"><span class="val" id="hero-miles">—</span><span class="lbl">Miles</span></div>
-        <div class="metric"><span class="val" id="hero-kwh">—</span><span class="lbl">kWh</span></div>
+        <div class="metric"><span class="val" id="hero-photos">—</span><span class="lbl">Photos</span></div>
         <div class="metric"><span class="val" id="hero-days">—</span><span class="lbl">Days</span></div>
-        <div class="metric"><span class="val" id="hero-stops">—</span><span class="lbl">Stops</span></div>
+        <div class="metric"><span class="val" id="hero-stops">—</span><span class="lbl">Places</span></div>
       </div>
     </div>
+
+    <div class="filmstrip" id="trip-filmstrip" aria-label="Trip photos"></div>
 
     <div class="trip-scroll" id="trip-list">
       <div class="group-label">Overview</div>
       <div class="trip-item active" data-id="all">
         <div class="trip-swatch" style="background:linear-gradient(180deg,#c4b8a8,#e8e4dc)"></div>
-        <div><div class="trip-name">Atlas · All Routes</div><div class="trip-meta">{{ trips|length }} journeys · home hubs</div></div>
+        <div><div class="trip-name">Atlas · all routes</div><div class="trip-meta">{{ trips|length }} journeys · home hubs</div></div>
       </div>
       {% set featured_trips = trips|selectattr('featured')|list %}
       {% if featured_trips %}
-      <div class="group-label featured">Epic Road Trips</div>
+      <div class="group-label featured">Featured journeys</div>
       {% for trip in featured_trips %}
       <div class="trip-item featured" data-id="{{ trip.id }}" style="color:{{ trip.color }}">
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.name }}</div>
-          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
+          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% elif trip.photo_count %} · {{ trip.photo_count }} photos{% endif %}</div>
         </div>
       </div>
       {% endfor %}
@@ -168,7 +170,7 @@
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.name }}</div>
-          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi · {{ trip.stop_count }} stops{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.vehicle_label == 'your Tesla' %} · your Tesla{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}</div>
+          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi · {{ trip.stop_count }} stops{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% elif trip.photo_count %} · {{ trip.photo_count }} photos{% endif %}</div>
         </div>
       </div>
       {% endfor %}
@@ -288,11 +290,7 @@
     let routeLabelMarkers = [];
     let hubMarkers = [];
     let destMarkers = [];
-    let memoryTimer = null;
-    let memoryIndex = 0;
-    let memoryPaused = false;
-    let memoryActiveId = null;
-    let isPlaying = false, animFrame = null, lastTs = 0;
+        let isPlaying = false, animFrame = null, lastTs = 0;
     let speed = 1, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
@@ -302,7 +300,7 @@
     let smoothBearing = 0, camBearing = 0, lastTravelBearing = 0;
     const MAX_PITCH = 45;
 
-    const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 64 28" aria-hidden="true"><path class="tesla-body" d="M2 18 Q8 9 16 8 L48 8 Q56 9 62 18 L60 22 L4 22 Z"/><path class="tesla-accent" d="M18 8 L26 4 L34 8"/><circle cx="14" cy="21" r="3.2" fill="#111"/><circle cx="50" cy="21" r="3.2" fill="#111"/><path class="tesla-accent" d="M28 8 L32 6 L36 8" opacity="0.6"/></svg></div></div>`;
+    const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 64 28" aria-hidden="true"><path class="car-body" d="M2 18 Q8 9 16 8 L48 8 Q56 9 62 18 L60 22 L4 22 Z"/><path class="car-accent" d="M18 8 L26 4 L34 8"/><circle cx="14" cy="21" r="3.2" fill="#111"/><circle cx="50" cy="21" r="3.2" fill="#111"/><path class="car-accent" d="M28 8 L32 6 L36 8" opacity="0.6"/></svg></div></div>`;
 
     // ── Splash progress ──
     function setSplash(pct) { document.getElementById('splash-fill').style.width = pct + '%'; }
@@ -314,14 +312,13 @@
       }, 400);
     }
     function showOnboarding() {
-      if (localStorage.getItem('tesla-map-onboarded')) return;
+      if (localStorage.getItem('mymilediary-onboarded')) return;
       document.getElementById('onboarding').classList.add('visible');
     }
     function dismissOnboarding() {
       document.getElementById('onboarding').classList.remove('visible');
-      localStorage.setItem('tesla-map-onboarded', '1');
-      if (selectedId === 'all' && !memoryPaused) startMemoryReel();
-    }
+      localStorage.setItem('mymilediary-onboarded', '1');
+          }
     function startWithFeatured() {
       const epic = TRIPS.find(t => t.featured) || TRIPS.find(t => t.has_colorado) || TRIPS[0];
       if (epic) selectTrip(epic.id);
@@ -472,8 +469,7 @@
       document.getElementById('prog-text').textContent = 'Select a trip to play';
       introFlyover();
       setTimeout(() => {
-        if (selectedId === 'all' && !localStorage.getItem('tesla-map-onboarded')) return;
-        if (selectedId === 'all') startMemoryReel();
+        updateAtlasCta();
       }, 2800);
     }
 
@@ -513,9 +509,11 @@
     }
     function popupHtml(s) {
       const dt = new Date(s.datetime).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'});
-      let h=`<b>${s.location}</b><br>${dt}<br><strong>${s.kwh} kWh</strong>`;
-      if(s.in_colorado) h+='<br>🏔 Colorado';
-      if(s.invoice_url) h+=`<br><a href="${s.invoice_url}" target="_blank" style="color:#60a5fa">Invoice →</a>`;
+      if (s.is_photo || s.kind === 'photo') {
+        return `<b>${s.location || 'Photo memory'}</b><br>${dt}`;
+      }
+      let h=`<b>${s.location}</b><br>${dt}`;
+      if(s.in_colorado) h+='<br>Colorado';
       return h;
     }
     function hexToRgb(hex) {
@@ -555,7 +553,7 @@
           });
           drawRouteLabels();
           drawAtlasMarkers();
-          if (!memoryPaused && !memoryTimer && !hoveredTripId) startMemoryReel();
+          drawAtlasSpokes();
         }
       } finally {
         eraApplying = false;
@@ -577,32 +575,32 @@
       const panelTitle = document.getElementById('panel-title');
       if (selectedId === 'all') {
         panelTitle.textContent = 'Atlas';
-        document.getElementById('hero-name').textContent = 'Lifetime Overview';
+        document.getElementById('hero-name').textContent = 'Lifetime overview';
         const hubBits = (HUBS || []).map(h => `${h.label} (${h.trip_count})`).join(' · ');
         viaEl.innerHTML = hubBits
-          ? `Home hubs: <em>${hubBits}</em> — pick an Epic or destination to replay.`
-          : 'Select an <em>Epic Road Trip</em> for cinematic replay and video export.';
+          ? `Home hubs: <em>${hubBits}</em> — open a featured journey to replay.`
+          : 'Open a <em>featured journey</em> to replay your miles.';
         document.getElementById('hero-miles').textContent = DASHBOARD.total_miles.toLocaleString();
-        document.getElementById('hero-kwh').textContent = DASHBOARD.total_kwh.toLocaleString();
-        document.getElementById('hero-days').textContent = TRIPS.length;
-        document.getElementById('hero-stops').textContent = TRIPS.reduce((s, t) => s + t.stop_count, 0);
+        document.getElementById('hero-photos').textContent = (DASHBOARD.total_photos || 0).toLocaleString();
+        document.getElementById('hero-days').textContent = (DASHBOARD.total_days || TRIPS.length).toLocaleString();
+        document.getElementById('hero-stops').textContent = (DASHBOARD.total_places || TRIPS.reduce((s, t) => s + t.stop_count, 0)).toLocaleString();
         card.classList.remove('featured');
+        renderFilmstrip([]);
       } else {
         const t = trips[0];
         panelTitle.textContent = t.name.split('—').pop()?.trim() || t.name;
         document.getElementById('hero-name').textContent = t.name;
         const ownerBit = t.is_shared
-          ? ` · <em>${t.trip_crew} in ${t.vehicle_label || "shared car"}</em>`
-          : (t.vehicle_label === 'your Tesla'
-            ? ` · <em>your Tesla</em>`
-            : (t.trip_crew ? ` · <em>${t.trip_crew}</em>` : ''));
+          ? ` · <em>${t.trip_crew}${t.vehicle_label ? ' · ' + t.vehicle_label : ''}</em>`
+          : (t.trip_crew ? ` · <em>${t.trip_crew}</em>` : '');
         if (t.via_summary) viaEl.innerHTML = `Route via <em>${t.via_summary}</em>${ownerBit}`;
         else viaEl.innerHTML = (t.states.length ? `Through <em>${t.states.join(', ')}</em>` : '') + ownerBit;
         document.getElementById('hero-miles').textContent = t.miles.toLocaleString();
-        document.getElementById('hero-kwh').textContent = t.total_kwh;
+        document.getElementById('hero-photos').textContent = t.photo_count || 0;
         document.getElementById('hero-days').textContent = t.duration_days;
         document.getElementById('hero-stops').textContent = t.stop_count;
         card.classList.toggle('featured', t.featured || t.has_colorado);
+        renderFilmstrip(t.photos || []);
       }
     }
 
@@ -1014,9 +1012,7 @@
       updateQueueBadge();
       if (id === 'all') {
         applyEraFilter();
-        if (!memoryPaused) startMemoryReel();
       } else {
-        stopMemoryReel();
         drawAtlasSpokes();
       }
     }
@@ -1114,18 +1110,6 @@
       const id = document.getElementById('atlas-cta')?.dataset.tripId;
       if (id) selectTrip(id);
     });
-    document.getElementById('memory-pause')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      memoryPaused = !memoryPaused;
-      const btn = document.getElementById('memory-pause');
-      if (memoryPaused) {
-        if (btn) btn.textContent = 'Resume';
-        if (memoryTimer) { clearInterval(memoryTimer); memoryTimer = null; }
-      } else {
-        if (btn) btn.textContent = 'Pause';
-        startMemoryReel();
-      }
-    });
     document.addEventListener('keydown', e=>{
       if (e.target.tagName==='INPUT') return;
       if (e.code==='Escape') {
@@ -1136,12 +1120,6 @@
         }
         if (isPlaying) { stopPlayback(); return; }
         if (selectedId !== 'all') { selectTrip('all'); return; }
-        if (!memoryPaused) {
-          memoryPaused = true;
-          const btn = document.getElementById('memory-pause');
-          if (btn) btn.textContent = 'Resume';
-          stopMemoryReel();
-        }
         return;
       }
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }

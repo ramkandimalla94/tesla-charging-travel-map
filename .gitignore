@@ -14,3 +14,8 @@ data/imports/
 Tesla_Charging_History_*.csv
 *_charging_history_*.csv
 *charging_history*.csv
+
+# Apple Photos / camera dumps — keep originals local; commit thumbs + index only
+data/photos/**
+!data/photos/.gitkeep
+!data/photos/README.md

@@ -69,21 +69,11 @@
       btn.dataset.tripId = epic.id;
     }
 
-    function memoryPlaylist() {
-      const featured = TRIPS.filter(t => t.featured && tripInEra(t));
-      return featured.length ? featured : TRIPS.filter(t => tripInEra(t)).slice(0, 6);
-    }
-
-    function stopMemoryReel() {
-      if (memoryTimer) { clearInterval(memoryTimer); memoryTimer = null; }
-      memoryActiveId = null;
-      document.getElementById('memory-badge')?.classList.remove('visible');
-      if (selectedId === 'all' && !hoveredTripId) applyEraFilter();
-      drawAtlasSpokes();
-    }
+    function stopMemoryReel() { /* removed: no auto-cycling memory reel */ }
+    function startMemoryReel() { /* removed */ }
 
     function atlasHotDest() {
-      const id = hoveredTripId || memoryActiveId;
+      const id = hoveredTripId;
       if (!id) return null;
       const trip = TRIPS.find(t => t.id === id);
       return trip?.story_dest || trip?.dest_label || null;
@@ -91,10 +81,6 @@
 
     function showMemoryHighlight(trip) {
       if (!trip || selectedId !== 'all') return;
-      memoryActiveId = trip.id;
-      const label = document.getElementById('memory-label');
-      if (label) label.textContent = shortTripLabel(trip);
-      document.getElementById('memory-badge')?.classList.add('visible');
       TRIPS.forEach(t => {
         if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
         else if (t.id === trip.id) setRouteStyle(t.id, t.color, 'overviewHover');
@@ -111,22 +97,6 @@
         m.getElement().classList.toggle('dim', !hit);
       });
       drawAtlasSpokes();
-    }
-
-    function startMemoryReel() {
-      stopMemoryReel();
-      if (selectedId !== 'all' || memoryPaused) return;
-      const list = memoryPlaylist();
-      if (list.length < 2) return;
-      memoryIndex = 0;
-      showMemoryHighlight(list[0]);
-      memoryTimer = setInterval(() => {
-        if (selectedId !== 'all' || memoryPaused || hoveredTripId) return;
-        const items = memoryPlaylist();
-        if (!items.length) return;
-        memoryIndex = (memoryIndex + 1) % items.length;
-        showMemoryHighlight(items[memoryIndex]);
-      }, 4200);
     }
 
     /** Perpendicular offset (meters) for parallel corridor filaments. */

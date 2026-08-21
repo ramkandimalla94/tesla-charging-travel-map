@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build cinematic Tesla travel map with Mapbox GL JS (playback + Instagram export)."""
+"""Build My Mile Diary map with Mapbox GL JS (playback + photo memories)."""
 
 from __future__ import annotations
 
@@ -26,16 +26,20 @@ DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "output"
 GPX_DIR = OUTPUT_DIR / "gpx"
 TRIPS_FILE = DATA_DIR / "trips.json"
+TRIP_PHOTOS_FILE = DATA_DIR / "trip_photos.json"
+PHOTOS_INDEX_FILE = DATA_DIR / "photos_index.json"
 ROUTES_CACHE_FILE = DATA_DIR / "routes_cache.json"
 NEARBY_PLACES_FILE = DATA_DIR / "nearby_places.json"
 VISITED_PLACES_FILE = DATA_DIR / "visited_places.json"
 HTML_OUTPUT = OUTPUT_DIR / "travel_map.html"
 GEOJSON_OUTPUT = OUTPUT_DIR / "trips.geojson"
+LIVE_DEMO_URL = "https://ramkandimalla94.github.io/mymilediary/"
 
 POI_RADIUS_MILES = 40
 POI_MAX_PER_STOP = 3
 MIN_ROUTE_MILES = 0.3
 ROUTE_FETCH_DELAY_S = 0.25
+WALK_SPUR_MILES = 18.0
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -115,35 +119,101 @@ def match_pois_for_stop(
     return [p for _, p in matches[:POI_MAX_PER_STOP]]
 
 
+def sanitize_vehicle_label(label: str | None) -> str:
+    text = (label or "").strip()
+    if not text or text.lower() in {"your tesla", "tesla"}:
+        return ""
+    return text
+
+
+def client_stop(stop: dict) -> dict:
+    """Strip charging invoices / VIN from the browser payload."""
+    out = {
+        k: v for k, v in stop.items()
+        if k not in {"invoice_url", "vin", "owner"}
+    }
+    if out.get("is_photo") or out.get("kind") == "photo":
+        out.pop("kwh", None)
+    return out
+
+
+def load_trip_photos() -> dict[str, list[dict]]:
+    if not TRIP_PHOTOS_FILE.exists():
+        return {}
+    with open(TRIP_PHOTOS_FILE, encoding="utf-8") as f:
+        data = json.load(f)
+    out: dict[str, list[dict]] = {}
+    for trip_id, block in (data.get("trips") or {}).items():
+        out[trip_id] = list(block.get("photos") or [])
+    return out
+
+
+def load_photos_index_count() -> int:
+    if not PHOTOS_INDEX_FILE.exists():
+        return 0
+    with open(PHOTOS_INDEX_FILE, encoding="utf-8") as f:
+        return int(json.load(f).get("photo_count") or 0)
+
+
+def parse_waypoint_ts(value: str | None) -> datetime:
+    if not value:
+        return datetime.min
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.min
+
+
+def merge_photo_waypoints(stops: list[dict], photos: list[dict]) -> list[dict]:
+    """Chronologically interleave road stops with photo GPS waypoints."""
+    road = []
+    for s in stops:
+        row = dict(s)
+        row.setdefault("kind", "home" if row.get("is_home_anchor") else "stop")
+        row["is_photo"] = False
+        road.append(row)
+    photo_rows = []
+    for p in photos:
+        row = dict(p)
+        row["kind"] = "photo"
+        row["is_photo"] = True
+        row.setdefault("location", f"Photo · {row.get('album', 'memory')}")
+        row.setdefault("kwh", 0)
+        photo_rows.append(row)
+    merged = road + photo_rows
+    merged.sort(key=lambda s: (parse_waypoint_ts(s.get("datetime")), 0 if s.get("is_photo") else 1))
+    return merged
+
+
 def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]]) -> dict:
-    """Narrative captions for cinematic replay and video export."""
+    """Narrative captions for diary replay and video export."""
     origin = short_location_label(stops[0]["location"]) if stops else ""
-    dest = short_location_label(stops[-1]["location"]) if stops else ""
     states = trip.get("via_states") or []
     via = ", ".join(states) if states else "the open road"
     days = trip_duration_days(trip["start"], trip["end"])
     all_pois = [p for pois in stop_pois for p in pois]
     visited_count = sum(1 for p in all_pois if p.get("visited"))
     nearby_names = list(dict.fromkeys(p["name"] for p in all_pois))[:6]
+    photo_n = sum(1 for s in stops if s.get("is_photo") or s.get("kind") == "photo")
     crew = trip.get("trip_crew") or trip.get("owner_short") or "you"
-    vehicle = trip.get("vehicle_label") or "your Tesla"
+    vehicle = sanitize_vehicle_label(trip.get("vehicle_label"))
     if trip.get("is_shared"):
-        who = f"{crew} in {vehicle}"
-    elif vehicle == "your Tesla":
-        who = "your Tesla"
+        who = f"{crew}" + (f" in {vehicle}" if vehicle else "")
     else:
-        who = vehicle
+        who = crew if not vehicle else f"{crew} · {vehicle}"
 
     intro = (
-        f"A {days}-day road trip for {who} from {origin.split(',')[0]} "
-        f"through {via} — {len(stops)} Supercharger stops powering the journey."
+        f"A {days}-day journey for {who} from {origin.split(',')[0]} "
+        f"through {via} — {len(stops)} places along the way"
+        + (f", {photo_n} photo memories" if photo_n else "")
+        + "."
     )
     outro = (
-        f"Journey complete — {len(stops)} charging stops across {via}. "
+        f"Journey complete — {len(stops)} places across {via}. "
         + (
-            f"{visited_count} confirmed visits · {len(all_pois)} nearby highlights explored."
+            f"{visited_count} confirmed visits · {len(all_pois)} nearby highlights."
             if all_pois
-            else "Every mile charged by Supercharger."
+            else "Miles become memories."
         )
     )
 
@@ -152,44 +222,35 @@ def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]])
     for i, (stop, pois) in enumerate(zip(stops, stop_pois)):
         label = short_location_label(stop["location"])
         city = label.split(",")[0]
-        kwh = stop.get("kwh")
-        try:
-            kwh_f = float(kwh) if kwh is not None else None
-        except (TypeError, ValueError):
-            kwh_f = None
-        kwh_bit = f"{kwh_f:.0f} kWh" if kwh_f and kwh_f >= 1 else ""
-        visited = [p for p in (pois or []) if p.get("visited")]
         nearby = pois or []
-
-        if i == 0:
+        if stop.get("is_photo") or stop.get("kind") == "photo":
+            caption = f"Memory · {city}"
+            sub = stop.get("album") or "Photo stop"
+        elif i == 0:
             caption = f"Departing {city} — the adventure begins"
-            sub = f"First of {n} Supercharger stops" + (f" · {kwh_bit}" if kwh_bit else "")
+            sub = f"First of {n} places"
         elif i == n - 1:
-            caption = f"Final charge · {city}"
+            caption = f"Final stop · {city}"
             sub = (
                 "Homeward bound — journey nearly complete"
                 if origin.split(",")[0] == city or "Home" in (trip.get("dest_label") or "")
                 else f"Last stop of {n}"
             )
-            if kwh_bit:
-                sub = f"{sub} · {kwh_bit}"
-        elif visited:
-            top = visited[0]
-            caption = f"Charging in {city} — {top.get('emoji', '')} {top.get('name', 'a favorite')} ✓".strip()
-            sub = top.get("tagline") or (f"Stop {i + 1} of {n}" + (f" · {kwh_bit}" if kwh_bit else ""))
         elif nearby:
-            poi_text = " · ".join(
-                f"{p.get('emoji', '')} {p.get('name', '')}".strip() for p in nearby[:2]
-            )
-            caption = f"Pit stop in {city} — nearby: {poi_text}"
-            sub = nearby[0].get("tagline") or (kwh_bit or f"Stop {i + 1} of {n}")
-        elif i == n // 2:
-            caption = f"Halfway · charging in {city}"
-            sub = (f"{kwh_bit} · " if kwh_bit else "") + f"Stop {i + 1} of {n} across {via}"
+            visited = [p for p in nearby if p.get("visited")]
+            if visited:
+                top = visited[0]
+                caption = f"In {city} — {top.get('emoji', '')} {top.get('name', 'a favorite')} ✓".strip()
+                sub = top.get("tagline") or f"Stop {i + 1} of {n}"
+            else:
+                poi_text = " · ".join(
+                    f"{p.get('emoji', '')} {p.get('name', '')}".strip() for p in nearby[:2]
+                )
+                caption = f"In {city} — nearby: {poi_text}"
+                sub = nearby[0].get("tagline") or f"Stop {i + 1} of {n}"
         else:
-            caption = f"Charging in {city}"
-            sub = (f"{kwh_bit} · " if kwh_bit else "") + f"Stop {i + 1} of {n}"
-
+            caption = f"Passing through {city}"
+            sub = f"Stop {i + 1} of {n}"
         stop_captions.append({"caption": caption, "sub": sub, "pois": nearby})
 
     return {
@@ -380,8 +441,8 @@ def save_routes_cache(cache: dict) -> None:
         json.dump(cache, f, indent=2)
 
 
-def fetch_mapbox_driving_route(
-    lat1: float, lng1: float, lat2: float, lng2: float, token: str
+def fetch_mapbox_route(
+    lat1: float, lng1: float, lat2: float, lng2: float, token: str, profile: str = "driving",
 ) -> tuple[list[list[float]], float] | None:
     coords = f"{lng1},{lat1};{lng2},{lat2}"
     query = urllib.parse.urlencode({
@@ -390,46 +451,76 @@ def fetch_mapbox_driving_route(
         "steps": "false",
         "access_token": token,
     })
-    url = f"https://api.mapbox.com/directions/v5/mapbox/driving/{coords}?{query}"
+    url = f"https://api.mapbox.com/directions/v5/mapbox/{profile}/{coords}?{query}"
     try:
         with urllib.request.urlopen(url, timeout=30) as resp:
             data = json.loads(resp.read())
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-        print(f"  Route fetch failed ({lat1:.4f},{lng1:.4f})→({lat2:.4f},{lng2:.4f}): {exc}")
+        print(f"  Route fetch failed [{profile}] ({lat1:.4f},{lng1:.4f})→({lat2:.4f},{lng2:.4f}): {exc}")
         return None
     if data.get("code") != "Ok" or not data.get("routes"):
-        print(f"  No driving route ({lat1:.4f},{lng1:.4f})→({lat2:.4f},{lng2:.4f}): {data.get('code')}")
+        print(f"  No {profile} route ({lat1:.4f},{lng1:.4f})→({lat2:.4f},{lng2:.4f}): {data.get('code')}")
         return None
     route = data["routes"][0]
     path = [[pt[1], pt[0]] for pt in route["geometry"]["coordinates"]]
     return path, route["distance"] / 1609.344
 
 
-def get_driving_segment(
+def fetch_mapbox_driving_route(
+    lat1: float, lng1: float, lat2: float, lng2: float, token: str
+) -> tuple[list[list[float]], float] | None:
+    return fetch_mapbox_route(lat1, lng1, lat2, lng2, token, "driving")
+
+
+def leg_wants_walking(a: dict, b: dict, dist: float) -> bool:
+    """Memory spurs (hike / trail photos) use walking when short and photo-related."""
+    photo_leg = bool(a.get("is_photo") or b.get("is_photo") or a.get("kind") == "photo" or b.get("kind") == "photo")
+    return photo_leg and dist <= WALK_SPUR_MILES
+
+
+def get_route_segment(
     lat1: float, lng1: float, lat2: float, lng2: float,
     cache: dict, token: str, refresh: bool, stats: dict,
+    profile: str = "driving",
 ) -> list[list[float]]:
     dist = haversine_miles(lat1, lng1, lat2, lng2)
     if dist < MIN_ROUTE_MILES:
         return [[lat1, lng1], [lat2, lng2]]
-    key = leg_cache_key(lat1, lng1, lat2, lng2)
+    key = f"{profile}:{leg_cache_key(lat1, lng1, lat2, lng2)}"
     if key in cache and (not refresh or key in stats["session_keys"]):
         stats["cache_hits"] += 1
         return cache[key]["path"]
+    # Also accept legacy driving keys without profile prefix
+    legacy = leg_cache_key(lat1, lng1, lat2, lng2)
+    if profile == "driving" and legacy in cache and (not refresh or legacy in stats["session_keys"]):
+        stats["cache_hits"] += 1
+        return cache[legacy]["path"]
     if token:
-        result = fetch_mapbox_driving_route(lat1, lng1, lat2, lng2, token)
+        result = fetch_mapbox_route(lat1, lng1, lat2, lng2, token, profile)
         if result:
             path, miles = result
+            # Ensure path ends on the requested endpoint (photo exact GPS)
+            if path and (abs(path[-1][0] - lat2) > 1e-5 or abs(path[-1][1] - lng2) > 1e-5):
+                path = list(path) + [[lat2, lng2]]
+            if path and (abs(path[0][0] - lat1) > 1e-5 or abs(path[0][1] - lng1) > 1e-5):
+                path = [[lat1, lng1]] + list(path)
             path = simplify_path(path)
-            cache[key] = {"path": path, "distance_miles": round(miles, 1)}
+            cache[key] = {"path": path, "distance_miles": round(miles, 1), "profile": profile}
             stats["session_keys"].add(key)
             stats["fetched"] += 1
             time.sleep(ROUTE_FETCH_DELAY_S)
             return path
         stats["fetch_failed"] += 1
     stats["fallback"] += 1
-    points = max(48, min(160, int(max(dist, 5) * 1.2)))
+    points = max(24, min(120, int(max(dist, 2) * 1.4)))
     return great_circle_arc(lat1, lng1, lat2, lng2, num_points=points)
+
+
+def get_driving_segment(
+    lat1: float, lng1: float, lat2: float, lng2: float,
+    cache: dict, token: str, refresh: bool, stats: dict,
+) -> list[list[float]]:
+    return get_route_segment(lat1, lng1, lat2, lng2, cache, token, refresh, stats, "driving")
 
 
 def build_route_path(
@@ -438,17 +529,34 @@ def build_route_path(
     if not stops:
         return []
     path: list[list[float]] = [[stops[0]["lat"], stops[0]["lng"]]]
+    memory_spurs: list[dict] = []
     for i in range(1, len(stops)):
         a, b = stops[i - 1], stops[i]
         if not is_valid_coord(a["lat"], a["lng"]) or not is_valid_coord(b["lat"], b["lng"]):
             continue
-        if haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"]) > 1500:
+        dist = haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"])
+        if dist > 1500:
             continue
-        segment = get_driving_segment(
-            a["lat"], a["lng"], b["lat"], b["lng"], cache, token, refresh, stats
+        profile = "walking" if leg_wants_walking(a, b, dist) else "driving"
+        segment = get_route_segment(
+            a["lat"], a["lng"], b["lat"], b["lng"], cache, token, refresh, stats, profile
         )
+        # Always pin exact photo coordinates
+        if segment:
+            segment = list(segment)
+            segment[-1] = [b["lat"], b["lng"]]
+        if profile == "walking":
+            memory_spurs.append({
+                "from": [a["lat"], a["lng"]],
+                "to": [b["lat"], b["lng"]],
+                "path": segment,
+            })
+            stats["walking_spurs"] = stats.get("walking_spurs", 0) + 1
         path.extend(segment[1:])
+    # Stash on stats for prepare_trips to pick up (cleared per trip)
+    stats["_last_memory_spurs"] = memory_spurs
     return path
+
 
 
 def build_arcs(
@@ -807,41 +915,52 @@ def prepare_trips(
 ) -> list[dict]:
     all_places = load_nearby_places()
     visited_all = load_visited_places()
+    trip_photos = load_trip_photos()
     home_regions = trips_data.get("home_regions") or []
     prepared: list[dict] = []
+    stats.setdefault("walking_spurs", 0)
     for i, trip in enumerate(trips_data["trips"]):
-        stops = [
+        base_stops = [
             s for s in trip["stops"]
             if is_valid_coord(s.get("lat"), s.get("lng"))
         ]
-        if not stops:
+        if not base_stops:
             continue
+        photos = trip_photos.get(trip["id"], [])
+        stops = merge_photo_waypoints(base_stops, photos)
+        stats["_last_memory_spurs"] = []
         route_path = build_route_path(stops, cache, token, refresh, stats)
+        memory_spurs = list(stats.get("_last_memory_spurs") or [])
         miles = path_miles(route_path)
-        total_kwh = round(sum(s["kwh"] for s in stops), 1)
+        photo_count = sum(1 for s in stops if s.get("is_photo"))
+        place_count = len(stops)
         states = trip.get("via_states") or sorted({
             st for s in stops
-            if (st := extract_state(s["location"]) or ("CO" if s.get("in_colorado") else None))
+            if (st := extract_state(s.get("location") or "") or ("CO" if s.get("in_colorado") else None))
         })
         state_names = [STATE_NAMES.get(s, s) for s in states]
         via_summary = trip.get("via_summary") or ", ".join(states)
         arcs = build_arcs(stops, trip_color(i), trip["id"], cache, token, refresh, stats)
         visited_for_trip = visited_all.get(trip["id"], {})
         stop_pois = [
-            match_pois_for_stop(s, all_places, visited_for_trip) for s in stops
+            [] if (s.get("is_photo") or s.get("kind") == "photo")
+            else match_pois_for_stop(s, all_places, visited_for_trip)
+            for s in stops
         ]
         story = build_trip_story(trip, stops, stop_pois)
         story["intro_title"] = trip["name"]
         days = trip_duration_days(trip["start"], trip["end"])
         story["share_blurb"] = (
-            f"{trip['name']} — {miles:,.0f} mi · {len(stops)} Supercharger stops · {days}d\n"
-            "Relive it: https://ramkandimalla94.github.io/tesla-charging-travel-map/"
+            f"{trip['name']} — {miles:,.0f} mi · {place_count} places"
+            + (f" · {photo_count} photos" if photo_count else "")
+            + f" · {days}d\n"
+            f"Relive it: {LIVE_DEMO_URL}"
         )
         story = apply_story_overrides(trip, story)
         playback = build_playback_timeline(
             stops, route_path, story, stop_pois, cache, token, refresh, stats
         )
-        featured = is_featured_trip(trip, miles, len(stops))
+        featured = is_featured_trip(trip, miles, len(base_stops))
         style = TRIP_OVERVIEW_STYLES[i % len(TRIP_OVERVIEW_STYLES)]
         story_dest = parse_story_destination(trip)
         label_lat, label_lng = destination_label_coords(stops, route_path, home_regions)
@@ -853,6 +972,20 @@ def prepare_trips(
             float(stops[-1]["lat"]), float(stops[-1]["lng"]),
             stops[-1].get("location") or "", home_regions,
         )
+        vehicle_label = sanitize_vehicle_label(trip.get("vehicle_label"))
+        client_stops = [client_stop(s) for s in stops]
+        photos_payload = [
+            {
+                "id": s.get("id"),
+                "lat": s["lat"],
+                "lng": s["lng"],
+                "datetime": s.get("datetime"),
+                "album": s.get("album", ""),
+                "thumb": s.get("thumb", ""),
+                "location": s.get("location", ""),
+            }
+            for s in stops if s.get("is_photo")
+        ]
         prepared.append({
             "id": trip["id"],
             "name": trip["name"],
@@ -863,10 +996,12 @@ def prepare_trips(
             "color": trip_color(i),
             "overview_offset": style["offset"],
             "overview_dash": style["dash"],
-            "stops": stops,
+            "stops": client_stops,
+            "photos": photos_payload,
+            "photo_count": photo_count,
             "route_path": route_path,
-            "stop_count": len(stops),
-            "total_kwh": total_kwh,
+            "memory_spurs": memory_spurs,
+            "stop_count": place_count,
             "miles": miles,
             "duration_days": trip_duration_days(trip["start"], trip["end"]),
             "states": states,
@@ -885,20 +1020,18 @@ def prepare_trips(
             "arcs": arcs,
             "playback": playback,
             "story": story,
-            "owner": trip.get("owner", ""),
             "owner_short": trip.get("owner_short", ""),
-            "vin": trip.get("vin", ""),
             "travelers": trip.get("travelers", []),
             "trip_crew": trip.get("trip_crew", ""),
-            "driver": trip.get("driver", ""),
             "driver_short": trip.get("driver_short", ""),
-            "vehicle_label": trip.get("vehicle_label", ""),
+            "vehicle_label": vehicle_label,
             "is_shared": trip.get("is_shared", False),
             "region": "colorado" if trip.get("has_colorado") else (
                 "pnw" if any(s in states for s in ("WA", "OR", "ID")) else "other"
             ),
         })
     return prepared
+
 
 
 def build_dashboard(trips: list[dict], hubs: list[dict] | None = None,
@@ -917,10 +1050,15 @@ def build_dashboard(trips: list[dict], hubs: list[dict] | None = None,
         for t in trips
         if str(t.get("start", ""))[:4].isdigit()
     })
+    total_photos = sum(int(t.get("photo_count") or 0) for t in trips)
+    total_places = sum(int(t.get("stop_count") or 0) for t in trips)
+    total_days = sum(int(t.get("duration_days") or 0) for t in trips)
     return {
-        "total_kwh": round(sum(t["total_kwh"] for t in trips), 0),
         "trip_count": len(trips),
         "total_miles": sum(t["miles"] for t in trips),
+        "total_photos": total_photos,
+        "total_places": total_places,
+        "total_days": total_days,
         "states": sorted(all_states),
         "state_names": sorted(STATE_NAMES.get(s, s) for s in all_states),
         "longest_trip": {
@@ -973,7 +1111,7 @@ def build_geojson(trips: list[dict]) -> dict:
                 "type": "Feature",
                 "properties": {
                     "trip_id": trip["id"], "location": s["location"],
-                    "datetime": s["datetime"], "kwh": s["kwh"],
+                    "datetime": s["datetime"], "kind": s.get("kind", "stop"), "is_photo": bool(s.get("is_photo")),
                 },
                 "geometry": {"type": "Point", "coordinates": [s["lng"], s["lat"]]},
             })
@@ -982,7 +1120,7 @@ def build_geojson(trips: list[dict]) -> dict:
 
 def write_gpx(trip: dict, path: Path) -> None:
     gpx = ET.Element("gpx", {
-        "version": "1.1", "creator": "Road Replay",
+        "version": "1.1", "creator": "My Mile Diary",
         "xmlns": "http://www.topografix.com/GPX/1/1",
     })
     ET.SubElement(ET.SubElement(gpx, "metadata"), "name").text = trip["name"]
@@ -991,7 +1129,8 @@ def write_gpx(trip: dict, path: Path) -> None:
             continue
         wpt = ET.SubElement(gpx, "wpt", {"lat": str(stop["lat"]), "lon": str(stop["lng"])})
         ET.SubElement(wpt, "name").text = stop["location"]
-        ET.SubElement(wpt, "desc").text = f"{stop['kwh']} kWh"
+        desc = "Photo memory" if stop.get("is_photo") else (stop.get("location") or "Stop")
+        ET.SubElement(wpt, "desc").text = desc
     ET.ElementTree(gpx).write(path, encoding="utf-8", xml_declaration=True)
 
 
@@ -1076,7 +1215,7 @@ def encode_mapbox_token_for_html(token: str) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build 3D Tesla travel map")
+    parser = argparse.ArgumentParser(description="Build My Mile Diary travel map")
     parser.add_argument(
         "--public",
         action="store_true",
@@ -1105,7 +1244,7 @@ def main() -> None:
     GPX_DIR.mkdir(parents=True, exist_ok=True)
 
     cache = load_routes_cache()
-    stats = {"fetched": 0, "cache_hits": 0, "fallback": 0, "fetch_failed": 0, "session_keys": set()}
+    stats = {"fetched": 0, "cache_hits": 0, "fallback": 0, "fetch_failed": 0, "walking_spurs": 0, "session_keys": set()}
 
     trips_data = load_trips()
     prepared = prepare_trips(trips_data, cache, mapbox_token, args.refresh_routes, stats)
@@ -1144,8 +1283,8 @@ def main() -> None:
         pages_index.write_text(pages_html, encoding="utf-8")
         print(f"  Public index: {pages_index}")
 
-    print(f"Built 3D map — {len(prepared)} trips")
-    print(f"  Dashboard: {dashboard['total_kwh']} kWh · {dashboard['total_miles']:,} mi")
+    print(f"Built My Mile Diary — {len(prepared)} trips")
+    print(f"  Dashboard: {dashboard['total_miles']:,} mi · {dashboard.get('total_photos', 0)} photos · {dashboard.get('total_places', 0)} places")
     print(
         f"  Routes: {stats['fetched']} fetched, {stats['cache_hits']} cached, "
         f"{stats['fallback']} arc fallback, {stats['fetch_failed']} failed"

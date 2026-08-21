@@ -4,8 +4,8 @@
       const story = trip.story || {};
       if (story.share_blurb) return story.share_blurb;
       return (
-        `${trip.name} — ${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days}d\n` +
-        'Relive it: https://ramkandimalla94.github.io/tesla-charging-travel-map/'
+        `${trip.name} — ${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} places · ${trip.duration_days}d\n` +
+        'Relive it: https://ramkandimalla94.github.io/mymilediary/'
       );
     }
 
@@ -44,8 +44,8 @@
       }
       const trip = activeTrip();
       const text = tripShareBlurb(trip);
-      const liveUrl = 'https://ramkandimalla94.github.io/tesla-charging-travel-map/';
-      const shareData = { title: trip.name || 'Road Replay', text, url: liveUrl };
+      const liveUrl = 'https://ramkandimalla94.github.io/mymilediary/';
+      const shareData = { title: trip.name || 'My Mile Diary', text, url: liveUrl };
 
       if (preferNative && typeof navigator.share === 'function') {
         try {
@@ -109,7 +109,7 @@
       } else {
         document.getElementById('cinema-title-text').textContent = trip.name;
         document.getElementById('cinema-subtitle').textContent =
-          `${trip.miles.toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days} days`;
+          `${trip.miles.toLocaleString()} mi · ${trip.stop_count} places · ${trip.duration_days} days`;
         const hlEl = document.getElementById('cinema-highlights');
         hlEl.innerHTML = (story.highlights || []).slice(0, 4).map(h => `<span>${h}</span>`).join('');
         title.classList.remove('outro');
