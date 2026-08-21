@@ -1303,12 +1303,39 @@
     }
 
     /** Pixel offsets so round-trip home start/return stay readable at any zoom. */
-    function milestoneMarkerOffset(sameHome, isStart, isEnd) {
+    function milestoneMarkerOffset(sameHome, isStart, isEnd, geoSepDeg) {
       if (!sameHome) return [0, 0];
-      // Diagonal split — beacon stays centered on its own offset anchor.
-      if (isStart) return [-92, -48];
-      if (isEnd) return [92, 40];
+      // When outbound/inbound share a corridor, lean on larger pixel separation.
+      const tight = geoSepDeg != null && geoSepDeg < 0.035;
+      if (isStart) return tight ? [-72, -46] : [-30, -36];
+      if (isEnd) return tight ? [72, 42] : [30, 32];
       return [0, 0];
+    }
+
+    /** Walk the driving path until far enough from home (and the other endpoint). */
+    function endpointLngLat(trip, isStart, isEnd, otherLngLat) {
+      const stop = isStart ? trip.stops[0] : trip.stops[trip.stops.length - 1];
+      const path = trip.route_path || [];
+      if (!isSameHomeTrip(trip) || path.length < 6) return [stop.lng, stop.lat];
+      const minFromHome = 0.04; // ~4.5km
+      const minFromOther = 0.035;
+      const farEnough = (lng, lat) => {
+        if (Math.hypot(lng - stop.lng, lat - stop.lat) < minFromHome) return false;
+        if (otherLngLat && Math.hypot(lng - otherLngLat[0], lat - otherLngLat[1]) < minFromOther) return false;
+        return true;
+      };
+      if (isStart) {
+        for (let i = 1; i < path.length; i++) {
+          const lat = path[i][0], lng = path[i][1];
+          if (farEnough(lng, lat)) return [lng, lat];
+        }
+      } else if (isEnd) {
+        for (let i = path.length - 2; i >= 0; i--) {
+          const lat = path[i][0], lng = path[i][1];
+          if (farEnough(lng, lat)) return [lng, lat];
+        }
+      }
+      return [stop.lng, stop.lat];
     }
 
     function cityOnly(location) {
@@ -1349,6 +1376,11 @@
           : [...new Set([0, lastIdx])];
         const start = trip.stops[0];
         const sameHome = isSameHomeTrip(trip);
+        const startLngLat = sameHome ? endpointLngLat(trip, true, false, null) : null;
+        const endLngLat = sameHome ? endpointLngLat(trip, false, true, startLngLat) : null;
+        const homeGeoSep = (startLngLat && endLngLat)
+          ? Math.hypot(endLngLat[0] - startLngLat[0], endLngLat[1] - startLngLat[1])
+          : null;
         indices.forEach(i => {
           const s = trip.stops[i];
           const wrap = document.createElement('div');
@@ -1395,15 +1427,15 @@
             wrap.appendChild(dot);
             var el = dot, lblRef = null;
           }
-          const pixelOffset = single
-            ? milestoneMarkerOffset(sameHome, isStart, isEnd)
-            : milestoneMarkerOffset(sameHome, isStart, isEnd);
+          let lngLat = [s.lng, s.lat];
+          if (isMilestone && sameHome) lngLat = isStart ? startLngLat : endLngLat;
+          const pixelOffset = milestoneMarkerOffset(sameHome, isStart, isEnd, homeGeoSep);
           const m = new mapboxgl.Marker({
             element: wrap,
             anchor: 'bottom',
             offset: pixelOffset,
           })
-            .setLngLat([s.lng, s.lat])
+            .setLngLat(lngLat)
             .setPopup(new mapboxgl.Popup({ offset: 14, maxWidth: '280px' }).setHTML(popupHtml(s)))
             .addTo(map);
           m._idx = i; m._el = el; m._lbl = lblRef; m._stop = s;
