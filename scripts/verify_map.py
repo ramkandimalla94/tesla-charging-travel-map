@@ -43,8 +43,8 @@ def main() -> int:
         return 1
 
     SCREENSHOTS.mkdir(parents=True, exist_ok=True)
-    trip_co = load_trip_id("Henrietta_to_Vernon")
-    trip_sea = load_trip_id("Henrietta_to_Yakima")
+    trip_co = load_trip_id("2024-06-29_Addison")  # Colorado round trip
+    trip_sea = load_trip_id("2024-11-17_Addison_to_Bellevue")
 
     console_errors: list[str] = []
     base_url = "http://127.0.0.1:8765/output/travel_map.html"
@@ -75,6 +75,17 @@ def main() -> int:
         )
         print(f"Overview camera: {overview}")
         page.screenshot(path=str(SCREENSHOTS / "01-overview.png"))
+
+        declutter = page.evaluate(
+            """() => ({
+              hubs: document.querySelectorAll('.home-hub').length,
+              chips: document.querySelectorAll('.route-chip').length,
+              stopDots: document.querySelectorAll('.stop-dot').length,
+              hubTripCounts: (DASHBOARD.hubs || []).map(h => h.trip_count),
+              destGroups: (DASHBOARD.destination_groups || []).length,
+            })"""
+        )
+        print(f"Overview declutter: {declutter}")
 
         # Colorado trip
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
@@ -124,6 +135,25 @@ def main() -> int:
         print(f"Seattle: {sea_state}")
         page.screenshot(path=str(SCREENSHOTS / "05-seattle-fixed.png"))
 
+        # Playback smoke + watch mode
+        page.evaluate(f"selectTrip({json.dumps(trip_co)})")
+        page.wait_for_timeout(800)
+        page.evaluate("startPlayback()")
+        page.wait_for_timeout(1500)
+        play_state = page.evaluate(
+            """() => ({
+              playing: isPlaying,
+              watching: document.body.classList.contains('watching'),
+              panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
+              t0: animTimeMs,
+            })"""
+        )
+        page.wait_for_timeout(800)
+        play_state["t1"] = page.evaluate("animTimeMs")
+        page.evaluate("stopPlayback()")
+        print(f"Playback: {play_state}")
+        page.screenshot(path=str(SCREENSHOTS / "06-watch-mode.png"))
+
         browser.close()
 
     critical_errors = [
@@ -155,6 +185,27 @@ def main() -> int:
         ok = False
     if not in_conus(sea_state["center"]["lat"], sea_state["center"]["lng"]):
         print(f"FAIL: Seattle camera outside CONUS: {sea_state['center']}")
+        ok = False
+    if declutter.get("hubs", 0) < 1:
+        print(f"FAIL: Expected home hubs on overview, got {declutter}")
+        ok = False
+    if declutter.get("stopDots", 0) > 0:
+        print(f"FAIL: Overview still has per-trip stop dots: {declutter}")
+        ok = False
+    if declutter.get("hubs", 0) + declutter.get("chips", 0) >= 23:
+        print(f"FAIL: Overview still looks fully labeled ({declutter})")
+        ok = False
+    if not play_state.get("playing"):
+        print(f"FAIL: Playback did not start: {play_state}")
+        ok = False
+    if not play_state.get("watching"):
+        print(f"FAIL: Watch mode not active during play: {play_state}")
+        ok = False
+    if not play_state.get("panelCollapsed"):
+        print(f"FAIL: Panel should collapse during play: {play_state}")
+        ok = False
+    if play_state.get("t1", 0) <= play_state.get("t0", 0):
+        print(f"FAIL: animTimeMs not advancing: {play_state}")
         ok = False
     if critical_errors:
         print("WARN: Console errors detected")

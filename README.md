@@ -14,7 +14,9 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 
 ## Features
 
+- **Atlas overview** — home hubs (Addison / Bellevue) instead of stacked start labels; destination-grouped trip list
 - **3D satellite map** with Mapbox terrain and elevated route lines
+- **Cinematic watch mode** — Play hides chrome for a passenger-seat replay (Export still uses 9:16 cinema)
 - **Time-accurate playback** — long overnight halts show as slower pacing between Supercharger stops
 - **Location labels on map** — city/state names appear at each stop during replay
 - **Instagram video export** — one-click `.webm` download per trip (9:16 cinema mode)
