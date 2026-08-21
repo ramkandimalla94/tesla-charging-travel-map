@@ -280,8 +280,14 @@
     }
     body.watching .transport-dock:hover,
     body.watching .transport-dock:focus-within { opacity: 0.95; }
-    body.watching .story-overlay { bottom: 100px; }
-    body.watching .cinema-title.visible { display: block; bottom: 120px; }
+    body.watching .story-overlay { bottom: 148px; left: 50%; transform: translateX(-50%); max-width: min(520px, calc(100vw - 48px)); text-align: center; }
+    body.watching .story-overlay .story-caption {
+      text-shadow: 0 2px 16px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9);
+      background: rgba(8,10,16,0.55);
+      padding: 8px 14px; border-radius: 12px;
+      display: inline-block;
+    }
+    body.watching .cinema-title.visible { display: block; bottom: 160px; }
 
     @media (max-width: 900px) {
       :root { --panel-w: 280px; }
