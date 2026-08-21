@@ -109,20 +109,29 @@ def main() -> int:
         reel = page.evaluate(
             """() => {
               let spokeCount = 0;
+              let hotCount = 0;
+              let bandHot = false;
               try {
-                spokeCount = map.querySourceFeatures('atlas-spokes')?.length || 0;
+                const raw = map.getSource('atlas-spokes')?._data;
+                const feats = raw?.features || [];
+                spokeCount = feats.length || map.querySourceFeatures('atlas-spokes')?.length || 0;
+                hotCount = feats.filter(f => f.properties?.hot === 1).length;
+                bandHot = feats.some(f => f.properties?.kind === 'band' && f.properties?.hot === 1);
               } catch (e) {
                 try {
-                  const raw = map.getSource('atlas-spokes')?._data;
-                  spokeCount = raw?.features?.length || 0;
+                  spokeCount = map.querySourceFeatures('atlas-spokes')?.length || 0;
                 } catch (e2) {}
               }
+              const bandOpacity = map.getPaintProperty('atlas-spokes-band', 'line-opacity');
               return {
                 badge: document.getElementById('memory-badge')?.classList.contains('visible'),
                 cta: document.getElementById('atlas-cta')?.classList.contains('visible'),
                 spokes: !!map.getLayer('atlas-spokes-line'),
                 spokeBand: !!map.getLayer('atlas-spokes-band'),
                 spokeCount,
+                hotCount,
+                bandHot,
+                zoomPaint: JSON.stringify(bandOpacity || '').includes('zoom'),
               };
             }"""
         )
@@ -353,6 +362,41 @@ def main() -> int:
         )
         print(f"Export cinema: {cinema}")
 
+        # Share blurb button
+        share_state = page.evaluate(
+            """() => {
+              const btn = document.getElementById('btn-share');
+              const trip = activeTrip();
+              const blurb = typeof tripShareBlurb === 'function' ? tripShareBlurb(trip) : '';
+              const dwellSegs = (trip?.playback?.segments || []).filter(s => s.type === 'dwell');
+              const rich = dwellSegs.filter(s =>
+                /kWh|Pit stop|Halfway|Final charge|✓|nearby:/i.test(s.caption || '')
+                || /kWh|Stop \\d|nearby|Homeward|halfway/i.test(s.subcaption || '')
+              );
+              return {
+                btn: !!btn,
+                enabled: btn && !btn.disabled,
+                hasBlurb: blurb.includes('Relive it:') && blurb.includes('tesla-charging-travel-map'),
+                hasStoryShare: !!(trip?.story?.share_blurb),
+                sampleCaption: dwellSegs[0]?.caption || '',
+                dwellCount: dwellSegs.length,
+                richCaptionCount: rich.length,
+                hasNativeShareHelper: typeof shareTripBlurb === 'function',
+                hasOfferShare: typeof offerShareAfterPlay === 'function',
+                hasHideShare: typeof hideShareToast === 'function',
+                toastClickable: (() => {
+                  const t = document.getElementById('share-toast');
+                  if (!t) return false;
+                  t.classList.add('visible');
+                  const pe = getComputedStyle(t).pointerEvents;
+                  t.classList.remove('visible');
+                  return pe === 'auto';
+                })(),
+              };
+            }"""
+        )
+        print(f"Share blurb: {share_state}")
+
         browser.close()
 
     critical_errors = [
@@ -415,6 +459,12 @@ def main() -> int:
     # querySourceFeatures can be empty at low zoom; layer presence is enough
     if reel.get("spokes") and reel.get("spokeCount", 0) == 0:
         print(f"WARN: Spokes layer present but no features queried at this zoom: {reel}")
+    if reel.get("badge") and reel.get("hotCount", 0) < 1:
+        print(f"FAIL: Memory reel should hot-highlight a corridor: {reel}")
+        ok = False
+    if not reel.get("zoomPaint"):
+        print(f"FAIL: Corridor band should use zoom-aware width: {reel}")
+        ok = False
     if not play_state.get("playing"):
         print(f"FAIL: Playback did not start: {play_state}")
         ok = False
@@ -462,6 +512,24 @@ def main() -> int:
         ok = False
     if not cinema.get("portraitish"):
         print(f"FAIL: Map frame not portrait-ish for export: {cinema}")
+        ok = False
+    if not share_state.get("btn") or not share_state.get("enabled"):
+        print(f"FAIL: Share button missing/disabled on trip: {share_state}")
+        ok = False
+    if not share_state.get("hasBlurb"):
+        print(f"FAIL: Share blurb missing live URL: {share_state}")
+        ok = False
+    if share_state.get("dwellCount", 0) > 2 and share_state.get("richCaptionCount", 0) < 1:
+        print(f"FAIL: Expected richer dwell captions: {share_state}")
+        ok = False
+    if not share_state.get("hasOfferShare"):
+        print(f"FAIL: offerShareAfterPlay missing: {share_state}")
+        ok = False
+    if not share_state.get("toastClickable"):
+        print(f"FAIL: Share toast must accept clicks when visible: {share_state}")
+        ok = False
+    if not share_state.get("hasHideShare"):
+        print(f"FAIL: hideShareToast missing: {share_state}")
         ok = False
     if story_pacing.get("ok"):
         if story_pacing.get("midTravelVisible"):

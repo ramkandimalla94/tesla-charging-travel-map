@@ -30,6 +30,7 @@
           return;
         }
         stopPlayback();
+        offerShareAfterPlay();
         return;
       }
       updateTrailFromState(positionAtTime(animTimeMs));
@@ -46,18 +47,22 @@
       setPanelCollapsed(true);
       if (!forRecording) setWatching(true);
       setPlaybackVisuals(true);
-      document.getElementById('btn-play').disabled = true;
-      document.getElementById('btn-pause').disabled = false;
-      document.getElementById('location-hud').classList.remove('visible');
-      document.getElementById('transport-dock')?.classList.remove('idle');
+      const playBtn = ui('btn-play');
+      const pauseBtn = ui('btn-pause');
+      if (playBtn) playBtn.disabled = true;
+      if (pauseBtn) pauseBtn.disabled = false;
+      ui('location-hud')?.classList.remove('visible');
+      ui('transport-dock')?.classList.remove('idle');
       updateQueueBadge();
       animFrame = requestAnimationFrame(animate);
     }
     function stopPlayback() {
       isPlaying=false;
       if (animFrame) cancelAnimationFrame(animFrame);
-      document.getElementById('btn-play').disabled = !isSingleTrip();
-      document.getElementById('btn-pause').disabled = true;
+      const playBtn = ui('btn-play');
+      const pauseBtn = ui('btn-pause');
+      if (playBtn) playBtn.disabled = !isSingleTrip();
+      if (pauseBtn) pauseBtn.disabled = true;
       if (!isRecording) {
         setPlaybackVisuals(false);
         setWatching(false);

@@ -79,6 +79,14 @@
       memoryActiveId = null;
       document.getElementById('memory-badge')?.classList.remove('visible');
       if (selectedId === 'all' && !hoveredTripId) applyEraFilter();
+      drawAtlasSpokes();
+    }
+
+    function atlasHotDest() {
+      const id = hoveredTripId || memoryActiveId;
+      if (!id) return null;
+      const trip = TRIPS.find(t => t.id === id);
+      return trip?.story_dest || trip?.dest_label || null;
     }
 
     function showMemoryHighlight(trip) {
@@ -102,6 +110,7 @@
         m.getElement().classList.toggle('hot', hit);
         m.getElement().classList.toggle('dim', !hit);
       });
+      drawAtlasSpokes();
     }
 
     function startMemoryReel() {
@@ -137,6 +146,7 @@
     function drawAtlasSpokes() {
       if (!map) return;
       const feats = [];
+      const hotDest = atlasHotDest();
       if (selectedId === 'all') {
         DEST_GROUPS.forEach(group => {
           const visibleIds = (group.trip_ids || []).filter(id => {
@@ -155,31 +165,32 @@
           const hub = HUBS.find(h => h.label === hubLabel) || HUBS[0];
           if (!hub || group.lat == null || group.lng == null) return;
           const visits = visibleIds.length;
+          const hot = hotDest && group.dest === hotDest ? 1 : 0;
           const a = [hub.lng, hub.lat], b = [group.lng, group.lat];
           // Soft corridor band + dashed spokes share one GeoJSON source (kind filter)
           feats.push({
             type: 'Feature',
-            properties: { kind: 'band', color: group.color, dest: group.dest, visits },
+            properties: { kind: 'band', color: group.color, dest: group.dest, visits, hot },
             geometry: { type: 'LineString', coordinates: [a, b] },
           });
           feats.push({
             type: 'Feature',
-            properties: { kind: 'spoke', color: group.color, dest: group.dest, visits, role: 'core' },
+            properties: { kind: 'spoke', color: group.color, dest: group.dest, visits, role: 'core', hot },
             geometry: { type: 'LineString', coordinates: [a, b] },
           });
           // Multi-visit destinations: fan parallel filaments so the corridor reads as a band
           if (visits >= 2) {
-            const spacing = Math.min(38000, 12000 + visits * 4500);
-            const sides = visits >= 5 ? [-1.1, 1.1, -0.65, 0.65, -0.3, 0.3]
+            const spacing = Math.min(42000, 14000 + visits * 5000);
+            const sides = visits >= 5 ? [-1.15, 1.15, -0.7, 0.7, -0.35, 0.35]
               : visits >= 3 ? [-1, 1, -0.5, 0.5]
               : [-1, 1];
             sides.forEach((s, i) => {
               feats.push({
                 type: 'Feature',
-                properties: { kind: 'spoke', color: group.color, dest: group.dest, visits, role: 'filament' },
+                properties: { kind: 'spoke', color: group.color, dest: group.dest, visits, role: 'filament', hot },
                 geometry: {
                   type: 'LineString',
-                  coordinates: offsetSpokeCoords(a[0], a[1], b[0], b[1], s * spacing * (1 + (i % 2) * 0.2)),
+                  coordinates: offsetSpokeCoords(a[0], a[1], b[0], b[1], s * spacing * (1 + (i % 2) * 0.18)),
                 },
               });
             });
@@ -188,14 +199,21 @@
       }
       const data = { type: 'FeatureCollection', features: feats };
       const vis = selectedId === 'all' ? 'visible' : 'none';
-      if (map.getSource('atlas-spokes')) {
+      const hasSource = !!map.getSource('atlas-spokes');
+      if (hasSource) {
         map.getSource('atlas-spokes').setData(data);
+      } else {
+        map.addSource('atlas-spokes', { type: 'geojson', data });
+      }
+      const hasBand = !!map.getLayer('atlas-spokes-band');
+      const hasLine = !!map.getLayer('atlas-spokes-line');
+      if (hasBand && hasLine) {
+        map.setLayoutProperty('atlas-spokes-band', 'visibility', vis);
         map.setLayoutProperty('atlas-spokes-line', 'visibility', vis);
-        if (map.getLayer('atlas-spokes-band')) map.setLayoutProperty('atlas-spokes-band', 'visibility', vis);
         return;
       }
-      map.addSource('atlas-spokes', { type: 'geojson', data });
       const beforeId = (map.getStyle().layers || []).find(l => /^route-.*-casing$/.test(l.id))?.id;
+      // Zoom-aware opacity + visit-aware width; hot corridor brightens during reel/hover
       const bandLayer = {
         id: 'atlas-spokes-band',
         type: 'line',
@@ -206,10 +224,18 @@
           'line-color': ['get', 'color'],
           'line-width': [
             'interpolate', ['linear'], ['get', 'visits'],
-            1, 8, 2, 14, 4, 22, 8, 32,
+            1, ['case', ['==', ['get', 'hot'], 1], 12, 8],
+            2, ['case', ['==', ['get', 'hot'], 1], 18, 14],
+            4, ['case', ['==', ['get', 'hot'], 1], 28, 22],
+            8, ['case', ['==', ['get', 'hot'], 1], 40, 32],
           ],
-          'line-opacity': 0.2,
-          'line-blur': 3.5,
+          'line-opacity': [
+            'interpolate', ['linear'], ['zoom'],
+            2, ['case', ['==', ['get', 'hot'], 1], 0.4, 0.26],
+            4, ['case', ['==', ['get', 'hot'], 1], 0.32, 0.18],
+            6, ['case', ['==', ['get', 'hot'], 1], 0.2, 0.1],
+          ],
+          'line-blur': ['case', ['==', ['get', 'hot'], 1], 2.2, 3.8],
         },
       };
       const layer = {
@@ -222,28 +248,40 @@
           'line-color': ['get', 'color'],
           'line-width': [
             'match', ['get', 'role'],
-            'filament', 1.05,
-            1.55,
+            'filament', ['case', ['==', ['get', 'hot'], 1], 1.35, 0.95],
+            ['case', ['==', ['get', 'hot'], 1], 2.2, 1.55],
           ],
           'line-opacity': [
-            'match', ['get', 'role'],
-            'filament', 0.28,
-            0.42,
+            'interpolate', ['linear'], ['zoom'],
+            2, [
+              'match', ['get', 'role'],
+              'filament', ['case', ['==', ['get', 'hot'], 1], 0.45, 0.18],
+              ['case', ['==', ['get', 'hot'], 1], 0.7, 0.34],
+            ],
+            4, [
+              'match', ['get', 'role'],
+              'filament', ['case', ['==', ['get', 'hot'], 1], 0.55, 0.28],
+              ['case', ['==', ['get', 'hot'], 1], 0.75, 0.42],
+            ],
+            6, [
+              'match', ['get', 'role'],
+              'filament', ['case', ['==', ['get', 'hot'], 1], 0.4, 0.22],
+              ['case', ['==', ['get', 'hot'], 1], 0.65, 0.36],
+            ],
           ],
           'line-dasharray': [1.2, 1.8],
         },
       };
-      try {
-        if (beforeId) {
-          map.addLayer(bandLayer, beforeId);
-          map.addLayer(layer, beforeId);
-        } else {
-          map.addLayer(bandLayer);
-          map.addLayer(layer);
+      const add = (spec) => {
+        if (map.getLayer(spec.id)) return;
+        try {
+          if (beforeId) map.addLayer(spec, beforeId);
+          else map.addLayer(spec);
+        } catch (_) {
+          try { map.addLayer(spec); } catch (__) {}
         }
-      } catch (_) {
-        try { map.addLayer(bandLayer); } catch (__) {}
-        try { map.addLayer(layer); } catch (__) {}
-      }
+      };
+      add(bandLayer);
+      add(layer);
     }
 

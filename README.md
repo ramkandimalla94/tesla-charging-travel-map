@@ -14,7 +14,7 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 
 ## Features
 
-- **Atlas overview** — home hubs + destination constellation + hub→destination spokes with corridor banding for repeat destinations; destination-grouped trip list
+- **Atlas overview** — home hubs + destination constellation + hub→destination spokes with zoom-aware corridor banding (hot band on memory reel / hover); destination-grouped trip list
 - **Memory reel** — atlas quietly cycles featured journeys until you pick one (Pause anytime); Loop cycles epics when queued (dock shows `Epic queue · i/n`)
 - **Year era filter** — labeled Era chips on the journey timeline isolate atlas chapters by year
 - **3D satellite map** with Mapbox terrain and elevated route lines
@@ -22,6 +22,7 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **Time-accurate playback** — overnight halts pace charging beats without long freezes; dwell progress in the dock
 - **Location labels on map** — city/state names appear at each stop during replay
 - **Instagram video export** — one-click `.webm` with intro/outro title cards and 9:16 safe margins
+- **Share blurb** — Share uses the system sheet when available, otherwise copies a caption + live demo link; prompted after a replay finishes (toast stays clickable ~8s; Esc dismisses)
 - **Works for any Tesla owner** — drop in your CSV exports; home base auto-detected (or override via config)
 - Trip segmentation, timeline scrubber, director camera, night mode, GPX export
 
@@ -52,7 +53,7 @@ python scripts/segment_trips.py
 python scripts/build_map.py
 ```
 
-Optional: copy `data/owner_config.json.example` → `data/owner_config.json` to pin your home base if auto-detection isn't right.
+Optional: copy `data/owner_config.json.example` → `data/owner_config.json` to pin your home base if auto-detection isn't right. You can also set `story_overrides` (by trip id / id prefix / name) to customize intro, outro, share blurb, or individual stop captions.
 
 ### Export a trip video for Instagram
 
@@ -109,7 +110,7 @@ scripts/
   verify_map.py       # Playwright browser tests
   templates/
     travel_map.html.j2
-    travel_map/       # Jinja partials (_map_css, _atlas_js, _playback_js, _routes_js, _markers_js)
+    travel_map/       # Jinja partials (_map_css → _css_base/_chrome/_cinema, _atlas_js, _playback_js, …)
 data/
   trips.json          # Segmented trips (committed)
   locations_cache.json
@@ -123,6 +124,7 @@ output/               # Generated (gitignored except GPX/GeoJSON)
 | Space | Play / pause |
 | ← → | Step stops |
 | Esc | Stop play → atlas · pause memory reel |
+| S | Copy share blurb (selected trip) |
 | R | Reset |
 | D | Director camera |
 

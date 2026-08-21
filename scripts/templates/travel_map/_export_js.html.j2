@@ -1,4 +1,101 @@
 {# Instagram 9:16 export — title hold, outro card, chrome-free canvas #}
+    function tripShareBlurb(trip) {
+      if (!trip) return '';
+      const story = trip.story || {};
+      if (story.share_blurb) return story.share_blurb;
+      return (
+        `${trip.name} — ${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days}d\n` +
+        'Relive it: https://ramkandimalla94.github.io/tesla-charging-travel-map/'
+      );
+    }
+
+    function hideShareToast() {
+      const toast = document.getElementById('share-toast');
+      if (!toast) return;
+      toast.classList.remove('visible');
+      toast.onclick = null;
+      toast.onkeydown = null;
+      toast.style.cursor = '';
+      toast.removeAttribute('tabindex');
+      toast.removeAttribute('role');
+      clearTimeout(showShareToast._t);
+      clearTimeout(offerShareAfterPlay._t);
+    }
+
+    function showShareToast(msg, ms) {
+      const toast = document.getElementById('share-toast');
+      if (!toast) return;
+      toast.onclick = null;
+      toast.onkeydown = null;
+      toast.style.cursor = '';
+      toast.removeAttribute('tabindex');
+      toast.setAttribute('role', 'status');
+      toast.textContent = msg;
+      toast.classList.add('visible');
+      clearTimeout(showShareToast._t);
+      showShareToast._t = setTimeout(() => hideShareToast(), ms == null ? 2600 : ms);
+    }
+
+    async function shareTripBlurb(opts) {
+      const preferNative = !opts || opts.preferNative !== false;
+      if (!isSingleTrip()) {
+        showShareToast('Select a trip to share');
+        return;
+      }
+      const trip = activeTrip();
+      const text = tripShareBlurb(trip);
+      const liveUrl = 'https://ramkandimalla94.github.io/tesla-charging-travel-map/';
+      const shareData = { title: trip.name || 'Road Replay', text, url: liveUrl };
+
+      if (preferNative && typeof navigator.share === 'function') {
+        try {
+          if (!navigator.canShare || navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            showShareToast('Shared');
+            return;
+          }
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+          // Fall through to clipboard when share sheet is unavailable
+        }
+      }
+
+      try {
+        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+        else {
+          const ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); ta.remove();
+        }
+        showShareToast('Share blurb copied — paste anywhere');
+      } catch (_) {
+        showShareToast('Could not copy — try Export instead');
+      }
+    }
+
+    function offerShareAfterPlay() {
+      if (isRecording || loopTrip || queueEpics) return;
+      const toast = document.getElementById('share-toast');
+      if (!toast) return;
+      showShareToast('Journey complete — tap to share', 8000);
+      toast.style.cursor = 'pointer';
+      toast.tabIndex = 0;
+      toast.setAttribute('role', 'button');
+      const go = () => {
+        hideShareToast();
+        shareTripBlurb();
+      };
+      toast.onclick = go;
+      toast.onkeydown = (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          go();
+        }
+      };
+      clearTimeout(offerShareAfterPlay._t);
+      offerShareAfterPlay._t = setTimeout(() => hideShareToast(), 8000);
+    }
+
     function showExportTitleCard(trip, phase) {
       const title = document.getElementById('cinema-title');
       if (!title || !trip) return;
@@ -72,6 +169,7 @@
         document.getElementById('story-overlay')?.classList.remove('visible');
         map.resize();
         fitTrip(false);
+        showShareToast('Video saved — Share copies a caption with the live link');
       };
 
       isRecording = true;

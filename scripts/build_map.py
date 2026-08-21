@@ -19,6 +19,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 
+from home_config import load_owner_config
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "output"
@@ -146,26 +148,49 @@ def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]])
     )
 
     stop_captions: list[dict] = []
+    n = len(stops)
     for i, (stop, pois) in enumerate(zip(stops, stop_pois)):
         label = short_location_label(stop["location"])
         city = label.split(",")[0]
-        if pois:
-            poi_text = " · ".join(
-                f"{p['emoji']} {p['name']}" + (" ✓" if p.get("visited") else "")
-                for p in pois[:2]
-            )
-            caption = f"Charging in {city} — nearby: {poi_text}"
-            sub = pois[0].get("tagline", "")
-        elif i == 0:
+        kwh = stop.get("kwh")
+        try:
+            kwh_f = float(kwh) if kwh is not None else None
+        except (TypeError, ValueError):
+            kwh_f = None
+        kwh_bit = f"{kwh_f:.0f} kWh" if kwh_f and kwh_f >= 1 else ""
+        visited = [p for p in (pois or []) if p.get("visited")]
+        nearby = pois or []
+
+        if i == 0:
             caption = f"Departing {city} — the adventure begins"
-            sub = f"First Supercharger of {len(stops)} stops"
-        elif i == len(stops) - 1:
-            caption = f"Final stop · {city}"
-            sub = "Homeward bound"
+            sub = f"First of {n} Supercharger stops" + (f" · {kwh_bit}" if kwh_bit else "")
+        elif i == n - 1:
+            caption = f"Final charge · {city}"
+            sub = (
+                "Homeward bound — journey nearly complete"
+                if origin.split(",")[0] == city or "Home" in (trip.get("dest_label") or "")
+                else f"Last stop of {n}"
+            )
+            if kwh_bit:
+                sub = f"{sub} · {kwh_bit}"
+        elif visited:
+            top = visited[0]
+            caption = f"Charging in {city} — {top.get('emoji', '')} {top.get('name', 'a favorite')} ✓".strip()
+            sub = top.get("tagline") or (f"Stop {i + 1} of {n}" + (f" · {kwh_bit}" if kwh_bit else ""))
+        elif nearby:
+            poi_text = " · ".join(
+                f"{p.get('emoji', '')} {p.get('name', '')}".strip() for p in nearby[:2]
+            )
+            caption = f"Pit stop in {city} — nearby: {poi_text}"
+            sub = nearby[0].get("tagline") or (kwh_bit or f"Stop {i + 1} of {n}")
+        elif i == n // 2:
+            caption = f"Halfway · charging in {city}"
+            sub = (f"{kwh_bit} · " if kwh_bit else "") + f"Stop {i + 1} of {n} across {via}"
         else:
             caption = f"Charging in {city}"
-            sub = f"Stop {i + 1} of {len(stops)}"
-        stop_captions.append({"caption": caption, "sub": sub, "pois": pois})
+            sub = (f"{kwh_bit} · " if kwh_bit else "") + f"Stop {i + 1} of {n}"
+
+        stop_captions.append({"caption": caption, "sub": sub, "pois": nearby})
 
     return {
         "intro": intro,
@@ -175,6 +200,53 @@ def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]])
         "nearby_count": len(all_pois),
         "stop_captions": stop_captions,
     }
+
+
+def apply_story_overrides(trip: dict, story: dict, cfg: dict | None = None) -> dict:
+    """Optional owner_config.story_overrides keyed by trip id, id prefix, or name substring."""
+    cfg = cfg if cfg is not None else load_owner_config()
+    overrides = (cfg or {}).get("story_overrides") or {}
+    if not overrides:
+        return story
+    trip_id = str(trip.get("id") or "")
+    trip_name = str(trip.get("name") or "")
+    matched: dict | None = None
+    if trip_id in overrides:
+        matched = overrides[trip_id]
+    else:
+        for key, val in overrides.items():
+            if not isinstance(val, dict):
+                continue
+            k = str(key)
+            if trip_id.startswith(k) or (k and k.lower() in trip_name.lower()):
+                matched = val
+                break
+    if not matched:
+        return story
+    out = dict(story)
+    for field in ("intro", "outro", "intro_title", "share_blurb"):
+        if matched.get(field):
+            out[field] = matched[field]
+    if isinstance(matched.get("highlights"), list) and matched["highlights"]:
+        out["highlights"] = [str(h) for h in matched["highlights"][:6]]
+    # Optional per-stop caption patches: [{index, caption, sub}]
+    patches = matched.get("stop_captions") or []
+    if patches and out.get("stop_captions"):
+        caps = list(out["stop_captions"])
+        for patch in patches:
+            if not isinstance(patch, dict):
+                continue
+            idx = patch.get("index")
+            if not isinstance(idx, int) or idx < 0 or idx >= len(caps):
+                continue
+            row = dict(caps[idx])
+            if patch.get("caption"):
+                row["caption"] = patch["caption"]
+            if patch.get("sub") is not None:
+                row["sub"] = patch["sub"]
+            caps[idx] = row
+        out["stop_captions"] = caps
+    return out
 
 
 def trip_color(index: int) -> str:
@@ -760,6 +832,12 @@ def prepare_trips(
         ]
         story = build_trip_story(trip, stops, stop_pois)
         story["intro_title"] = trip["name"]
+        days = trip_duration_days(trip["start"], trip["end"])
+        story["share_blurb"] = (
+            f"{trip['name']} — {miles:,.0f} mi · {len(stops)} Supercharger stops · {days}d\n"
+            "Relive it: https://ramkandimalla94.github.io/tesla-charging-travel-map/"
+        )
+        story = apply_story_overrides(trip, story)
         playback = build_playback_timeline(
             stops, route_path, story, stop_pois, cache, token, refresh, stats
         )

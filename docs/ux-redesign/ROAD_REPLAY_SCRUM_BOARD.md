@@ -5,7 +5,7 @@
 **Critical complaint:** Home page locations overlapping; UI feels poor  
 **This doc owns:** Process, backlog, DoD, handoffs — **not** implementation  
 
-**Team session status (2026-08-21):** Sprint 0–2 merged. Sprint 3 (+ Sprint 4 export polish) implemented on PR **#15** (`cursor/road-replay-sprint3-cinema-9f19`) — DoD checklist in `00-MASTER_PLAN.md` is green except human review/merge. Live URL unchanged.
+**Team session status (2026-08-21):** Sprint 0–3 merged (#12–#15). Pages deploy green. Sprint 4 share polish continues on `cursor/road-replay-sprint4-share-9f19`. Live URL unchanged.
 
 ---
 
