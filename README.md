@@ -22,7 +22,7 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **Time-accurate playback** — overnight halts pace charging beats without long freezes; dwell progress in the dock
 - **Location labels on map** — city/state names appear at each stop during replay
 - **Instagram video export** — one-click `.webm` with intro/outro title cards and 9:16 safe margins
-- **Share blurb** — copy a trip caption + live demo link from the dock Share control
+- **Share blurb** — Share uses the system sheet when available, otherwise copies a caption + live demo link; prompted after a replay finishes
 - **Works for any Tesla owner** — drop in your CSV exports; home base auto-detected (or override via config)
 - Trip segmentation, timeline scrubber, director camera, night mode, GPX export
 

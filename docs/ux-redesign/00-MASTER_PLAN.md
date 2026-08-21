@@ -21,7 +21,9 @@ Memory reel, spokes + corridor banding, featured CTA, epic queue + badge, Era ra
 3. **Caption pacing** — shipped in #15
 4. **Richer dwell story captions** — kWh / visited POI / halfway copy in `build_trip_story`
 5. **Share blurb** — dock Share copies trip caption + live demo URL; toast after export
+6. **Web Share API** — `navigator.share` when available, clipboard fallback
+7. **Post-play share prompt** — journey-complete toast invites Share
 
 ## Later
 
-Optional: Web Share API when available; per-stop story overrides in owner config.
+Per-stop story overrides in owner config.

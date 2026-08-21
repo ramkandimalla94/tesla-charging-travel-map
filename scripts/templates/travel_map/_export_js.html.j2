@@ -18,13 +18,30 @@
       showShareToast._t = setTimeout(() => toast.classList.remove('visible'), 2600);
     }
 
-    async function shareTripBlurb() {
+    async function shareTripBlurb(opts) {
+      const preferNative = !opts || opts.preferNative !== false;
       if (!isSingleTrip()) {
         showShareToast('Select a trip to share');
         return;
       }
       const trip = activeTrip();
       const text = tripShareBlurb(trip);
+      const liveUrl = 'https://ramkandimalla94.github.io/tesla-charging-travel-map/';
+      const shareData = { title: trip.name || 'Road Replay', text, url: liveUrl };
+
+      if (preferNative && typeof navigator.share === 'function') {
+        try {
+          if (!navigator.canShare || navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            showShareToast('Shared');
+            return;
+          }
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+          // Fall through to clipboard when share sheet is unavailable
+        }
+      }
+
       try {
         if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
         else {
@@ -36,6 +53,26 @@
       } catch (_) {
         showShareToast('Could not copy — try Export instead');
       }
+    }
+
+    function offerShareAfterPlay() {
+      if (isRecording || loopTrip || queueEpics) return;
+      const toast = document.getElementById('share-toast');
+      if (!toast) return;
+      showShareToast('Journey complete — tap to share');
+      toast.style.cursor = 'pointer';
+      toast.onclick = () => {
+        toast.onclick = null;
+        toast.style.cursor = '';
+        shareTripBlurb();
+      };
+      clearTimeout(offerShareAfterPlay._t);
+      offerShareAfterPlay._t = setTimeout(() => {
+        if (toast.onclick) {
+          toast.onclick = null;
+          toast.style.cursor = '';
+        }
+      }, 8000);
     }
 
     function showExportTitleCard(trip, phase) {

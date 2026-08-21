@@ -359,12 +359,21 @@ def main() -> int:
               const btn = document.getElementById('btn-share');
               const trip = activeTrip();
               const blurb = typeof tripShareBlurb === 'function' ? tripShareBlurb(trip) : '';
+              const dwellSegs = (trip?.playback?.segments || []).filter(s => s.type === 'dwell');
+              const rich = dwellSegs.filter(s =>
+                /kWh|Pit stop|Halfway|Final charge|✓|nearby:/i.test(s.caption || '')
+                || /kWh|Stop \\d|nearby|Homeward|halfway/i.test(s.subcaption || '')
+              );
               return {
                 btn: !!btn,
                 enabled: btn && !btn.disabled,
                 hasBlurb: blurb.includes('Relive it:') && blurb.includes('tesla-charging-travel-map'),
                 hasStoryShare: !!(trip?.story?.share_blurb),
-                sampleCaption: trip?.playback?.segments?.find(s => s.type === 'dwell')?.caption || '',
+                sampleCaption: dwellSegs[0]?.caption || '',
+                dwellCount: dwellSegs.length,
+                richCaptionCount: rich.length,
+                hasNativeShareHelper: typeof shareTripBlurb === 'function',
+                hasOfferShare: typeof offerShareAfterPlay === 'function',
               };
             }"""
         )
@@ -485,6 +494,12 @@ def main() -> int:
         ok = False
     if not share_state.get("hasBlurb"):
         print(f"FAIL: Share blurb missing live URL: {share_state}")
+        ok = False
+    if share_state.get("dwellCount", 0) > 2 and share_state.get("richCaptionCount", 0) < 1:
+        print(f"FAIL: Expected richer dwell captions: {share_state}")
+        ok = False
+    if not share_state.get("hasOfferShare"):
+        print(f"FAIL: offerShareAfterPlay missing: {share_state}")
         ok = False
     if story_pacing.get("ok"):
         if story_pacing.get("midTravelVisible"):
