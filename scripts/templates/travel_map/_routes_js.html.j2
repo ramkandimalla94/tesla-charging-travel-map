@@ -1,0 +1,274 @@
+{# Mapbox route layers, trail layers, terrain, drawRoutes #}
+    function routeLayerIds(tripId) {
+      const base = `route-${tripId}`;
+      return {
+        src: base,
+        casing: `${base}-casing`,
+        halo: `${base}-halo`,
+        glowOuter: `${base}-glow-outer`,
+        glowMid: `${base}-glow-mid`,
+        core: `${base}-core`,
+        highlight: `${base}-highlight`,
+      };
+    }
+
+    function zoomWidth(stops) {
+      // Zoom-aware widths so routes stay readable on satellite at every scale.
+      return ['interpolate', ['linear'], ['zoom'], ...stops];
+    }
+
+    function addRouteLayers(tripId, coords, color, visible, overviewOffset, overviewDash) {
+      const ids = routeLayerIds(tripId);
+      const vis = visible ? 'visible' : 'none';
+      const feature = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } };
+      if (!map.getSource(ids.src)) {
+        map.addSource(ids.src, { type: 'geojson', lineMetrics: true, data: feature });
+        map.addLayer({
+          id: ids.casing, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: {
+            'line-color': '#03050a',
+            'line-width': zoomWidth([3, 7, 5, 14, 8, 22]),
+            'line-opacity': 0.9,
+          },
+        });
+        // White halo between dark casing and color — max contrast on satellite
+        map.addLayer({
+          id: ids.halo, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': zoomWidth([3, 5, 5, 10, 8, 16]),
+            'line-opacity': 0.55,
+          },
+        });
+        map.addLayer({
+          id: ids.glowOuter, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: {
+            'line-color': color,
+            'line-width': zoomWidth([3, 5, 5, 9, 8, 14]),
+            'line-opacity': 0.45,
+            'line-blur': 2.2,
+          },
+        });
+        map.addLayer({
+          id: ids.glowMid, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: {
+            'line-color': color,
+            'line-width': zoomWidth([3, 3.2, 5, 5.5, 8, 9]),
+            'line-opacity': 0.95,
+            'line-blur': 0.1,
+          },
+        });
+        map.addLayer({
+          id: ids.core, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: {
+            'line-width': zoomWidth([3, 2.4, 5, 4.2, 8, 6.5]),
+            'line-color': color,
+            'line-opacity': 1,
+          },
+        });
+        map.addLayer({
+          id: ids.highlight, type: 'line', source: ids.src,
+          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': zoomWidth([3, 0.8, 5, 1.4, 8, 2]),
+            'line-opacity': 0.85,
+          },
+        });
+        [ids.halo, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+          try { map.setPaintProperty(id, 'line-emissive-strength', 1); } catch (_) {}
+        });
+      } else {
+        map.getSource(ids.src).setData(feature);
+        [ids.casing, ids.halo, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+          map.setLayoutProperty(id, 'visibility', vis);
+        });
+        map.setPaintProperty(ids.glowOuter, 'line-color', color);
+        map.setPaintProperty(ids.glowMid, 'line-color', color);
+        map.setPaintProperty(ids.core, 'line-color', color);
+      }
+      map._tripRouteMeta = map._tripRouteMeta || {};
+      map._tripRouteMeta[tripId] = { offset: overviewOffset || 0, dash: overviewDash || null, color };
+    }
+
+    function setRouteStyle(tripId, color, mode) {
+      const ids = routeLayerIds(tripId);
+      if (!map.getLayer(ids.core)) return;
+      const meta = (map._tripRouteMeta && map._tripRouteMeta[tripId]) || { offset: 0, dash: null };
+      const isHover = hoveredTripId === tripId && selectedId === 'all';
+      const styles = {
+        overview: {
+          casing: 0.55, halo: 0.28, outer: 0.28, mid: 0.8, coreOp: 1, hi: 0.5,
+          coreW: zoomWidth([3, 1.8, 5, 3, 8, 4.5]),
+          casingW: zoomWidth([3, 5, 5, 9, 8, 13]),
+          haloW: zoomWidth([3, 3.4, 5, 6.5, 8, 10]),
+          offset: meta.offset, dash: meta.dash,
+        },
+        overviewHover: {
+          casing: 0.9, halo: 0.55, outer: 0.6, mid: 1, coreOp: 1, hi: 0.95,
+          coreW: zoomWidth([3, 2.8, 5, 4.5, 8, 6.5]),
+          casingW: zoomWidth([3, 7, 5, 12, 8, 17]),
+          haloW: zoomWidth([3, 5, 5, 9, 8, 13]),
+          offset: meta.offset, dash: null,
+        },
+        overviewDim: {
+          casing: 0.15, halo: 0.06, outer: 0.06, mid: 0.2, coreOp: 0.4, hi: 0.1,
+          coreW: zoomWidth([3, 1.1, 5, 1.8, 8, 2.5]),
+          casingW: zoomWidth([3, 3, 5, 5, 8, 7]),
+          haloW: zoomWidth([3, 2, 5, 3.5, 8, 5]),
+          offset: meta.offset, dash: meta.dash,
+        },
+        active: {
+          casing: 0.95, halo: 0.7, outer: 0.7, mid: 1, coreOp: 1, hi: 1,
+          coreW: zoomWidth([3, 3.5, 5, 6, 8, 9]),
+          casingW: zoomWidth([3, 10, 5, 16, 8, 24]),
+          haloW: zoomWidth([3, 7, 5, 12, 8, 18]),
+          offset: 0, dash: null,
+        },
+        playback: {
+          casing: 0.45, halo: 0.25, outer: 0.25, mid: 0.45, coreOp: 0.65, hi: 0.35,
+          coreW: zoomWidth([3, 1.8, 5, 3, 8, 4]),
+          casingW: zoomWidth([3, 5, 5, 8, 8, 12]),
+          haloW: zoomWidth([3, 3.5, 5, 6, 8, 9]),
+          offset: 0, dash: null,
+        },
+        hidden: {
+          casing: 0, halo: 0, outer: 0, mid: 0, coreOp: 0, hi: 0,
+          coreW: 0, casingW: 0, haloW: 0, offset: 0, dash: null,
+        },
+      };
+      let key = mode;
+      if (mode === 'overview') {
+        if (hoveredTripId && isHover) key = 'overviewHover';
+        else if (hoveredTripId && !isHover) key = 'overviewDim';
+      }
+      const s = styles[key] || styles.hidden;
+      map.setPaintProperty(ids.casing, 'line-opacity', s.casing);
+      map.setPaintProperty(ids.halo, 'line-opacity', s.halo);
+      map.setPaintProperty(ids.glowOuter, 'line-opacity', s.outer);
+      map.setPaintProperty(ids.glowMid, 'line-opacity', s.mid);
+      map.setPaintProperty(ids.core, 'line-opacity', s.coreOp);
+      map.setPaintProperty(ids.core, 'line-width', s.coreW);
+      map.setPaintProperty(ids.casing, 'line-width', s.casingW);
+      map.setPaintProperty(ids.halo, 'line-width', s.haloW);
+      map.setPaintProperty(ids.core, 'line-color', color);
+      map.setPaintProperty(ids.highlight, 'line-opacity', s.hi);
+      map.setPaintProperty(ids.glowOuter, 'line-color', color);
+      map.setPaintProperty(ids.glowMid, 'line-color', color);
+      try {
+        [ids.casing, ids.halo, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+          map.setPaintProperty(id, 'line-offset', s.offset || 0);
+        });
+      } catch (_) {}
+      try {
+        const dash = s.dash;
+        [ids.core, ids.glowMid].forEach(id => {
+          if (dash) map.setPaintProperty(id, 'line-dasharray', dash);
+          else map.setPaintProperty(id, 'line-dasharray', [1, 0]);
+        });
+      } catch (_) {}
+    }
+
+    function ensureTrailLayers(color) {
+      if (map.getSource('active-trail')) {
+        map.setPaintProperty('active-trail-glow', 'line-color', color);
+        return;
+      }
+      map.addSource('active-trail', { type: 'geojson', lineMetrics: true, data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
+      map.addLayer({
+        id: 'active-trail-casing', type: 'line', source: 'active-trail',
+        paint: {
+          'line-color': '#05070c',
+          'line-width': zoomWidth([4, 8, 6, 14, 9, 20]),
+          'line-opacity': 0.85,
+        },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      map.addLayer({
+        id: 'active-trail-shadow', type: 'line', source: 'active-trail',
+        paint: { 'line-color': '#000', 'line-width': 22, 'line-opacity': 0.3, 'line-blur': 8 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      map.addLayer({
+        id: 'active-trail-glow', type: 'line', source: 'active-trail',
+        paint: {
+          'line-color': color,
+          'line-width': zoomWidth([4, 6, 6, 11, 9, 16]),
+          'line-opacity': 0.7,
+          'line-blur': 3,
+        },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      map.addLayer({
+        id: 'active-trail-line', type: 'line', source: 'active-trail',
+        paint: {
+          'line-width': zoomWidth([4, 3, 6, 5, 9, 7]),
+          'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, color, 0.7, '#ffffff', 1, '#ffffff'],
+        },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      map.addLayer({
+        id: 'active-trail-head', type: 'line', source: 'active-trail',
+        paint: { 'line-color': '#ffffff', 'line-width': 1.4, 'line-opacity': 1 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      ['active-trail-glow', 'active-trail-line', 'active-trail-head'].forEach(id => {
+        try { map.setPaintProperty(id, 'line-emissive-strength', 1); } catch (_) {}
+      });
+    }
+
+    // ── Terrain (subtle — routes use Mapbox line layers on surface) ──
+    function setupTerrain() {
+      setSplash(50);
+      if (!map.getSource('mapbox-dem')) {
+        map.addSource('mapbox-dem', { type:'raster-dem', url:'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize:512, maxzoom:14 });
+      }
+      map.setTerrain({ source:'mapbox-dem', exaggeration: 0.55 });
+      setSplash(70);
+    }
+
+    let mapLabelLayerIds = null;
+    function setMapLabelsVisible(visible) {
+      if (!map || !map.isStyleLoaded()) return;
+      if (!mapLabelLayerIds) {
+        mapLabelLayerIds = map.getStyle().layers
+          .filter(layer => layer.type === 'symbol' && layer.layout && layer.layout['text-field'])
+          .map(layer => layer.id);
+      }
+      const vis = visible ? 'visible' : 'none';
+      mapLabelLayerIds.forEach(id => {
+        try { map.setLayoutProperty(id, 'visibility', vis); } catch (_) {}
+      });
+    }
+
+    // ── Premium route rendering ──
+    let routesBooted = false;
+    function drawRoutes() {
+      TRIPS.forEach(trip => {
+        const coords = (trip.route_path || []).map(p => [p[1], p[0]]);
+        const isSelected = selectedId === trip.id;
+        const isOverview = selectedId === 'all';
+        const visible = isOverview || isSelected;
+        const ids = routeLayerIds(trip.id);
+        if (!routesBooted || !map.getSource(ids.src)) {
+          addRouteLayers(trip.id, coords, trip.color, visible, trip.overview_offset, trip.overview_dash);
+        } else {
+          // Geometry is stable — only flip visibility on trip select (skip setData thrash)
+          const vis = visible ? 'visible' : 'none';
+          [ids.casing, ids.halo, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+            try { map.setLayoutProperty(id, 'visibility', vis); } catch (_) {}
+          });
+        }
+        if (!visible) setRouteStyle(trip.id, trip.color, 'hidden');
+        else if (isSelected) setRouteStyle(trip.id, trip.color, 'active');
+        else setRouteStyle(trip.id, trip.color, tripInEra(trip) ? 'overview' : 'overviewDim');
+      });
+      routesBooted = true;
+      drawRouteLabels();
+    }
+

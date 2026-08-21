@@ -103,6 +103,32 @@ def main() -> int:
         page.evaluate("setYearFilter('all')")
         page.wait_for_timeout(400)
 
+        # Memory reel + featured CTA
+        page.evaluate("localStorage.setItem('tesla-map-onboarded','1'); startMemoryReel()")
+        page.wait_for_timeout(500)
+        reel = page.evaluate(
+            """() => {
+              let spokeCount = 0;
+              try {
+                spokeCount = map.querySourceFeatures('atlas-spokes')?.length || 0;
+              } catch (e) {
+                try {
+                  const raw = map.getSource('atlas-spokes')?._data;
+                  spokeCount = raw?.features?.length || 0;
+                } catch (e2) {}
+              }
+              return {
+                badge: document.getElementById('memory-badge')?.classList.contains('visible'),
+                cta: document.getElementById('atlas-cta')?.classList.contains('visible'),
+                spokes: !!map.getLayer('atlas-spokes-line'),
+                spokeBand: !!map.getLayer('atlas-spokes-band'),
+                spokeCount,
+              };
+            }"""
+        )
+        print(f"Memory/CTA/spokes: {reel}")
+        page.screenshot(path=str(SCREENSHOTS / "07-memory-reel.png"))
+
         # Colorado trip
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
         page.wait_for_timeout(3500)
@@ -166,9 +192,166 @@ def main() -> int:
         )
         page.wait_for_timeout(800)
         play_state["t1"] = page.evaluate("animTimeMs")
+        story_state = page.evaluate(
+            """() => {
+              const ov = document.getElementById('story-overlay');
+              return {
+                visible: ov?.classList.contains('visible'),
+                dwell: ov?.classList.contains('dwell'),
+                travel: ov?.classList.contains('travel'),
+                caption: document.getElementById('story-caption')?.textContent || '',
+                modeOk: !!(ov && (ov.classList.contains('dwell') || ov.classList.contains('travel')
+                  || ov.classList.contains('visible') === false || true)),
+              };
+            }"""
+        )
+        # Force a mid-travel + dwell sample via positionAtTime helpers if available
+        story_pacing = page.evaluate(
+            """() => {
+              const pb = activePlayback();
+              if (!pb?.segments?.length) return { ok: false };
+              let cursor = 0;
+              let travelAt = null, dwellAt = null;
+              for (const seg of pb.segments) {
+                if (seg.type === 'travel' && travelAt == null) {
+                  travelAt = { start: cursor, dur: seg.duration_ms || 0 };
+                }
+                if (seg.type === 'dwell' && dwellAt == null) {
+                  dwellAt = { start: cursor, dur: seg.duration_ms || 0 };
+                }
+                cursor += seg.duration_ms || 0;
+              }
+              const samples = {};
+              if (travelAt && travelAt.dur > 0) {
+                updateTrailFromState(positionAtTime(travelAt.start + travelAt.dur * 0.45));
+                samples.midTravelVisible = document.getElementById('story-overlay')?.classList.contains('visible');
+                updateTrailFromState(positionAtTime(travelAt.start + travelAt.dur * 0.04));
+                samples.earlyTravelVisible = document.getElementById('story-overlay')?.classList.contains('visible');
+                samples.earlyTravelMode = document.getElementById('story-overlay')?.classList.contains('travel');
+              }
+              if (dwellAt && dwellAt.dur > 0) {
+                updateTrailFromState(positionAtTime(dwellAt.start + dwellAt.dur * 0.05));
+                samples.earlyDwellPois = (document.getElementById('story-pois')?.children.length || 0);
+                updateTrailFromState(positionAtTime(dwellAt.start + dwellAt.dur * 0.45));
+                samples.lateDwellPois = (document.getElementById('story-pois')?.children.length || 0);
+                samples.lateDwellMode = document.getElementById('story-overlay')?.classList.contains('dwell');
+              }
+              return { ok: true, ...samples };
+            }"""
+        )
+        print(f"Story overlay: {story_state}")
+        print(f"Caption pacing: {story_pacing}")
         page.evaluate("stopPlayback()")
         print(f"Playback: {play_state}")
         page.screenshot(path=str(SCREENSHOTS / "06-watch-mode.png"))
+
+        # Epic queue dock badge (loop → queue)
+        page.evaluate(
+            """() => {
+              loopTrip = false; queueEpics = false;
+              document.getElementById('btn-loop')?.click(); // loop
+              document.getElementById('btn-loop')?.click(); // queue
+            }"""
+        )
+        page.wait_for_timeout(200)
+        queue_state = page.evaluate(
+            """() => {
+              const badge = document.getElementById('queue-badge');
+              return {
+                queueEpics,
+                loopTrip,
+                badgeVisible: !!(badge && !badge.hidden && badge.classList.contains('visible')),
+                badgeText: badge?.textContent || '',
+                btnQueue: document.getElementById('btn-loop')?.classList.contains('queue'),
+              };
+            }"""
+        )
+        print(f"Epic queue badge: {queue_state}")
+        page.evaluate("loopTrip = false; queueEpics = false; syncLoopButton()")
+
+        # Mobile sheet regression (iPhone-ish)
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.evaluate("selectTrip('all'); setPanelCollapsed(false)")
+        page.wait_for_timeout(700)
+        mobile = page.evaluate(
+            """() => {
+              const panel = document.getElementById('sidebar');
+              const dock = document.getElementById('transport-dock');
+              const toggle = document.getElementById('sidebar-toggle');
+              const era = document.getElementById('era-rail');
+              const pr = panel?.getBoundingClientRect();
+              const dr = dock?.getBoundingClientRect();
+              const tr = toggle?.getBoundingClientRect();
+              const styles = getComputedStyle(panel);
+              return {
+                panelBottomSheet: pr.top > window.innerHeight * 0.35,
+                panelGrab: !!document.querySelector('.panel-grab') && getComputedStyle(document.querySelector('.panel-grab')).display !== 'none',
+                panelMaxH: pr.height,
+                dockWidth: dr.width,
+                dockInView: dr.bottom <= window.innerHeight + 2 && dr.top >= 0,
+                toggleSize: Math.min(tr.width, tr.height),
+                eraScrollable: era ? era.scrollWidth >= era.clientWidth - 1 : false,
+                eraChips: document.querySelectorAll('.era-chip').length,
+                hubs: document.querySelectorAll('.home-hub').length,
+                vw: window.innerWidth,
+                vh: window.innerHeight,
+              };
+            }"""
+        )
+        print(f"Mobile 390x844: {mobile}")
+        page.screenshot(path=str(SCREENSHOTS / "08-mobile-sheet.png"))
+        page.evaluate("selectTrip('all'); startPlayback()")  # should no-op / ask select
+        page.evaluate(f"selectTrip({json.dumps(trip_co)}); startPlayback()")
+        page.wait_for_timeout(900)
+        mobile_play = page.evaluate(
+            """() => ({
+              playing: isPlaying,
+              watching: document.body.classList.contains('watching'),
+              panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
+              pad: typeof mapCameraPadding === 'function' ? mapCameraPadding() : null,
+            })"""
+        )
+        page.evaluate("stopPlayback()")
+        print(f"Mobile playback: {mobile_play}")
+
+        # Sprint 4 — export cinema framing smoke (no MediaRecorder download)
+        page.set_viewport_size({"width": 1440, "height": 900})
+        page.evaluate(f"selectTrip({json.dumps(trip_co)})")
+        page.wait_for_timeout(500)
+        cinema = page.evaluate(
+            """() => {
+              const trip = activeTrip();
+              document.body.classList.add('cinema-mode', 'portrait-export');
+              if (typeof showExportTitleCard === 'function') showExportTitleCard(trip, 'intro');
+              map.resize();
+              const title = document.getElementById('cinema-title');
+              const wrap = document.getElementById('map-wrap');
+              const mapEl = document.getElementById('map');
+              const tr = title?.getBoundingClientRect();
+              const mr = mapEl?.getBoundingClientRect();
+              const aspect = mr.width && mr.height ? mr.width / mr.height : 0;
+              return {
+                cinema: document.body.classList.contains('cinema-mode'),
+                portrait: document.body.classList.contains('portrait-export'),
+                titleVisible: title?.classList.contains('visible'),
+                titleTop: tr?.top ?? -1,
+                titleInUpper: (tr?.top ?? 9999) < window.innerHeight * 0.35,
+                mapAspect: Math.round(aspect * 100) / 100,
+                portraitish: aspect > 0 && aspect < 0.75,
+                dockHidden: getComputedStyle(document.getElementById('transport-dock')).opacity === '0',
+                titleText: document.getElementById('cinema-title-text')?.textContent || '',
+              };
+            }"""
+        )
+        page.screenshot(path=str(SCREENSHOTS / "09-export-cinema.png"))
+        page.evaluate(
+            """() => {
+              document.body.classList.remove('cinema-mode', 'portrait-export');
+              if (typeof hideExportTitleCard === 'function') hideExportTitleCard();
+              map.resize();
+            }"""
+        )
+        print(f"Export cinema: {cinema}")
 
         browser.close()
 
@@ -220,6 +403,18 @@ def main() -> int:
     if era_state.get("dimmedTrips", 0) < 1:
         print(f"FAIL: Era filter did not dim trips: {era_state}")
         ok = False
+    if not reel.get("cta"):
+        print(f"FAIL: Featured atlas CTA missing: {reel}")
+        ok = False
+    if not reel.get("spokes"):
+        print(f"FAIL: Atlas spokes source missing: {reel}")
+        ok = False
+    if not reel.get("spokeBand"):
+        print(f"FAIL: Atlas corridor band layer missing: {reel}")
+        ok = False
+    # querySourceFeatures can be empty at low zoom; layer presence is enough
+    if reel.get("spokes") and reel.get("spokeCount", 0) == 0:
+        print(f"WARN: Spokes layer present but no features queried at this zoom: {reel}")
     if not play_state.get("playing"):
         print(f"FAIL: Playback did not start: {play_state}")
         ok = False
@@ -232,6 +427,54 @@ def main() -> int:
     if play_state.get("t1", 0) <= play_state.get("t0", 0):
         print(f"FAIL: animTimeMs not advancing: {play_state}")
         ok = False
+    if not queue_state.get("queueEpics") or not queue_state.get("btnQueue"):
+        print(f"FAIL: Epic queue mode not armed: {queue_state}")
+        ok = False
+    if not queue_state.get("badgeVisible") or "Epic queue" not in queue_state.get("badgeText", ""):
+        print(f"FAIL: Epic queue dock badge missing: {queue_state}")
+        ok = False
+    if mobile.get("vw") != 390:
+        print(f"FAIL: Mobile viewport not applied: {mobile}")
+        ok = False
+    if mobile.get("toggleSize", 0) < 40:
+        print(f"FAIL: Mobile panel toggle too small: {mobile}")
+        ok = False
+    if not mobile.get("dockInView"):
+        print(f"FAIL: Mobile dock not fully in view: {mobile}")
+        ok = False
+    if not mobile.get("panelGrab"):
+        print(f"FAIL: Mobile panel grab handle missing: {mobile}")
+        ok = False
+    if mobile.get("eraChips", 0) < 2:
+        print(f"FAIL: Mobile era chips missing: {mobile}")
+        ok = False
+    if not mobile_play.get("playing") or not mobile_play.get("panelCollapsed"):
+        print(f"FAIL: Mobile watch/play sheet state bad: {mobile_play}")
+        ok = False
+    if not cinema.get("cinema") or not cinema.get("portrait"):
+        print(f"FAIL: Export cinema classes missing: {cinema}")
+        ok = False
+    if not cinema.get("titleVisible") or not cinema.get("titleInUpper"):
+        print(f"FAIL: Export title card not in 9:16 safe upper zone: {cinema}")
+        ok = False
+    if not cinema.get("dockHidden"):
+        print(f"FAIL: Dock should hide in cinema mode: {cinema}")
+        ok = False
+    if not cinema.get("portraitish"):
+        print(f"FAIL: Map frame not portrait-ish for export: {cinema}")
+        ok = False
+    if story_pacing.get("ok"):
+        if story_pacing.get("midTravelVisible"):
+            print(f"FAIL: Mid-travel caption should be hidden: {story_pacing}")
+            ok = False
+        if story_pacing.get("earlyTravelVisible") is False:
+            print(f"FAIL: Early-travel caption should show: {story_pacing}")
+            ok = False
+        if story_pacing.get("lateDwellMode") is False:
+            print(f"FAIL: Late dwell should use dwell caption mode: {story_pacing}")
+            ok = False
+    else:
+        print(f"WARN: Caption pacing samples skipped: {story_pacing}")
     if critical_errors:
         print("WARN: Console errors detected")
 

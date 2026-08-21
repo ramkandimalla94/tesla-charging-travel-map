@@ -7,711 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #030306;
-      --surface: rgba(12, 14, 20, 0.78);
-      --surface-2: rgba(255, 255, 255, 0.035);
-      --border: rgba(255, 255, 255, 0.09);
-      --border-bright: rgba(255, 255, 255, 0.16);
-      --text: #f4f6fa;
-      --muted: #8b93a3;
-      --accent: #5eead4;
-      --accent-2: #38bdf8;
-      --gold: #fbbf24;
-      --panel-w: 320px;
-      --dock-h: 140px;
-      --timeline-h: 72px;
-      --font-display: 'Syne', system-ui, sans-serif;
-      --font-body: 'DM Sans', system-ui, sans-serif;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      height: 100%; overflow: hidden;
-      font-family: var(--font-body); background: var(--bg); color: var(--text);
-      -webkit-font-smoothing: antialiased;
-    }
-
-    #map-wrap { position: absolute; inset: 0; overflow: hidden; }
-    #map { position: absolute; inset: 0; }
-    .map-vignette {
-      position: absolute; inset: 0; pointer-events: none; z-index: 2;
-      background:
-        radial-gradient(ellipse 80% 60% at 50% 42%, transparent 35%, rgba(3,3,6,0.42) 100%),
-        linear-gradient(to bottom, rgba(3,3,6,0.32) 0%, transparent 16%, transparent 74%, rgba(3,3,6,0.72) 100%);
-      transition: opacity 0.6s ease;
-    }
-    body.trip-focus .map-vignette {
-      background:
-        radial-gradient(ellipse 70% 55% at 55% 45%, transparent 28%, rgba(3,3,6,0.55) 100%),
-        linear-gradient(to bottom, rgba(3,3,6,0.4) 0%, transparent 14%, transparent 70%, rgba(3,3,6,0.78) 100%);
-    }
-    .map-grain {
-      position: absolute; inset: 0; pointer-events: none; z-index: 3; opacity: 0.028;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    }
-    .mapboxgl-canvas { transition: filter 0.8s ease; }
-    body.night .mapboxgl-canvas { filter: brightness(0.38) contrast(1.12) saturate(0.78) hue-rotate(205deg); }
-    /* Do NOT filter the whole canvas in trip-focus — that also dims neon routes. */
-
-    /* Floating map legend */
-    .map-legend {
-      position: absolute; top: 72px; right: 22px; z-index: 11;
-      display: flex; flex-direction: column; gap: 6px;
-      padding: 10px 12px; border-radius: 14px;
-      background: var(--surface); backdrop-filter: blur(20px) saturate(1.4);
-      border: 1px solid var(--border); box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-      opacity: 0; transform: translateY(-6px); pointer-events: none;
-      transition: opacity 0.35s ease, transform 0.35s ease;
-    }
-    .map-legend.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    .map-legend .leg-row {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: var(--muted);
-      text-transform: uppercase;
-    }
-    .map-legend .swatch {
-      width: 18px; height: 6px; border-radius: 99px; flex-shrink: 0;
-      box-shadow: 0 0 10px currentColor;
-    }
-    .map-legend .pin {
-      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
-      border: 2px solid rgba(255,255,255,0.9);
-    }
-    .map-legend .pin.start { background: linear-gradient(145deg, #34d399, #059669); }
-    .map-legend .pin.end { background: linear-gradient(145deg, #fbbf24, #d97706); }
-
-    /* ── Splash ── */
-    #splash {
-      position: fixed; inset: 0; z-index: 9999; background: var(--bg);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: opacity 0.9s ease, visibility 0.9s;
-    }
-    #splash.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-    #splash .brand-mark {
-      font-family: var(--font-display); font-size: 13px; letter-spacing: 0.45em;
-      text-transform: uppercase; color: var(--muted); margin-bottom: 28px;
-    }
-    #splash h1 {
-      font-family: var(--font-display); font-size: clamp(28px, 4vw, 42px);
-      font-weight: 800; letter-spacing: -0.03em; margin-bottom: 10px;
-      background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    #splash p { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
-    .splash-bar { width: 280px; height: 2px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
-    .splash-fill {
-      height: 100%; width: 0%; border-radius: 99px;
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
-      box-shadow: 0 0 20px rgba(94, 234, 212, 0.5);
-      transition: width 0.35s ease;
-    }
-
-    /* ── Top bar ── */
-    .top-bar {
-      position: absolute; top: 0; left: 0; right: 0; z-index: 12;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 18px 22px; pointer-events: none;
-    }
-    .brand {
-      font-family: var(--font-display); font-size: 15px; font-weight: 800;
-      letter-spacing: 0.18em; text-transform: uppercase; pointer-events: auto;
-      text-shadow: 0 2px 16px rgba(0,0,0,0.8);
-    }
-    .brand span { color: var(--accent); }
-    .stat-rail {
-      display: flex; gap: 8px; pointer-events: auto;
-    }
-    .stat-chip {
-      background: var(--surface); backdrop-filter: blur(20px) saturate(1.3);
-      border: 1px solid var(--border); border-radius: 999px;
-      padding: 8px 14px; font-size: 11px; color: var(--muted);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
-    }
-    .stat-chip strong { color: var(--text); font-weight: 700; margin-left: 4px; font-size: 12px; }
-
-    /* ── Trip panel ── */
-    .trip-panel {
-      position: absolute; top: 72px; left: 18px; bottom: calc(var(--dock-h) + var(--timeline-h) + 36px);
-      width: var(--panel-w); z-index: 10;
-      background: var(--surface); backdrop-filter: blur(28px) saturate(1.5);
-      border: 1px solid var(--border); border-radius: 18px;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04);
-      display: flex; flex-direction: column; overflow: hidden;
-      transition: transform 0.45s cubic-bezier(.22,1,.36,1), opacity 0.35s;
-    }
-    .trip-panel.collapsed { transform: translateX(calc(-1 * var(--panel-w) - 28px)); opacity: 0.4; }
-
-    .panel-head { padding: 18px 18px 14px; border-bottom: 1px solid var(--border); }
-    .panel-head .eyebrow {
-      font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
-      text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
-    }
-    .panel-head h2 {
-      font-family: var(--font-display); font-size: 18px; font-weight: 700;
-      letter-spacing: -0.02em; line-height: 1.2;
-    }
-    .panel-head .sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
-
-    .trip-hero {
-      margin: 14px 14px 0; padding: 16px; border-radius: 14px;
-      background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-      border: 1px solid var(--border); position: relative; overflow: hidden;
-    }
-    .trip-hero::before {
-      content: ''; position: absolute; inset: 0;
-      background: radial-gradient(circle at 100% 0%, rgba(94,234,212,0.12), transparent 55%);
-      pointer-events: none;
-    }
-    .trip-hero.featured::before {
-      background: radial-gradient(circle at 100% 0%, rgba(251,191,36,0.16), transparent 55%);
-    }
-    .trip-hero-name {
-      font-family: var(--font-display); font-size: 15px; font-weight: 700;
-      line-height: 1.35; margin-bottom: 6px; position: relative;
-    }
-    .trip-hero-via { font-size: 11px; color: var(--muted); line-height: 1.45; margin-bottom: 12px; position: relative; }
-    .trip-hero-via em { color: var(--accent-2); font-style: normal; font-weight: 600; }
-    .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; position: relative; }
-    .metric {
-      text-align: center; padding: 8px 4px; border-radius: 10px;
-      background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.04);
-    }
-    .metric .val { display: block; font-family: var(--font-display); font-size: 14px; font-weight: 700; }
-    .metric .lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
-
-    .trip-scroll { flex: 1; overflow-y: auto; padding: 10px 10px 14px; }
-    .trip-scroll::-webkit-scrollbar { width: 3px; }
-    .trip-scroll::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 99px; }
-    .group-label {
-      font-size: 9px; font-weight: 700; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.12em; padding: 10px 6px 6px;
-    }
-    .group-label.featured { color: var(--gold); }
-    .trip-item {
-      display: flex; align-items: center; gap: 12px; padding: 11px 12px;
-      border-radius: 12px; cursor: pointer; margin-bottom: 3px;
-      border: 1px solid transparent; transition: background 0.2s, border-color 0.2s, transform 0.15s;
-    }
-    .trip-item:hover { background: var(--surface-2); transform: translateX(2px); }
-    .trip-item.active {
-      background: rgba(94, 234, 212, 0.08); border-color: rgba(94, 234, 212, 0.22);
-      box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.08);
-    }
-    .trip-item.featured { border-color: rgba(251, 191, 36, 0.15); }
-    .trip-item.featured.active { background: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.35); }
-    .trip-item.preview {
-      background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16);
-      box-shadow: inset 3px 0 0 currentColor;
-    }
-    .trip-swatch {
-      width: 10px; height: 36px; border-radius: 99px; flex-shrink: 0;
-      box-shadow: 0 0 12px currentColor;
-    }
-    .trip-name { font-size: 12px; font-weight: 600; line-height: 1.3; }
-    .trip-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
-    .route-chip {
-      position: absolute; z-index: 6; pointer-events: none;
-      transform: translate(-50%, -130%);
-      font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
-      padding: 4px 8px; border-radius: 8px; white-space: nowrap;
-      background: rgba(8,10,16,0.92); border: 1px solid rgba(255,255,255,0.22);
-      color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-      opacity: 0; transition: opacity 0.2s;
-    }
-    .route-chip.visible { opacity: 1; }
-    .route-chip .dot {
-      display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-      margin-right: 6px; vertical-align: middle;
-    }
-
-    /* Home hubs — one pin per home base on overview */
-    .home-hub {
-      display: flex; flex-direction: column; align-items: center;
-      pointer-events: auto; cursor: pointer; transform: translateY(-4px);
-    }
-    .home-hub-core {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: linear-gradient(145deg, #e8e4dc, #c4b8a8);
-      border: 2px solid rgba(255,255,255,0.95);
-      box-shadow: 0 4px 18px rgba(0,0,0,0.55);
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-display); font-size: 11px; font-weight: 800; color: #1a1612;
-    }
-    .home-hub-label {
-      margin-top: 5px; padding: 4px 9px; border-radius: 8px;
-      background: rgba(8,10,16,0.9); border: 1px solid rgba(255,255,255,0.2);
-      font-size: 10px; font-weight: 700; color: #f4f6fa; white-space: nowrap;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
-    }
-    .home-hub-label span { color: var(--muted); font-weight: 600; margin-left: 4px; }
-    .home-hub.dim { opacity: 0.35; }
-    .home-hub.hot .home-hub-core {
-      box-shadow: 0 0 0 3px rgba(251,191,36,0.45), 0 4px 18px rgba(0,0,0,0.55);
-    }
-
-    .dest-group-label {
-      font-size: 10px; font-weight: 700; color: var(--text);
-      letter-spacing: 0.04em; padding: 10px 8px 4px;
-      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-    }
-    .dest-group-label .meta { font-size: 9px; color: var(--muted); font-weight: 600; }
-    .trip-item.nested { margin-left: 8px; padding: 9px 10px; }
-    .trip-item.nested .trip-name { font-size: 11px; }
-
-    .transport-dock.idle {
-      opacity: 0.72; transform: translateX(-50%) translateY(4px);
-    }
-    body.trip-focus .stat-rail { opacity: 0.35; transition: opacity 0.35s; }
-    body.trip-focus .stat-rail:hover { opacity: 1; }
-
-    /* Soft watch mode — cinema feel without portrait export */
-    body.watching .trip-panel,
-    body.watching .panel-toggle,
-    body.watching .top-bar,
-    body.watching .timeline-bar,
-    body.watching #onboarding,
-    body.watching .map-legend,
-    body.watching .mapboxgl-ctrl-group,
-    body.watching .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
-    body.watching .location-hud { opacity: 0 !important; pointer-events: none !important; }
-    body.watching .transport-dock {
-      opacity: 0.28; transition: opacity 0.35s ease;
-    }
-    body.watching .transport-dock:hover,
-    body.watching .transport-dock:focus-within { opacity: 0.95; }
-    body.watching .story-overlay { bottom: 148px; left: 50%; transform: translateX(-50%); max-width: min(520px, calc(100vw - 48px)); text-align: center; }
-    body.watching .story-overlay .story-caption {
-      text-shadow: 0 2px 16px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9);
-      background: rgba(8,10,16,0.55);
-      padding: 8px 14px; border-radius: 12px;
-      display: inline-block;
-    }
-    body.watching .cinema-title.visible { display: block; bottom: 160px; }
-
-    @media (max-width: 900px) {
-      :root { --panel-w: 280px; }
-      .stat-rail { display: none; }
-      .transport-dock { width: min(640px, calc(100vw - 24px)); padding: 12px 14px 14px; }
-    }
-    @media (max-width: 640px) {
-      .trip-panel {
-        top: auto; left: 10px; right: 10px; bottom: calc(var(--dock-h) + var(--timeline-h) + 16px);
-        width: auto; max-height: 42vh;
-      }
-      .trip-panel.collapsed { transform: translateY(110%); opacity: 0; pointer-events: none; }
-      .panel-toggle { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 20px); left: 18px; }
-      .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
-      .location-hud { top: 56px; left: 12px; right: 12px; max-width: none; }
-      .map-legend { top: 56px; right: 12px; }
-      .onboard-card { margin-left: 0 !important; max-width: calc(100vw - 32px); }
-    }
-
-    .panel-toggle {
-      position: absolute; top: 78px; left: calc(var(--panel-w) + 30px); z-index: 11;
-      width: 34px; height: 34px; border-radius: 10px;
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(16px); transition: left 0.45s cubic-bezier(.22,1,.36,1);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
-    }
-    .panel-toggle svg { width: 14px; height: 14px; opacity: 0.8; }
-    .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
-
-    /* ── Transport dock ── */
-    .transport-dock {
-      position: absolute; bottom: calc(var(--timeline-h) + 22px); left: 50%;
-      transform: translateX(-50%); z-index: 14;
-      width: min(720px, calc(100vw - 40px));
-      background: var(--surface); backdrop-filter: blur(32px) saturate(1.4);
-      border: 1px solid var(--border-bright); border-radius: 20px;
-      padding: 14px 18px 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
-    }
-    .dock-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
-    .dock-info { flex: 1; min-width: 0; }
-    .dock-location {
-      font-family: var(--font-display); font-size: 14px; font-weight: 700;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .dock-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
-    .dock-actions { display: flex; gap: 6px; align-items: center; }
-    .icon-btn {
-      width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 12px;
-      border: 1px solid var(--border); background: rgba(255,255,255,0.04);
-      color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s, border-color 0.15s, transform 0.12s;
-    }
-    .icon-btn:hover { background: rgba(255,255,255,0.08); border-color: var(--border-bright); }
-    .icon-btn:active { transform: scale(0.94); }
-    .icon-btn:disabled { opacity: 0.28; cursor: default; }
-    .icon-btn:focus-visible {
-      outline: 2px solid var(--accent); outline-offset: 2px;
-    }
-    .icon-btn.on { background: rgba(94,234,212,0.12); border-color: rgba(94,234,212,0.35); color: var(--accent); }
-    .icon-btn.primary {
-      width: 52px; height: 52px; min-width: 52px; min-height: 52px; border-radius: 14px;
-      background: linear-gradient(145deg, #fff, #cbd5e1); border: none; color: #0f172a;
-      box-shadow: 0 4px 24px rgba(255,255,255,0.15);
-    }
-    .icon-btn.primary:hover { background: #fff; }
-    .icon-btn.export {
-      width: auto; min-width: 44px; min-height: 44px; padding: 0 14px; gap: 7px; font-size: 11px; font-weight: 700;
-      letter-spacing: 0.04em; text-transform: uppercase;
-      background: linear-gradient(135deg, rgba(94,234,212,0.18), rgba(56,189,248,0.12));
-      border-color: rgba(94,234,212,0.35); color: var(--accent);
-    }
-    .icon-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
-
-    .scrub-track {
-      position: relative; height: 6px; background: rgba(255,255,255,0.06);
-      border-radius: 99px; overflow: hidden; cursor: pointer;
-    }
-    .scrub-fill {
-      position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
-      border-radius: 99px; box-shadow: 0 0 12px rgba(94,234,212,0.45);
-      transition: width 0.08s linear;
-    }
-    input[type=range]#scrubber {
-      position: absolute; inset: 0; width: 100%; height: 100%;
-      opacity: 0; cursor: pointer; margin: 0;
-    }
-    .dock-sliders { display: grid; grid-template-columns: 1fr 120px; gap: 14px; margin-top: 10px; align-items: center; }
-    .speed-wrap label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
-    input[type=range]#speed { width: 100%; accent-color: var(--accent); height: 3px; margin-top: 4px; }
-    .speed-val { font-size: 11px; font-weight: 700; color: var(--accent); text-align: right; }
-
-    /* ── Timeline ── */
-    .timeline-bar {
-      position: absolute; bottom: 14px; left: 18px; right: 18px; height: auto; min-height: var(--timeline-h);
-      background: var(--surface); backdrop-filter: blur(24px);
-      border: 1px solid var(--border); border-radius: 14px;
-      z-index: 10; padding: 8px 14px 10px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .timeline-head {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    }
-    .timeline-label { font-size: 9px; font-weight: 600; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
-    .era-rail { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-    .era-chip {
-      border: 1px solid var(--border); background: rgba(255,255,255,0.04);
-      color: var(--muted); font-size: 10px; font-weight: 700; font-family: inherit;
-      padding: 4px 9px; border-radius: 999px; cursor: pointer; min-height: 28px;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
-    }
-    .era-chip:hover { color: var(--text); border-color: var(--border-bright); }
-    .era-chip.active {
-      color: #0f172a; background: #e8e4dc; border-color: transparent;
-    }
-    .era-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-    .timeline-track { position: relative; flex: 1; height: 22px; background: rgba(0,0,0,0.35); border-radius: 8px; overflow: hidden; cursor: pointer; }
-    .tl-seg {
-      position: absolute; top: 3px; bottom: 3px; border-radius: 5px;
-      cursor: pointer; opacity: 0.7; transition: opacity 0.2s, filter 0.2s; min-width: 3px;
-    }
-    .tl-seg:hover, .tl-seg.active { opacity: 1; filter: brightness(1.15); }
-    .tl-seg.featured { box-shadow: 0 0 10px rgba(251,191,36,0.4); }
-    .tl-seg.era-dim { opacity: 0.12; pointer-events: none; }
-    .timeline-scrub {
-      position: absolute; top: 0; bottom: 0; width: 2px;
-      background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.8);
-      pointer-events: none; transition: left 0.08s;
-    }
-    .trip-item.era-dim { opacity: 0.28; }
-    .dest-star {
-      display: flex; flex-direction: column; align-items: center;
-      pointer-events: auto; cursor: pointer; transform: translateY(-2px);
-    }
-    .dest-star-core {
-      width: 22px; height: 22px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.92);
-      box-shadow: 0 0 14px color-mix(in srgb, currentColor 70%, transparent), 0 4px 14px rgba(0,0,0,0.45);
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-display); font-size: 9px; font-weight: 800; color: #fff;
-      background: color-mix(in srgb, currentColor 82%, #111 18%);
-    }
-    .dest-star-core span { color: #fff; }
-    .dest-star-label {
-      margin-top: 4px; padding: 3px 8px; border-radius: 8px;
-      background: rgba(8,10,16,0.9); border: 1px solid rgba(255,255,255,0.18);
-      font-size: 9px; font-weight: 700; color: #fff; white-space: nowrap;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      max-width: 120px; overflow: hidden; text-overflow: ellipsis;
-    }
-    .dest-star.dim { opacity: 0.22; }
-    .dest-star.hot .dest-star-core {
-      box-shadow: 0 0 0 3px rgba(255,255,255,0.35), 0 0 18px currentColor;
-    }
-    .dock-sub .dwell-pct { color: var(--gold); font-weight: 700; }
-
-    /* ── Location HUD (cinema) ── */
-    .location-hud {
-      position: absolute; top: 68px; left: 50%; transform: translateX(-50%); z-index: 13;
-      display: none; align-items: center; gap: 12px;
-      background: rgba(8,10,16,0.82); backdrop-filter: blur(24px);
-      border: 1px solid var(--border-bright); border-radius: 16px;
-      padding: 12px 20px; box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-      max-width: min(92vw, 560px);
-    }
-    .location-hud.visible { display: flex; }
-    .hud-icon {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(94,234,212,0.12); border: 1px solid rgba(94,234,212,0.25);
-      font-size: 16px;
-    }
-    .hud-icon.charging { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.3); }
-    .hud-body { min-width: 0; }
-    .hud-phase { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-    .hud-text {
-      font-family: var(--font-display); font-size: 17px; font-weight: 700;
-      letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-
-    /* ── Beacons & labels ── */
-    .beacon-wrap { display: flex; flex-direction: column; align-items: center; pointer-events: none; }
-    .beacon-wrap .beacon-core,
-    .beacon-wrap .stop-dot { pointer-events: auto; cursor: pointer; }
-    .beacon {
-      position: relative; width: 32px; height: 32px;
-      opacity: 0; transform: scale(0.4); transition: opacity 0.45s, transform 0.45s cubic-bezier(.34,1.4,.64,1);
-    }
-    .beacon.visible { opacity: 1; transform: scale(1); }
-    .beacon-ring {
-      position: absolute; inset: -6px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.35);
-      pointer-events: none;
-      animation: beacon-pulse 2.4s ease-in-out infinite;
-    }
-    .beacon.active .beacon-ring { inset: -10px; border-color: rgba(255,255,255,0.7); animation-duration: 1.2s; }
-    @keyframes beacon-pulse { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.08);opacity:0.2} }
-    .beacon-core {
-      position: absolute; inset: 0; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-display); font-size: 11px; font-weight: 800; color: #fff;
-      border: 2px solid rgba(255,255,255,0.95);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 24px var(--beacon-glow, rgba(94,234,212,0.5));
-    }
-    .beacon-label {
-      margin-top: 6px; padding: 5px 11px; border-radius: 12px;
-      font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: #fff;
-      background: rgba(6,8,14,0.9); border: 1px solid rgba(255,255,255,0.14);
-      backdrop-filter: blur(10px); white-space: nowrap; max-width: 128px;
-      display: flex; flex-direction: column; align-items: center; gap: 1px;
-      opacity: 0; transform: translateY(6px); transition: opacity 0.35s, transform 0.35s;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-    }
-    .beacon-label .role {
-      font-size: 8px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
-      color: rgba(255,255,255,0.55);
-    }
-    .beacon-label .place {
-      font-size: 11px; font-weight: 800; letter-spacing: -0.01em;
-      max-width: 110px; overflow: hidden; text-overflow: ellipsis;
-    }
-    .beacon-label.visible { opacity: 1; transform: translateY(0); }
-    .beacon-label.active { border-color: rgba(251,191,36,0.5); color: var(--gold); }
-    .beacon-wrap.split-start .beacon-label { border-color: rgba(52,211,153,0.45); }
-    .beacon-wrap.split-end .beacon-label { border-color: rgba(251,191,36,0.45); }
-    /* Keep beacon centered on the Mapbox anchor — only style the label chrome */
-    .beacon-wrap.split-start .beacon-label .role { color: #6ee7b7; }
-    .beacon-wrap.split-end .beacon-label .role { color: #fcd34d; }
-
-    .beacon.milestone .beacon-core { width: 36px; height: 36px; font-size: 12px; }
-    .beacon.milestone.start .beacon-core {
-      background: linear-gradient(145deg, #34d399, #059669) !important;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 28px rgba(52,211,153,0.55);
-    }
-    .beacon.milestone.end .beacon-core {
-      background: linear-gradient(145deg, #fbbf24, #d97706) !important;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 28px rgba(251,191,36,0.5);
-    }
-    .beacon.waypoint { width: 14px; height: 14px; }
-    .beacon.waypoint .beacon-ring { display: none; }
-    .beacon.waypoint .beacon-core {
-      inset: 0; font-size: 0; border-width: 2px; border-color: rgba(255,255,255,0.95);
-      box-shadow: 0 0 0 2px rgba(0,0,0,0.45), 0 0 14px var(--beacon-glow, rgba(94,234,212,0.55));
-    }
-
-    .stop-dot {
-      width: 5px; height: 5px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.7);
-      box-shadow: 0 0 8px currentColor;
-    }
-
-    /* ── Vehicle (red Tesla) ── */
-    .vehicle-wrap { position: relative; width: 56px; height: 56px; }
-    .vehicle-glow {
-      position: absolute; inset: -14px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(220,38,38,0.65) 0%, rgba(220,38,38,0.15) 45%, transparent 70%);
-      animation: vglow 2s ease-in-out infinite;
-    }
-    @keyframes vglow { 0%,100%{transform:scale(1);opacity:0.95} 50%{transform:scale(1.28);opacity:0.4} }
-    .vehicle-body {
-      position: absolute; inset: 4px; display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(155deg, #ef4444 0%, #dc2626 45%, #991b1b 100%);
-      border-radius: 50%;
-      border: 2.5px solid rgba(255,255,255,0.92);
-      box-shadow: 0 0 28px rgba(220,38,38,0.55), 0 4px 18px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
-    }
-    .vehicle-body svg { width: 30px; height: 30px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
-    .vehicle-body .tesla-body { fill: #fff; }
-    .vehicle-body .tesla-accent { fill: rgba(255,255,255,0.85); }
-
-    /* ── Nearby place pins ── */
-    .poi-wrap {
-      display: flex; flex-direction: column; align-items: center; pointer-events: none;
-      opacity: 0; transform: scale(0.5) translateY(8px);
-      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.34,1.4,.64,1);
-    }
-    .poi-wrap.visible { opacity: 1; transform: scale(1) translateY(0); }
-    .poi-pin {
-      width: 34px; height: 34px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; background: rgba(8,10,16,0.88);
-      border: 2px solid rgba(251,191,36,0.75);
-      box-shadow: 0 0 20px rgba(251,191,36,0.35), 0 4px 14px rgba(0,0,0,0.5);
-      animation: poi-pulse 2.2s ease-in-out infinite;
-    }
-    .poi-pin.visited { border-color: rgba(52,211,153,0.85); box-shadow: 0 0 20px rgba(52,211,153,0.4), 0 4px 14px rgba(0,0,0,0.5); }
-    @keyframes poi-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
-    .poi-label {
-      margin-top: 5px; padding: 3px 9px; border-radius: 999px;
-      font-size: 9px; font-weight: 700; letter-spacing: 0.02em; color: #fff;
-      background: rgba(8,10,16,0.85); border: 1px solid rgba(251,191,36,0.35);
-      backdrop-filter: blur(8px); white-space: nowrap; max-width: 130px;
-      overflow: hidden; text-overflow: ellipsis;
-    }
-    .poi-label.visited { border-color: rgba(52,211,153,0.45); color: #6ee7b7; }
-
-    /* ── Story overlay (cinema captions) ── */
-    .story-overlay {
-      position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 14;
-      width: min(92vw, 640px); text-align: center; pointer-events: none;
-      opacity: 0; transition: opacity 0.6s ease;
-    }
-    .story-overlay.visible { opacity: 1; }
-    .story-caption {
-      font-family: var(--font-display); font-size: clamp(16px, 2.8vw, 22px); font-weight: 800;
-      letter-spacing: -0.02em; line-height: 1.35;
-      text-shadow: 0 2px 20px rgba(0,0,0,0.95), 0 0 40px rgba(0,0,0,0.8);
-    }
-    .story-sub {
-      font-size: 12px; color: #cbd5e1; margin-top: 8px; letter-spacing: 0.04em;
-      text-shadow: 0 2px 12px rgba(0,0,0,0.9);
-    }
-    .story-pois {
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px;
-    }
-    .story-poi-chip {
-      font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
-      background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.35); color: var(--gold);
-    }
-    .story-poi-chip.visited { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.4); color: #6ee7b7; }
-    body.cinema-mode .story-overlay { bottom: 80px; }
-
-    /* ── Cinema / export ── */
-    body.cinema-mode .trip-panel,
-    body.cinema-mode .panel-toggle,
-    body.cinema-mode .top-bar,
-    body.cinema-mode .transport-dock,
-    body.cinema-mode .timeline-bar,
-    body.cinema-mode #onboarding,
-    body.cinema-mode .map-legend,
-    body.cinema-mode .mapboxgl-ctrl-group,
-    body.cinema-mode .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
-    body.cinema-mode .location-hud { opacity: 0 !important; }
-    body.cinema-mode .beacon-ring { animation: none !important; }
-    body.cinema-mode.portrait-export #map-wrap {
-      display: flex; align-items: center; justify-content: center; background: #000;
-    }
-    body.cinema-mode.portrait-export #map {
-      width: min(100vw, calc(100vh * 9 / 16)); height: 100vh; position: relative; inset: auto;
-    }
-    .cinema-title {
-      position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); z-index: 15;
-      text-align: center; display: none; pointer-events: none;
-    }
-    body.cinema-mode .cinema-title.visible { display: block; }
-    body.watching .cinema-title.visible { display: block; }
-    .cinema-title h2 {
-      font-family: var(--font-display); font-size: clamp(22px, 4vw, 32px); font-weight: 800;
-      text-shadow: 0 4px 24px rgba(0,0,0,0.95);
-    }
-    .cinema-title p { font-size: 12px; color: #cbd5e1; margin-top: 6px; letter-spacing: 0.06em; }
-    .cinema-title .cinema-highlights {
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 14px;
-    }
-    .cinema-title .cinema-highlights span {
-      font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 999px;
-      background: rgba(220,38,38,0.2); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5;
-    }
-
-    .export-status {
-      position: fixed; bottom: 24px; right: 24px; z-index: 10001;
-      background: var(--surface); border: 1px solid var(--border-bright); border-radius: 12px;
-      padding: 12px 18px; font-size: 12px; font-weight: 600; display: none;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-    }
-    .export-status.visible { display: block; }
-
-    /* ── Onboarding / token ── */
-    #onboarding {
-      position: fixed; inset: 0; z-index: 9000; background: rgba(3,3,6,0.65);
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0.4s;
-    }
-    #onboarding.visible { opacity: 1; visibility: visible; }
-    .onboard-card {
-      max-width: 440px; margin-left: 340px; padding: 32px 36px;
-      background: var(--surface); border: 1px solid var(--border-bright); border-radius: 20px;
-      backdrop-filter: blur(28px); box-shadow: 0 32px 100px rgba(0,0,0,0.65);
-    }
-    .onboard-card h2 { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-bottom: 10px; }
-    .onboard-card p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
-    .onboard-card .highlight { color: var(--gold); font-weight: 600; }
-    .onboard-actions { display: flex; gap: 10px; }
-    .btn {
-      flex: 1; padding: 13px 18px; border-radius: 12px; border: 1px solid var(--border);
-      background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer;
-      font-size: 13px; font-weight: 600; font-family: inherit; transition: all 0.15s;
-    }
-    .btn:hover { background: rgba(255,255,255,0.08); }
-    .btn.gold {
-      background: linear-gradient(135deg, rgba(251,191,36,0.25), rgba(245,158,11,0.15));
-      border-color: rgba(251,191,36,0.4); color: var(--gold);
-    }
-    .btn.primary { background: #fff; color: #0f172a; border: none; font-weight: 700; }
-    #token-gate {
-      position: fixed; inset: 0; z-index: 10000; background: var(--bg);
-      display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
-    }
-    #token-gate.visible { display: flex; }
-    #token-gate h2 { font-family: var(--font-display); font-size: 26px; font-weight: 800; margin-bottom: 8px; }
-    #token-gate p { font-size: 14px; color: var(--muted); max-width: 420px; text-align: center; line-height: 1.6; margin-bottom: 20px; }
-    #token-gate input {
-      width: min(420px, 90vw); padding: 14px 16px; border-radius: 12px;
-      border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 13px; margin-bottom: 12px;
-    }
-    #token-gate a { color: var(--accent-2); }
-
-    .mapboxgl-ctrl-group { background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 10px !important; }
-    .mapboxgl-ctrl-group button span { filter: invert(1); }
-    .mapboxgl-popup-content {
-      background: var(--surface) !important; color: var(--text) !important; border-radius: 14px !important;
-      border: 1px solid var(--border) !important; font-family: var(--font-body) !important;
-      backdrop-filter: blur(20px) !important; box-shadow: 0 16px 48px rgba(0,0,0,0.55) !important;
-    }
-    .mapboxgl-ctrl-attrib { background: rgba(3,3,6,0.75) !important; color: var(--muted) !important; font-size: 9px !important; }
-    kbd {
-      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
-      border-radius: 4px; padding: 1px 5px; font-size: 10px;
-    }
-  </style>
+  {% include 'travel_map/_map_css.html.j2' %}
 </head>
 <body>
 
@@ -756,6 +52,19 @@
     <div class="leg-row"><span class="pin end"></span><span id="legend-end-label">Return</span></div>
   </div>
 
+  <button type="button" class="atlas-cta" id="atlas-cta" aria-label="Replay featured epic trip">
+    <span class="atlas-cta-swatch" id="atlas-cta-swatch"></span>
+    <span class="atlas-cta-body">
+      <div class="atlas-cta-eyebrow">Featured epic</div>
+      <div class="atlas-cta-title" id="atlas-cta-title">Replay a road trip</div>
+      <div class="atlas-cta-meta" id="atlas-cta-meta">Tap to focus · then Play</div>
+    </span>
+  </button>
+  <div class="memory-badge" id="memory-badge" aria-live="polite">
+    <span>Memory reel · <strong id="memory-label">—</strong></span>
+    <button type="button" id="memory-pause" title="Pause memory reel">Pause</button>
+  </div>
+
   <!-- Top bar -->
   <header class="top-bar">
     <div class="brand">ROAD<span>REPLAY</span></div>
@@ -793,6 +102,7 @@
   </button>
 
   <aside class="trip-panel" id="sidebar">
+    <div class="panel-grab" aria-hidden="true"></div>
     <div class="panel-head">
       <div class="eyebrow">Your Journeys</div>
       <h2 id="panel-title">Select a Trip</h2>
@@ -871,13 +181,14 @@
       <div class="dock-info">
         <div class="dock-location" id="prog-text">Select a trip to replay</div>
         <div class="dock-sub"><span id="prog-start">—</span> → <span id="prog-end">—</span></div>
+        <div class="queue-badge" id="queue-badge" aria-live="polite" hidden></div>
       </div>
       <div class="dock-actions">
         <button class="icon-btn" id="btn-reset" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v5h5"/></svg></button>
         <button class="icon-btn" id="btn-step" title="Next stop"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l12 8-12 8V4z"/></svg></button>
         <button class="icon-btn primary" id="btn-play" disabled title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></button>
         <button class="icon-btn" id="btn-pause" disabled title="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg></button>
-        <button class="icon-btn" id="btn-loop" title="Loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+        <button class="icon-btn" id="btn-loop" title="Loop trip · click again for epic queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
         <button class="icon-btn on" id="btn-director" title="Director camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l6 3-6 3V9z"/></svg></button>
         <button class="icon-btn" id="btn-night" title="Night mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
         <button class="icon-btn export" id="btn-export" disabled title="Export video">
@@ -895,7 +206,7 @@
         <label>Playback speed · <span class="speed-val" id="speed-label">1×</span></label>
         <input type="range" id="speed" min="0.25" max="8" step="0.25" value="1">
       </div>
-      <div style="font-size:9px;color:var(--muted);text-align:right;padding-top:14px"><kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> step</div>
+      <div style="font-size:9px;color:var(--muted);text-align:right;padding-top:14px"><kbd>Space</kbd> play · <kbd>Esc</kbd> back · <kbd>←</kbd><kbd>→</kbd> step</div>
     </div>
   </div>
 
@@ -903,8 +214,9 @@
   <div class="timeline-bar">
     <div class="timeline-head">
       <div class="timeline-label" id="timeline-label">Journey Timeline</div>
-      <div class="era-rail" id="era-rail" role="group" aria-label="Filter by year">
-        <button type="button" class="era-chip active" data-year="all">All years</button>
+      <div class="era-rail" id="era-rail" role="group" aria-label="Filter journeys by year">
+        <span class="era-rail-label">Era</span>
+        <button type="button" class="era-chip active" data-year="all">All</button>
         {% for year in dashboard.years or [] %}
         <button type="button" class="era-chip" data-year="{{ year }}">{{ year }}</button>
         {% endfor %}
@@ -935,15 +247,49 @@
 
     let map;
 
+    // Cache hot-path DOM nodes (playback RAF hits these every frame)
+    const uiCache = Object.create(null);
+    function ui(id) {
+      const cached = uiCache[id];
+      if (cached && cached.isConnected) return cached;
+      return (uiCache[id] = document.getElementById(id));
+    }
+    function setPlaybackChrome(prog, label, startText, endText, endHtml) {
+      const scrub = ui('scrubber');
+      const fill = ui('scrub-fill');
+      const tl = ui('timeline-scrub');
+      const pt = ui('prog-text');
+      if (scrub) scrub.value = Math.round(prog * 1000);
+      if (fill) fill.style.width = (prog * 100) + '%';
+      if (tl) tl.style.left = (prog * 100) + '%';
+      if (label != null && pt) pt.textContent = label;
+      if (startText != null) {
+        const ps = ui('prog-start');
+        if (ps) ps.textContent = startText;
+      }
+      if (endHtml != null) {
+        const pe = ui('prog-end');
+        if (pe) pe.innerHTML = endHtml;
+      } else if (endText != null) {
+        const pe = ui('prog-end');
+        if (pe) pe.textContent = endText;
+      }
+    }
+
     // ── State ──
     let selectedId = 'all', animTimeMs = 0, animProg = 0, animStopIdx = 0;
     let hoveredTripId = null;
     let yearFilter = 'all';
+    let eraApplying = false;
     let routeLabelMarkers = [];
     let hubMarkers = [];
     let destMarkers = [];
+    let memoryTimer = null;
+    let memoryIndex = 0;
+    let memoryPaused = false;
+    let memoryActiveId = null;
     let isPlaying = false, animFrame = null, lastTs = 0;
-    let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
+    let speed = 1, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
     let poiMarkerKey = '';
@@ -970,6 +316,7 @@
     function dismissOnboarding() {
       document.getElementById('onboarding').classList.remove('visible');
       localStorage.setItem('tesla-map-onboarded', '1');
+      if (selectedId === 'all' && !memoryPaused) startMemoryReel();
     }
     function startWithFeatured() {
       const epic = TRIPS.find(t => t.featured) || TRIPS.find(t => t.has_colorado) || TRIPS[0];
@@ -1112,13 +459,21 @@
       setupTerrain();
       drawRoutes();
       drawStops();
+      drawAtlasSpokes();
       updateHero();
       updateDockIdle();
+      updateAtlasCta();
       setMapLabelsVisible(true);
       document.getElementById('btn-play').disabled = true;
       document.getElementById('prog-text').textContent = 'Select a trip to play';
       introFlyover();
+      setTimeout(() => {
+        if (selectedId === 'all' && !localStorage.getItem('tesla-map-onboarded')) return;
+        if (selectedId === 'all') startMemoryReel();
+      }, 2800);
     }
+
+    {% include 'travel_map/_atlas_js.html.j2' %}
 
     // ── Helpers ──
     function isSingleTrip() { return selectedId !== 'all'; }
@@ -1164,267 +519,7 @@
       return [r,g,b];
     }
 
-    function routeLayerIds(tripId) {
-      const base = `route-${tripId}`;
-      return {
-        src: base,
-        casing: `${base}-casing`,
-        halo: `${base}-halo`,
-        glowOuter: `${base}-glow-outer`,
-        glowMid: `${base}-glow-mid`,
-        core: `${base}-core`,
-        highlight: `${base}-highlight`,
-      };
-    }
-
-    function zoomWidth(stops) {
-      // Zoom-aware widths so routes stay readable on satellite at every scale.
-      return ['interpolate', ['linear'], ['zoom'], ...stops];
-    }
-
-    function addRouteLayers(tripId, coords, color, visible, overviewOffset, overviewDash) {
-      const ids = routeLayerIds(tripId);
-      const vis = visible ? 'visible' : 'none';
-      const feature = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } };
-      if (!map.getSource(ids.src)) {
-        map.addSource(ids.src, { type: 'geojson', lineMetrics: true, data: feature });
-        map.addLayer({
-          id: ids.casing, type: 'line', source: ids.src,
-          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: {
-            'line-color': '#03050a',
-            'line-width': zoomWidth([3, 7, 5, 14, 8, 22]),
-            'line-opacity': 0.9,
-          },
-        });
-        // White halo between dark casing and color — max contrast on satellite
-        map.addLayer({
-          id: ids.halo, type: 'line', source: ids.src,
-          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: {
-            'line-color': '#ffffff',
-            'line-width': zoomWidth([3, 5, 5, 10, 8, 16]),
-            'line-opacity': 0.55,
-          },
-        });
-        map.addLayer({
-          id: ids.glowOuter, type: 'line', source: ids.src,
-          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: {
-            'line-color': color,
-            'line-width': zoomWidth([3, 5, 5, 9, 8, 14]),
-            'line-opacity': 0.45,
-            'line-blur': 2.2,
-          },
-        });
-        map.addLayer({
-          id: ids.glowMid, type: 'line', source: ids.src,
-          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: {
-            'line-color': color,
-            'line-width': zoomWidth([3, 3.2, 5, 5.5, 8, 9]),
-            'line-opacity': 0.95,
-            'line-blur': 0.1,
-          },
-        });
-        map.addLayer({
-          id: ids.core, type: 'line', source: ids.src,
-          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: {
-            'line-width': zoomWidth([3, 2.4, 5, 4.2, 8, 6.5]),
-            'line-color': color,
-            'line-opacity': 1,
-          },
-        });
-        map.addLayer({
-          id: ids.highlight, type: 'line', source: ids.src,
-          layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: {
-            'line-color': '#ffffff',
-            'line-width': zoomWidth([3, 0.8, 5, 1.4, 8, 2]),
-            'line-opacity': 0.85,
-          },
-        });
-        [ids.halo, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
-          try { map.setPaintProperty(id, 'line-emissive-strength', 1); } catch (_) {}
-        });
-      } else {
-        map.getSource(ids.src).setData(feature);
-        [ids.casing, ids.halo, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
-          map.setLayoutProperty(id, 'visibility', vis);
-        });
-        map.setPaintProperty(ids.glowOuter, 'line-color', color);
-        map.setPaintProperty(ids.glowMid, 'line-color', color);
-        map.setPaintProperty(ids.core, 'line-color', color);
-      }
-      map._tripRouteMeta = map._tripRouteMeta || {};
-      map._tripRouteMeta[tripId] = { offset: overviewOffset || 0, dash: overviewDash || null, color };
-    }
-
-    function setRouteStyle(tripId, color, mode) {
-      const ids = routeLayerIds(tripId);
-      if (!map.getLayer(ids.core)) return;
-      const meta = (map._tripRouteMeta && map._tripRouteMeta[tripId]) || { offset: 0, dash: null };
-      const isHover = hoveredTripId === tripId && selectedId === 'all';
-      const styles = {
-        overview: {
-          casing: 0.55, halo: 0.28, outer: 0.28, mid: 0.8, coreOp: 1, hi: 0.5,
-          coreW: zoomWidth([3, 1.8, 5, 3, 8, 4.5]),
-          casingW: zoomWidth([3, 5, 5, 9, 8, 13]),
-          haloW: zoomWidth([3, 3.4, 5, 6.5, 8, 10]),
-          offset: meta.offset, dash: meta.dash,
-        },
-        overviewHover: {
-          casing: 0.9, halo: 0.55, outer: 0.6, mid: 1, coreOp: 1, hi: 0.95,
-          coreW: zoomWidth([3, 2.8, 5, 4.5, 8, 6.5]),
-          casingW: zoomWidth([3, 7, 5, 12, 8, 17]),
-          haloW: zoomWidth([3, 5, 5, 9, 8, 13]),
-          offset: meta.offset, dash: null,
-        },
-        overviewDim: {
-          casing: 0.15, halo: 0.06, outer: 0.06, mid: 0.2, coreOp: 0.4, hi: 0.1,
-          coreW: zoomWidth([3, 1.1, 5, 1.8, 8, 2.5]),
-          casingW: zoomWidth([3, 3, 5, 5, 8, 7]),
-          haloW: zoomWidth([3, 2, 5, 3.5, 8, 5]),
-          offset: meta.offset, dash: meta.dash,
-        },
-        active: {
-          casing: 0.95, halo: 0.7, outer: 0.7, mid: 1, coreOp: 1, hi: 1,
-          coreW: zoomWidth([3, 3.5, 5, 6, 8, 9]),
-          casingW: zoomWidth([3, 10, 5, 16, 8, 24]),
-          haloW: zoomWidth([3, 7, 5, 12, 8, 18]),
-          offset: 0, dash: null,
-        },
-        playback: {
-          casing: 0.45, halo: 0.25, outer: 0.25, mid: 0.45, coreOp: 0.65, hi: 0.35,
-          coreW: zoomWidth([3, 1.8, 5, 3, 8, 4]),
-          casingW: zoomWidth([3, 5, 5, 8, 8, 12]),
-          haloW: zoomWidth([3, 3.5, 5, 6, 8, 9]),
-          offset: 0, dash: null,
-        },
-        hidden: {
-          casing: 0, halo: 0, outer: 0, mid: 0, coreOp: 0, hi: 0,
-          coreW: 0, casingW: 0, haloW: 0, offset: 0, dash: null,
-        },
-      };
-      let key = mode;
-      if (mode === 'overview') {
-        if (hoveredTripId && isHover) key = 'overviewHover';
-        else if (hoveredTripId && !isHover) key = 'overviewDim';
-      }
-      const s = styles[key] || styles.hidden;
-      map.setPaintProperty(ids.casing, 'line-opacity', s.casing);
-      map.setPaintProperty(ids.halo, 'line-opacity', s.halo);
-      map.setPaintProperty(ids.glowOuter, 'line-opacity', s.outer);
-      map.setPaintProperty(ids.glowMid, 'line-opacity', s.mid);
-      map.setPaintProperty(ids.core, 'line-opacity', s.coreOp);
-      map.setPaintProperty(ids.core, 'line-width', s.coreW);
-      map.setPaintProperty(ids.casing, 'line-width', s.casingW);
-      map.setPaintProperty(ids.halo, 'line-width', s.haloW);
-      map.setPaintProperty(ids.core, 'line-color', color);
-      map.setPaintProperty(ids.highlight, 'line-opacity', s.hi);
-      map.setPaintProperty(ids.glowOuter, 'line-color', color);
-      map.setPaintProperty(ids.glowMid, 'line-color', color);
-      try {
-        [ids.casing, ids.halo, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
-          map.setPaintProperty(id, 'line-offset', s.offset || 0);
-        });
-      } catch (_) {}
-      try {
-        const dash = s.dash;
-        [ids.core, ids.glowMid].forEach(id => {
-          if (dash) map.setPaintProperty(id, 'line-dasharray', dash);
-          else map.setPaintProperty(id, 'line-dasharray', [1, 0]);
-        });
-      } catch (_) {}
-    }
-
-    function ensureTrailLayers(color) {
-      if (map.getSource('active-trail')) {
-        map.setPaintProperty('active-trail-glow', 'line-color', color);
-        return;
-      }
-      map.addSource('active-trail', { type: 'geojson', lineMetrics: true, data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
-      map.addLayer({
-        id: 'active-trail-casing', type: 'line', source: 'active-trail',
-        paint: {
-          'line-color': '#05070c',
-          'line-width': zoomWidth([4, 8, 6, 14, 9, 20]),
-          'line-opacity': 0.85,
-        },
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-      });
-      map.addLayer({
-        id: 'active-trail-shadow', type: 'line', source: 'active-trail',
-        paint: { 'line-color': '#000', 'line-width': 22, 'line-opacity': 0.3, 'line-blur': 8 },
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-      });
-      map.addLayer({
-        id: 'active-trail-glow', type: 'line', source: 'active-trail',
-        paint: {
-          'line-color': color,
-          'line-width': zoomWidth([4, 6, 6, 11, 9, 16]),
-          'line-opacity': 0.7,
-          'line-blur': 3,
-        },
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-      });
-      map.addLayer({
-        id: 'active-trail-line', type: 'line', source: 'active-trail',
-        paint: {
-          'line-width': zoomWidth([4, 3, 6, 5, 9, 7]),
-          'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, color, 0.7, '#ffffff', 1, '#ffffff'],
-        },
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-      });
-      map.addLayer({
-        id: 'active-trail-head', type: 'line', source: 'active-trail',
-        paint: { 'line-color': '#ffffff', 'line-width': 1.4, 'line-opacity': 1 },
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-      });
-      ['active-trail-glow', 'active-trail-line', 'active-trail-head'].forEach(id => {
-        try { map.setPaintProperty(id, 'line-emissive-strength', 1); } catch (_) {}
-      });
-    }
-
-    // ── Terrain (subtle — routes use Mapbox line layers on surface) ──
-    function setupTerrain() {
-      setSplash(50);
-      if (!map.getSource('mapbox-dem')) {
-        map.addSource('mapbox-dem', { type:'raster-dem', url:'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize:512, maxzoom:14 });
-      }
-      map.setTerrain({ source:'mapbox-dem', exaggeration: 0.55 });
-      setSplash(70);
-    }
-
-    let mapLabelLayerIds = null;
-    function setMapLabelsVisible(visible) {
-      if (!map || !map.isStyleLoaded()) return;
-      if (!mapLabelLayerIds) {
-        mapLabelLayerIds = map.getStyle().layers
-          .filter(layer => layer.type === 'symbol' && layer.layout && layer.layout['text-field'])
-          .map(layer => layer.id);
-      }
-      const vis = visible ? 'visible' : 'none';
-      mapLabelLayerIds.forEach(id => {
-        try { map.setLayoutProperty(id, 'visibility', vis); } catch (_) {}
-      });
-    }
-
-    // ── Premium route rendering ──
-    function drawRoutes() {
-      TRIPS.forEach(trip => {
-        const coords = (trip.route_path || []).map(p => [p[1], p[0]]);
-        const isSelected = selectedId === trip.id;
-        const isOverview = selectedId === 'all';
-        const visible = isOverview || isSelected;
-        addRouteLayers(trip.id, coords, trip.color, visible, trip.overview_offset, trip.overview_dash);
-        if (!visible) setRouteStyle(trip.id, trip.color, 'hidden');
-        else if (isSelected) setRouteStyle(trip.id, trip.color, 'active');
-        else setRouteStyle(trip.id, trip.color, 'overview');
-      });
-      drawRouteLabels();
-    }
+    {% include 'travel_map/_routes_js.html.j2' %}
 
     function tripInEra(trip) {
       if (yearFilter === 'all' || yearFilter == null) return true;
@@ -1433,26 +528,33 @@
     }
 
     function applyEraFilter() {
-      document.querySelectorAll('.era-chip').forEach(el => {
-        el.classList.toggle('active', el.dataset.year === String(yearFilter));
-      });
-      document.querySelectorAll('.trip-item').forEach(el => {
-        if (el.dataset.id === 'all') { el.classList.remove('era-dim'); return; }
-        const trip = TRIPS.find(t => t.id === el.dataset.id);
-        el.classList.toggle('era-dim', !!(trip && !tripInEra(trip)));
-      });
-      document.querySelectorAll('.tl-seg').forEach(el => {
-        const y = el.dataset.year || '';
-        el.classList.toggle('era-dim', yearFilter !== 'all' && y !== String(yearFilter));
-      });
-      if (selectedId === 'all' && map) {
-        TRIPS.forEach(t => {
-          if (!map.getLayer(`route-core-${t.id}`)) return;
-          if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
-          else setRouteStyle(t.id, t.color, 'overview');
+      if (eraApplying) return;
+      eraApplying = true;
+      try {
+        document.querySelectorAll('.era-chip').forEach(el => {
+          el.classList.toggle('active', el.dataset.year === String(yearFilter));
         });
-        drawRouteLabels();
-        drawAtlasMarkers();
+        document.querySelectorAll('.trip-item').forEach(el => {
+          if (el.dataset.id === 'all') { el.classList.remove('era-dim'); return; }
+          const trip = TRIPS.find(t => t.id === el.dataset.id);
+          el.classList.toggle('era-dim', !!(trip && !tripInEra(trip)));
+        });
+        document.querySelectorAll('.tl-seg').forEach(el => {
+          const y = el.dataset.year || '';
+          el.classList.toggle('era-dim', yearFilter !== 'all' && y !== String(yearFilter));
+        });
+        if (selectedId === 'all' && map) {
+          TRIPS.forEach(t => {
+            if (!map.getLayer(`route-core-${t.id}`)) return;
+            if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
+            else setRouteStyle(t.id, t.color, 'overview');
+          });
+          drawRouteLabels();
+          drawAtlasMarkers();
+          if (!memoryPaused && !memoryTimer && !hoveredTripId) startMemoryReel();
+        }
+      } finally {
+        eraApplying = false;
       }
     }
 
@@ -1461,346 +563,7 @@
       applyEraFilter();
     }
 
-    function clearDestMarkers() {
-      destMarkers.forEach(m => m.remove());
-      destMarkers = [];
-    }
-
-    function drawDestinationConstellation() {
-      clearDestMarkers();
-      if (selectedId !== 'all' || !DEST_GROUPS.length) return;
-      DEST_GROUPS.forEach(group => {
-        const visibleIds = (group.trip_ids || []).filter(id => {
-          const t = TRIPS.find(x => x.id === id);
-          return t && tripInEra(t);
-        });
-        if (!visibleIds.length) return;
-        // Skip pure home-name destinations that sit on hubs (rare); keep relocate Bellevue.
-        const el = document.createElement('div');
-        el.className = 'dest-star';
-        el.style.color = group.color;
-        const count = visibleIds.length;
-        el.innerHTML = `<div class="dest-star-core"><span>${count > 1 ? count : ''}</span></div>`
-          + `<div class="dest-star-label">${group.dest}</div>`;
-        el.title = `${group.dest} · ${count} trip${count === 1 ? '' : 's'} · ${group.total_miles} mi`;
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const preferred = visibleIds
-            .map(id => TRIPS.find(t => t.id === id))
-            .find(t => t?.featured) || TRIPS.find(t => t.id === visibleIds[0]);
-          if (preferred) selectTrip(preferred.id);
-        });
-        el.addEventListener('mouseenter', () => {
-          hoveredTripId = null;
-          visibleIds.forEach(id => {
-            const t = TRIPS.find(x => x.id === id);
-            if (t) setRouteStyle(t.id, t.color, 'overviewHover');
-          });
-          TRIPS.forEach(t => {
-            if (!visibleIds.includes(t.id) && tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
-          });
-          destMarkers.forEach(m => {
-            const ids = m._tripIds || [];
-            const hit = ids.some(id => visibleIds.includes(id));
-            m.getElement().classList.toggle('hot', hit);
-            m.getElement().classList.toggle('dim', !hit);
-          });
-        });
-        el.addEventListener('mouseleave', () => {
-          applyEraFilter();
-        });
-        const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-          .setLngLat([group.lng, group.lat])
-          .addTo(map);
-        m._tripIds = visibleIds;
-        destMarkers.push(m);
-      });
-    }
-
-    function drawAtlasMarkers() {
-      drawHomeHubs();
-      drawDestinationConstellation();
-    }
-
-    function shortTripLabel(trip) {
-      if (trip.story_dest) return String(trip.story_dest).slice(0, 36);
-      const raw = (trip.name || '').split('—').pop()?.trim() || trip.name || '';
-      return raw.replace(/\s*·.*$/, '').slice(0, 42);
-    }
-
-    function isPanelCollapsed() {
-      return document.getElementById('sidebar')?.classList.contains('collapsed');
-    }
-
-    function setPanelCollapsed(collapsed) {
-      const sb = document.getElementById('sidebar');
-      if (!sb) return;
-      sb.classList.toggle('collapsed', !!collapsed);
-    }
-
-    function mapCameraPadding() {
-      const w = map?.getContainer()?.clientWidth || window.innerWidth || 1200;
-      const h = map?.getContainer()?.clientHeight || window.innerHeight || 800;
-      const leftNeed = (!isPanelCollapsed() && w > 640)
-        ? Math.min(360, Math.floor(w * 0.34))
-        : (w <= 640 ? 24 : 48);
-      const bottomNeed = document.body.classList.contains('watching')
-        ? Math.min(120, Math.floor(h * 0.16))
-        : Math.min(200, Math.floor(h * 0.28));
-      return {
-        top: Math.min(88, Math.floor(h * 0.1)),
-        bottom: bottomNeed,
-        left: leftNeed,
-        right: Math.min(48, Math.floor(w * 0.06)),
-      };
-    }
-
-    function setWatching(on) {
-      if (isRecording) return;
-      document.body.classList.toggle('watching', !!on);
-      if (!on) {
-        document.getElementById('cinema-title')?.classList.remove('visible');
-      }
-    }
-
-    function showWatchTitleCard(trip, phase, state) {
-      const title = document.getElementById('cinema-title');
-      if (!title || isRecording) return;
-      if (phase === 'intro') {
-        document.getElementById('cinema-title-text').textContent = trip?.name || state?.label || '';
-        document.getElementById('cinema-subtitle').textContent = state?.caption
-          || (trip ? `${trip.miles.toLocaleString()} mi · ${trip.stop_count} stops · ${trip.duration_days}d` : '');
-        const hlEl = document.getElementById('cinema-highlights');
-        hlEl.innerHTML = (state?.highlights || trip?.story?.highlights || []).slice(0, 4)
-          .map(h => `<span>${h}</span>`).join('');
-        title.classList.add('visible');
-      } else if (phase === 'outro') {
-        document.getElementById('cinema-title-text').textContent = 'Journey Complete';
-        document.getElementById('cinema-subtitle').textContent = state?.caption || '';
-        document.getElementById('cinema-highlights').innerHTML = '';
-        title.classList.add('visible');
-      } else {
-        title.classList.remove('visible');
-      }
-    }
-
-    function drawRouteLabels() {
-      routeLabelMarkers.forEach(m => m.remove());
-      routeLabelMarkers = [];
-      if (selectedId !== 'all') return;
-      // Constellation owns idle labeling; chips only appear on trip hover.
-      if (!hoveredTripId) return;
-      const trip = TRIPS.find(t => t.id === hoveredTripId);
-      if (!trip || !tripInEra(trip)) return;
-      const lat = trip.label_lat ?? trip.stops?.[Math.floor((trip.stops?.length || 1) / 2)]?.lat;
-      const lng = trip.label_lng ?? trip.stops?.[Math.floor((trip.stops?.length || 1) / 2)]?.lng;
-      if (lat == null || lng == null) return;
-      const el = document.createElement('div');
-      el.className = 'route-chip visible';
-      el.innerHTML = `<span class="dot" style="background:${trip.color}"></span>${shortTripLabel(trip)}`;
-      const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-        .setLngLat([lng, lat])
-        .addTo(map);
-      routeLabelMarkers.push(m);
-    }
-
-    function setHoveredTrip(id) {
-      if (hoveredTripId === id) return;
-      hoveredTripId = id;
-      document.querySelectorAll('.trip-item').forEach(el => {
-        el.classList.toggle('preview', !!id && el.dataset.id === id);
-      });
-      hubMarkers.forEach(m => {
-        const ids = m._tripIds || [];
-        m.getElement().classList.toggle('dim', !!id && !ids.includes(id));
-        m.getElement().classList.toggle('hot', !!id && ids.includes(id));
-      });
-      destMarkers.forEach(m => {
-        const ids = m._tripIds || [];
-        m.getElement().classList.toggle('dim', !!id && !ids.includes(id));
-        m.getElement().classList.toggle('hot', !!id && ids.includes(id));
-      });
-      if (selectedId !== 'all') return;
-      if (hoverRaf) cancelAnimationFrame(hoverRaf);
-      hoverRaf = requestAnimationFrame(() => {
-        hoverRaf = null;
-        TRIPS.forEach(t => {
-          if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
-          else setRouteStyle(t.id, t.color, 'overview');
-        });
-        drawRouteLabels();
-      });
-    }
-
-    function isSameHomeTrip(trip) {
-      if (!trip?.stops?.length) return false;
-      const start = trip.stops[0];
-      const end = trip.stops[trip.stops.length - 1];
-      return trip.stops.length > 1
-        && Math.abs(start.lat - end.lat) < 0.02
-        && Math.abs(start.lng - end.lng) < 0.02;
-    }
-
-    /** Pixel offsets so round-trip home start/return stay readable at any zoom. */
-    function milestoneMarkerOffset(sameHome, isStart, isEnd, geoSepDeg) {
-      if (!sameHome) return [0, 0];
-      // When outbound/inbound share a corridor, lean on larger pixel separation.
-      const tight = geoSepDeg != null && geoSepDeg < 0.035;
-      if (isStart) return tight ? [-72, -46] : [-30, -36];
-      if (isEnd) return tight ? [72, 42] : [30, 32];
-      return [0, 0];
-    }
-
-    /** Walk the driving path until far enough from home (and the other endpoint). */
-    function endpointLngLat(trip, isStart, isEnd, otherLngLat) {
-      const stop = isStart ? trip.stops[0] : trip.stops[trip.stops.length - 1];
-      const path = trip.route_path || [];
-      if (!isSameHomeTrip(trip) || path.length < 6) return [stop.lng, stop.lat];
-      const minFromHome = 0.04; // ~4.5km
-      const minFromOther = 0.035;
-      const farEnough = (lng, lat) => {
-        if (Math.hypot(lng - stop.lng, lat - stop.lat) < minFromHome) return false;
-        if (otherLngLat && Math.hypot(lng - otherLngLat[0], lat - otherLngLat[1]) < minFromOther) return false;
-        return true;
-      };
-      if (isStart) {
-        for (let i = 1; i < path.length; i++) {
-          const lat = path[i][0], lng = path[i][1];
-          if (farEnough(lng, lat)) return [lng, lat];
-        }
-      } else if (isEnd) {
-        for (let i = path.length - 2; i >= 0; i--) {
-          const lat = path[i][0], lng = path[i][1];
-          if (farEnough(lng, lat)) return [lng, lat];
-        }
-      }
-      return [stop.lng, stop.lat];
-    }
-
-    function cityOnly(location) {
-      return (location || '').split(',')[0].trim() || shortLabel(location);
-    }
-
-    function setMilestoneLabel(el, role, location) {
-      if (!el) return;
-      el.innerHTML = `<span class="role">${role}</span><span class="place">${cityOnly(location)}</span>`;
-    }
-
-    // ── Beacon markers ──
-    function applyIdleStopVisuals() {
-      if (!isSingleTrip() || isPlaying) return;
-      const stops = activeStops();
-      const lastIdx = stops.length - 1;
-      stopMarkers.forEach(m => {
-        const isStart = m._idx === 0;
-        const isEnd = m._idx === lastIdx;
-        // Show the whole journey at rest — not only the stacked home pin.
-        m._el.classList.toggle('visible', true);
-        m._el.classList.remove('active');
-        if (m._lbl) {
-          m._lbl.classList.toggle('visible', isStart || isEnd);
-          m._lbl.classList.remove('active');
-        }
-      });
-    }
-
-    function clearHubMarkers() {
-      hubMarkers.forEach(m => m.remove());
-      hubMarkers = [];
-    }
-
-    function drawHomeHubs() {
-      clearHubMarkers();
-      if (selectedId !== 'all' || !HUBS.length) return;
-      HUBS.forEach(hub => {
-        const visibleIds = (hub.trip_ids || []).filter(id => {
-          const t = TRIPS.find(x => x.id === id);
-          return t && tripInEra(t);
-        });
-        if (!visibleIds.length) return;
-        const el = document.createElement('div');
-        el.className = 'home-hub';
-        el.innerHTML = `<div class="home-hub-core">${visibleIds.length}</div>`
-          + `<div class="home-hub-label">${hub.label}<span>· home</span></div>`;
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const epic = visibleIds.map(id => TRIPS.find(t => t.id === id)).find(t => t?.featured);
-          const pick = epic || TRIPS.find(t => t.id === visibleIds[0]);
-          if (pick) selectTrip(pick.id);
-        });
-        el.addEventListener('mouseenter', () => {
-          if (visibleIds.length === 1) setHoveredTrip(visibleIds[0]);
-        });
-        el.addEventListener('mouseleave', () => setHoveredTrip(null));
-        const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-          .setLngLat([hub.lng, hub.lat])
-          .addTo(map);
-        m._tripIds = visibleIds;
-        hubMarkers.push(m);
-      });
-    }
-
-    function drawStops() {
-      stopMarkers.forEach(m => m.remove()); stopMarkers = [];
-      clearHubMarkers();
-      clearDestMarkers();
-      const single = isSingleTrip();
-      if (!single) {
-        drawAtlasMarkers();
-        applyIdleStopVisuals();
-        return;
-      }
-      activeTrips().forEach(trip => {
-        const lastIdx = trip.stops.length - 1;
-        const indices = trip.stops.map((_, i) => i);
-        const sameHome = isSameHomeTrip(trip);
-        const startLngLat = sameHome ? endpointLngLat(trip, true, false, null) : null;
-        const endLngLat = sameHome ? endpointLngLat(trip, false, true, startLngLat) : null;
-        const homeGeoSep = (startLngLat && endLngLat)
-          ? Math.hypot(endLngLat[0] - startLngLat[0], endLngLat[1] - startLngLat[1])
-          : null;
-        indices.forEach(i => {
-          const s = trip.stops[i];
-          const wrap = document.createElement('div');
-          wrap.className = 'beacon-wrap';
-          const isStart = i === 0;
-          const isEnd = i === lastIdx;
-          const isMilestone = isStart || isEnd;
-          if (sameHome && isStart) wrap.classList.add('split-start');
-          if (sameHome && isEnd) wrap.classList.add('split-end');
-          const beacon = document.createElement('div');
-          beacon.className = 'beacon' + (isMilestone ? ` milestone ${isStart ? 'start' : 'end'}` : ' waypoint');
-          beacon.style.setProperty('--beacon-glow', trip.color + '88');
-          const coreText = isStart ? '▶' : (isEnd ? '◆' : '');
-          beacon.innerHTML = `<div class="beacon-ring"></div><div class="beacon-core" style="background:${trip.color}">${coreText}</div>`;
-          const lbl = document.createElement('div');
-          lbl.className = 'beacon-label';
-          if (sameHome && isStart) setMilestoneLabel(lbl, 'Start', s.location);
-          else if (sameHome && isEnd) setMilestoneLabel(lbl, 'Return', s.location);
-          else if (isStart) setMilestoneLabel(lbl, 'Start', s.location);
-          else if (isEnd) setMilestoneLabel(lbl, 'Finish', s.location);
-          else lbl.textContent = shortLabel(s.location);
-          wrap.appendChild(beacon);
-          if (isMilestone) wrap.appendChild(lbl);
-          let lngLat = [s.lng, s.lat];
-          if (isMilestone && sameHome) lngLat = isStart ? startLngLat : endLngLat;
-          const pixelOffset = milestoneMarkerOffset(sameHome, isStart, isEnd, homeGeoSep);
-          const m = new mapboxgl.Marker({
-            element: wrap,
-            anchor: 'bottom',
-            offset: pixelOffset,
-          })
-            .setLngLat(lngLat)
-            .setPopup(new mapboxgl.Popup({ offset: 14, maxWidth: '280px' }).setHTML(popupHtml(s)))
-            .addTo(map);
-          m._idx = i; m._el = beacon; m._lbl = isMilestone ? lbl : null; m._stop = s;
-          m._isMilestone = isMilestone;
-          m._sameHome = sameHome;
-          stopMarkers.push(m);
-        });
-      });
-      applyIdleStopVisuals();
-    }
+    {% include 'travel_map/_markers_js.html.j2' %}
 
     // ── Hero card ──
     function updateHero() {
@@ -1899,55 +662,79 @@
       document.getElementById('hud-text').textContent = state.label || '';
     }
 
+    let storyOverlayKey = '';
     function updateStoryOverlay(state) {
       const overlay = document.getElementById('story-overlay');
       const captionEl = document.getElementById('story-caption');
       const subEl = document.getElementById('story-sub');
       const poisEl = document.getElementById('story-pois');
-      if (!state || !isSingleTrip()) {
-        overlay.classList.remove('visible');
-        return;
-      }
-      const show = isPlaying || isRecording;
-      if (!show) { overlay.classList.remove('visible'); return; }
+      if (!overlay) return;
 
-      if (state.phase === 'intro') {
-        overlay.classList.add('visible');
-        captionEl.textContent = state.label || activeTrip()?.name || '';
-        subEl.textContent = state.caption || '';
-        poisEl.innerHTML = (state.highlights || []).map(h =>
-          `<span class="story-poi-chip">${h}</span>`
-        ).join('');
-        return;
+      let next = { visible: false, mode: '', caption: '', sub: '', pois: '' };
+
+      if (state && isSingleTrip() && (isPlaying || isRecording)) {
+        if (state.phase === 'intro') {
+          next = {
+            visible: true, mode: 'intro',
+            caption: state.label || activeTrip()?.name || '',
+            sub: state.caption || '',
+            pois: (state.highlights || []).map(h => `<span class="story-poi-chip">${h}</span>`).join(''),
+          };
+        } else if (state.phase === 'outro') {
+          const vc = state.visitedCount || 0;
+          const nc = state.nearbyCount || 0;
+          next = {
+            visible: true, mode: 'outro',
+            caption: 'Journey Complete',
+            sub: state.caption || '',
+            pois: nc
+              ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
+              : '',
+          };
+        } else if (state.phase === 'dwell' && (state.caption || state.pois?.length || state.label)) {
+          // Hold dwell captions; reveal POI chips after a short settle-in beat
+          const frac = state.frac || 0;
+          const poisHtml = frac >= 0.14
+            ? (state.pois || []).map(p =>
+                `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
+              ).join('')
+            : '';
+          next = {
+            visible: true, mode: 'dwell',
+            caption: state.caption || `Charging · ${state.label}`,
+            sub: state.subcaption || '',
+            pois: poisHtml,
+          };
+        } else if (state.phase === 'travel') {
+          // Pace travel captions: only at segment start / approach — avoid mid-drive spam
+          const frac = state.frac || 0;
+          if (frac <= 0.1) {
+            next = {
+              visible: true, mode: 'travel',
+              caption: `En route · ${state.label || 'next stop'}`,
+              sub: '', pois: '',
+            };
+          } else if (frac >= 0.78) {
+            next = {
+              visible: true, mode: 'travel approaching',
+              caption: `Approaching ${state.label || 'next stop'}`,
+              sub: '', pois: '',
+            };
+          }
+        }
       }
-      if (state.phase === 'outro') {
-        overlay.classList.add('visible');
-        captionEl.textContent = 'Journey Complete';
-        subEl.textContent = state.caption || '';
-        const vc = state.visitedCount || 0;
-        const nc = state.nearbyCount || 0;
-        poisEl.innerHTML = nc
-          ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
-          : '';
-        return;
-      }
-      if (state.phase === 'dwell' && (state.caption || state.pois?.length)) {
-        overlay.classList.add('visible');
-        captionEl.textContent = state.caption || `Charging · ${state.label}`;
-        subEl.textContent = state.subcaption || '';
-        poisEl.innerHTML = (state.pois || []).map(p =>
-          `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
-        ).join('');
-        return;
-      }
-      if (state.phase === 'travel') {
-        overlay.classList.add('visible');
-        captionEl.textContent = `Driving to ${state.label || 'next stop'}`;
-        subEl.textContent = '';
-        poisEl.innerHTML = '';
-        return;
-      }
-      overlay.classList.remove('visible');
+
+      const key = `${next.visible}|${next.mode}|${next.caption}|${next.sub}|${next.pois}`;
+      if (key === storyOverlayKey) return;
+      storyOverlayKey = key;
+
+      overlay.classList.toggle('visible', next.visible);
+      overlay.classList.toggle('dwell', next.mode === 'dwell');
+      overlay.classList.toggle('travel', next.mode.startsWith('travel'));
+      overlay.classList.toggle('approaching', next.mode.includes('approaching'));
+      if (captionEl) captionEl.textContent = next.caption;
+      if (subEl) subEl.textContent = next.sub;
+      if (poisEl) poisEl.innerHTML = next.pois;
     }
 
     function clearPoiMarkers() {
@@ -2011,10 +798,7 @@
         updateStoryOverlay(state);
         updateLocationHud(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'intro', state);
-        document.getElementById('scrubber').value = Math.round(animProg * 1000);
-        document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
-        document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
-        document.getElementById('prog-text').textContent = state.label || 'Opening…';
+        setPlaybackChrome(animProg, state.label || 'Opening…');
         return;
       }
       if (state.phase === 'outro') {
@@ -2023,10 +807,7 @@
         updateStoryOverlay(state);
         updateLocationHud(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'outro', state);
-        document.getElementById('scrubber').value = Math.round(animProg * 1000);
-        document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
-        document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
-        document.getElementById('prog-text').textContent = 'Journey complete';
+        setPlaybackChrome(animProg, 'Journey complete');
         return;
       }
       if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), state.phase, state);
@@ -2073,11 +854,18 @@
               ? smoothAngle(camBearing, bearing, 0.06)
               : camBearing;
             const zoom = state.phase === 'dwell' && state.pois?.length ? 7.2 : Math.min(6.8, Math.max(5.2, map.getZoom()));
+            const pad = mapCameraPadding();
             const cam = {
               center: [lookPos.lng, lookPos.lat],
               zoom,
               pitch: Math.min(MAX_PITCH, state.phase === 'dwell' ? 38 : 42),
               bearing: camBearing,
+              padding: {
+                top: Math.max(40, Math.floor(pad.top * 0.5)),
+                bottom: Math.max(100, pad.bottom),
+                left: Math.max(24, Math.floor(pad.left * 0.35)),
+                right: 40,
+              },
             };
             if (isRecording) map.jumpTo(cam);
             else map.easeTo({ ...cam, duration: 420, essential: true });
@@ -2096,10 +884,15 @@
         const isEnd = m._idx === lastIdx;
         // While the car sits on a stacked home pin, hide that milestone so the car wins.
         const carCovers = sameHome && isActive && (isStart || isEnd) && state.phase === 'dwell';
-        m._el.classList.toggle('visible', (reached || m._isMilestone) && !carCovers);
-        m._el.classList.toggle('active', isActive && !carCovers);
+        const wantVisible = (reached || m._isMilestone) && !carCovers;
+        const wantActive = isActive && !carCovers;
+        const showLbl = wantActive;
+        // Skip DOM writes when nothing changed (every RAF used to toggle all stops)
+        if (m._vis === wantVisible && m._act === wantActive && m._lblOn === showLbl) return;
+        m._vis = wantVisible; m._act = wantActive; m._lblOn = showLbl;
+        m._el.classList.toggle('visible', wantVisible);
+        m._el.classList.toggle('active', wantActive);
         if (m._lbl) {
-          const showLbl = isActive && !carCovers;
           m._lbl.classList.toggle('visible', showLbl);
           m._lbl.classList.toggle('active', showLbl);
           if (showLbl) {
@@ -2112,22 +905,29 @@
         }
       });
 
-      document.getElementById('scrubber').value = Math.round(animProg * 1000);
-      document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
-      document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
       const cur = stops[animStopIdx];
       if (cur && state.phase === 'dwell') {
         const pct = Math.round((state.frac || 0) * 100);
-        document.getElementById('prog-text').textContent = `Charging · ${shortLabel(cur.location)}`;
-        document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0, 10) || '';
-        document.getElementById('prog-end').innerHTML = `<span class="dwell-pct">${pct}%</span>`;
+        setPlaybackChrome(
+          animProg,
+          `Charging · ${shortLabel(cur.location)}`,
+          stops[0]?.datetime?.slice(0, 10) || '',
+          null,
+          `<span class="dwell-pct">${pct}%</span>`
+        );
       } else {
-        document.getElementById('prog-text').textContent = cur
+        const label = cur
           ? (state.phase === 'dwell' ? `Charging · ${shortLabel(cur.location)}` : `Driving · ${state.label || shortLabel(cur.location)}`)
           : 'Ready to replay';
         if (cur) {
-          document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0, 10) || '';
-          document.getElementById('prog-end').textContent = cur.datetime?.slice(0, 10) || '';
+          setPlaybackChrome(
+            animProg,
+            label,
+            stops[0]?.datetime?.slice(0, 10) || '',
+            cur.datetime?.slice(0, 10) || ''
+          );
+        } else {
+          setPlaybackChrome(animProg, label);
         }
       }
       updateLocationHud(state);
@@ -2139,140 +939,9 @@
       updateTrailFromState(positionAtTime(animTimeMs));
     }
 
-    // ── Playback ──
-    function animate(ts) {
-      if (!isPlaying) return;
-      if (!lastTs) lastTs=ts;
-      const pb = activePlayback();
-      if (!pb?.total_video_ms) { stopPlayback(); return; }
-      const rawDelta = ts - lastTs;
-      const delta = Math.min(rawDelta, 250);
-      animTimeMs += delta * speed;
-      lastTs = ts;
-      if (animTimeMs >= pb.total_video_ms) {
-        animTimeMs = pb.total_video_ms;
-        updateTrailFromState(positionAtTime(animTimeMs));
-        if (isRecording) finishRecording();
-        if (loopTrip) {
-          animTimeMs = 0; animStopIdx = 0;
-          applyIdleStopVisuals();
-          lastTs = 0;
-          if (!isRecording) { animFrame = requestAnimationFrame(animate); }
-          return;
-        }
-        stopPlayback();
-        return;
-      }
-      updateTrailFromState(positionAtTime(animTimeMs));
-      animFrame = requestAnimationFrame(animate);
-    }
-    function startPlayback(forRecording=false) {
-      if (!isSingleTrip()) {
-        document.getElementById('prog-text').textContent = 'Select a trip first';
-        return;
-      }
-      if (!activePlayback()?.total_video_ms) return;
-      if (animTimeMs >= activePlayback().total_video_ms) { animTimeMs = 0; resetVisuals(false); drawStops(); }
-      isPlaying = true; lastTs = 0;
-      setPanelCollapsed(true);
-      if (!forRecording) setWatching(true);
-      setPlaybackVisuals(true);
-      document.getElementById('btn-play').disabled = true;
-      document.getElementById('btn-pause').disabled = false;
-      document.getElementById('location-hud').classList.remove('visible');
-      document.getElementById('transport-dock')?.classList.remove('idle');
-      animFrame = requestAnimationFrame(animate);
-    }
-    function stopPlayback() {
-      isPlaying=false;
-      if (animFrame) cancelAnimationFrame(animFrame);
-      document.getElementById('btn-play').disabled = !isSingleTrip();
-      document.getElementById('btn-pause').disabled = true;
-      if (!isRecording) {
-        setPlaybackVisuals(false);
-        setWatching(false);
-      }
-    }
-    function resetVisuals(clearHud=true) {
-      stopPlayback(); animTimeMs=0; animProg=0; animStopIdx=0;
-      smoothBearing = 0; camBearing = 0; lastTravelBearing = 0;
-      if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
-      clearPoiMarkers();
-      if (map?.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
-      applyIdleStopVisuals();
-      document.getElementById('scrubber').value=0;
-      document.getElementById('scrub-fill').style.width='0%';
-      document.getElementById('timeline-scrub').style.left='0%';
-      document.getElementById('prog-text').textContent = isSingleTrip() ? 'Ready to replay' : 'Select a trip to replay';
-      if (clearHud) {
-        document.getElementById('location-hud').classList.remove('visible');
-        document.getElementById('story-overlay').classList.remove('visible');
-      }
-      setPlaybackVisuals(false);
-      setWatching(false);
-    }
+    {% include 'travel_map/_playback_js.html.j2' %}
 
-    async function exportTripVideo() {
-      if (!isSingleTrip() || !map) return;
-      const trip = activeTrip();
-      const story = trip.story || {};
-      const status = document.getElementById('export-status');
-      status.textContent = 'Preparing cinematic recording…';
-      status.classList.add('visible');
-      resetVisuals();
-      drawStops();
-      fitTrip(false);
-      await new Promise(r => setTimeout(r, 1600));
-
-      document.body.classList.add('cinema-mode', 'portrait-export');
-      const title = document.getElementById('cinema-title');
-      document.getElementById('cinema-title-text').textContent = trip.name;
-      document.getElementById('cinema-subtitle').textContent =
-        `${trip.miles.toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days} days`;
-      const hlEl = document.getElementById('cinema-highlights');
-      hlEl.innerHTML = (story.highlights || []).slice(0, 4).map(h => `<span>${h}</span>`).join('');
-      title.classList.add('visible');
-      map.resize();
-      await new Promise(r => setTimeout(r, 500));
-
-      const canvas = map.getCanvas();
-      const stream = canvas.captureStream(30);
-      recordedChunks = [];
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9' : 'video/webm';
-      mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
-      mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${trip.id}_road_trip.webm`;
-        a.click();
-        URL.revokeObjectURL(url);
-        isRecording = false;
-        document.body.classList.remove('cinema-mode', 'portrait-export');
-        title.classList.remove('visible');
-        hlEl.innerHTML = '';
-        status.classList.remove('visible');
-        document.getElementById('story-overlay').classList.remove('visible');
-        map.resize();
-        fitTrip(false);
-      };
-
-      isRecording = true;
-      status.textContent = 'Recording road trip story…';
-      mediaRecorder.start(250);
-      startPlayback(true);
-    }
-
-    function finishRecording() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        document.getElementById('export-status').textContent = 'Saving video…';
-        mediaRecorder.stop();
-      }
-      stopPlayback();
-    }
+    {% include 'travel_map/_export_js.html.j2' %}
 
     function setBasemapTripFocus(on) {
       if (!map || !map.isStyleLoaded()) return;
@@ -2336,7 +1005,15 @@
       document.getElementById('btn-play').disabled = !isSingleTrip();
       document.getElementById('btn-export').disabled = !isSingleTrip();
       updateDockIdle();
-      if (id === 'all') applyEraFilter();
+      updateAtlasCta();
+      updateQueueBadge();
+      if (id === 'all') {
+        applyEraFilter();
+        if (!memoryPaused) startMemoryReel();
+      } else {
+        stopMemoryReel();
+        drawAtlasSpokes();
+      }
     }
 
     function updateDockIdle() {
@@ -2394,7 +1071,15 @@
     });
     document.getElementById('btn-reset').addEventListener('click', ()=>{ resetVisuals(); drawStops(); fitTrip(); });
     document.getElementById('btn-loop').addEventListener('click', ()=>{
-      loopTrip=!loopTrip; document.getElementById('btn-loop').classList.toggle('on', loopTrip);
+      // off → loop one → epic queue → off
+      if (!loopTrip && !queueEpics) {
+        loopTrip = true; queueEpics = false;
+      } else if (loopTrip && !queueEpics) {
+        loopTrip = false; queueEpics = true;
+      } else {
+        loopTrip = false; queueEpics = false;
+      }
+      syncLoopButton();
     });
     document.getElementById('btn-director').addEventListener('click', ()=>{
       directorMode=!directorMode; document.getElementById('btn-director').classList.toggle('on', directorMode);
@@ -2420,8 +1105,35 @@
       if (!chip) return;
       setYearFilter(chip.dataset.year || 'all');
     });
+    document.getElementById('atlas-cta')?.addEventListener('click', () => {
+      const id = document.getElementById('atlas-cta')?.dataset.tripId;
+      if (id) selectTrip(id);
+    });
+    document.getElementById('memory-pause')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      memoryPaused = !memoryPaused;
+      const btn = document.getElementById('memory-pause');
+      if (memoryPaused) {
+        if (btn) btn.textContent = 'Resume';
+        if (memoryTimer) { clearInterval(memoryTimer); memoryTimer = null; }
+      } else {
+        if (btn) btn.textContent = 'Pause';
+        startMemoryReel();
+      }
+    });
     document.addEventListener('keydown', e=>{
       if (e.target.tagName==='INPUT') return;
+      if (e.code==='Escape') {
+        if (isPlaying) { stopPlayback(); return; }
+        if (selectedId !== 'all') { selectTrip('all'); return; }
+        if (!memoryPaused) {
+          memoryPaused = true;
+          const btn = document.getElementById('memory-pause');
+          if (btn) btn.textContent = 'Resume';
+          stopMemoryReel();
+        }
+        return;
+      }
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
       if (e.code==='ArrowRight') { stopPlayback(); document.getElementById('btn-step').click(); }
       if (e.code==='ArrowLeft') { stopPlayback(); if(isSingleTrip()&&animStopIdx>0){
