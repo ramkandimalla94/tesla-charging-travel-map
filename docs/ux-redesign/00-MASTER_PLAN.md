@@ -17,9 +17,11 @@ Destination constellation, year era filter, snappier dwell + dock %, a11y 44px c
 3. **Featured epic CTA** — one-click focus on the headline trip
 4. **Cinema caption safe margins** — caption plate + higher portrait placement
 5. **Mobile sheet polish** — grab handle, larger toggle, CTA reposition
-
 6. **Epic queue** — Loop button third state plays featured trips in sequence
+7. **Corridor banding** — soft band + parallel filaments for multi-visit destinations
+8. **Template CSS partial** — `travel_map/_map_css.html.j2` include
+9. **Playback DOM cache** — hot-path scrubber/prog updates skip repeated `getElementById`
 
 ## Later
 
-Shared GeoJSON overview layer consolidation, Jinja template partial split, denser corridor banding.
+Shared GeoJSON overview layer consolidation, fuller Jinja JS split, denser corridor polish.

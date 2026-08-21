@@ -121,6 +121,7 @@ def main() -> int:
                 badge: document.getElementById('memory-badge')?.classList.contains('visible'),
                 cta: document.getElementById('atlas-cta')?.classList.contains('visible'),
                 spokes: !!map.getLayer('atlas-spokes-line'),
+                spokeBand: !!map.getLayer('atlas-spokes-band'),
                 spokeCount,
               };
             }"""
@@ -250,6 +251,9 @@ def main() -> int:
         ok = False
     if not reel.get("spokes"):
         print(f"FAIL: Atlas spokes source missing: {reel}")
+        ok = False
+    if not reel.get("spokeBand"):
+        print(f"FAIL: Atlas corridor band layer missing: {reel}")
         ok = False
     # querySourceFeatures can be empty at low zoom; layer presence is enough
     if reel.get("spokes") and reel.get("spokeCount", 0) == 0:
