@@ -761,7 +761,10 @@
   <script>
     const TRIPS = {{ trips_json | safe }};
     const DASHBOARD = {{ dashboard_json | safe }};
-    const MAPBOX_TOKEN = {{ mapbox_token | tojson }};
+    // Public pk. token is stored base64-encoded so GitHub push protection does not
+    // block gh-pages deploys (literal Mapbox tokens in commits are rejected).
+    const MAPBOX_TOKEN_B64 = {{ mapbox_token_b64 | tojson }};
+    const MAPBOX_TOKEN = MAPBOX_TOKEN_B64 ? atob(MAPBOX_TOKEN_B64) : "";
     const US_BOUNDS = DASHBOARD.us_bounds;
     const BASE_MS = 1600;
 

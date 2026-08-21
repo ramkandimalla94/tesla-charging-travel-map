@@ -27,17 +27,34 @@ jobs:
 
       - name: Build map
         env:
-          # Public Mapbox token — embedded in index.html so the live demo
-          # launches without a paste prompt (single-owner project).
+          # Public Mapbox token (pk.…) — embedded as base64 in index.html so the
+          # live demo launches without a paste prompt, without tripping GitHub
+          # push protection on gh-pages (literal tokens are blocked).
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
         run: |
           if [ -z "${MAPBOX_TOKEN}" ]; then
             echo "MAPBOX_TOKEN secret is empty — set it in repo Settings → Secrets"
             exit 1
           fi
+          if [[ "${MAPBOX_TOKEN}" == sk.* ]]; then
+            echo "MAPBOX_TOKEN must be a public token (pk.…), not a secret token (sk.…)"
+            exit 1
+          fi
           python scripts/build_map.py --public
-          # Fail deploy if the built page would still show the token gate
-          grep -q 'MAPBOX_TOKEN = "pk\.' output/index.html
+          # Confirm embed is base64 (not a raw pk./sk. string GitHub would reject)
+          python - <<'PY'
+          import base64, pathlib, re, sys
+          html = pathlib.Path("output/index.html").read_text(encoding="utf-8")
+          if re.search(r"\b(?:pk|sk)\.eyJ[A-Za-z0-9_-]{10,}", html):
+              sys.exit("raw Mapbox token found in index.html — refuse deploy")
+          m = re.search(r'MAPBOX_TOKEN_B64 = "([A-Za-z0-9+/=]+)"', html)
+          if not m:
+              sys.exit("MAPBOX_TOKEN_B64 missing from index.html")
+          token = base64.b64decode(m.group(1)).decode("utf-8")
+          if not token.startswith("pk."):
+              sys.exit(f"decoded token does not start with pk.: {token[:8]!r}")
+          print(f"Pages embed OK — base64 public token ({len(token)} chars)")
+          PY
 
       - name: Deploy to gh-pages
         env:

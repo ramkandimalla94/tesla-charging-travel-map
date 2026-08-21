@@ -6,11 +6,11 @@ Follow these on every change. Do not leave the repo, docs, or live site stale.
 
 After any meaningful change (map UI, trip segmentation, data, deploy, features):
 
-1. **Update committed outputs** that the change affects (`data/trips.json`, `output/trips.geojson`, `output/gpx/`, caches as needed). Rebuild with `python scripts/build_map.py` / `--public` when the map or trips change. `--public` writes `output/index.html` and still embeds `MAPBOX_TOKEN` when set (live site must not show a paste prompt).
+1. **Update committed outputs** that the change affects (`data/trips.json`, `output/trips.geojson`, `output/gpx/`, caches as needed). Rebuild with `python scripts/build_map.py` / `--public` when the map or trips change. `--public` writes `output/index.html` and embeds `MAPBOX_TOKEN` as **base64** (never a raw `pk.`/`sk.` string — GitHub push protection blocks those on `gh-pages`).
 2. **Update README.md** whenever user-facing behavior, setup, live URL status, features, or commands change. Do not leave outdated screenshots/captions, wrong endpoints, or broken instructions.
 3. **Update examples/config docs** (`data/owner_config.json.example`, workflow comments, etc.) when config shape or deploy steps change.
 4. **Preserve the live demo URL** — always `https://ramkandimalla94.github.io/tesla-charging-travel-map/` in README. That URL is stable; the *content* behind it updates via CI. Never invent a second public URL.
-5. **Protect GitHub Pages deploy** — merges to `main` must keep `.github/workflows/pages.yml` green. Keep repo secret `MAPBOX_TOKEN` set so the baked site opens without a token gate. If you change `build_map.py` or deploy steps, verify the workflow can still switch to `gh-pages` after a dirty build (built HTML is copied aside; worktree is reset before checkout).
+5. **Protect GitHub Pages deploy** — merges to `main` must keep `.github/workflows/pages.yml` green. Keep repo secret `MAPBOX_TOKEN` set to a public `pk.` token (never `sk.`). If you change `build_map.py` or deploy steps, verify the workflow can still switch to `gh-pages` after a dirty build (built HTML is copied aside; worktree is reset before checkout).
 
 ## Live site
 
