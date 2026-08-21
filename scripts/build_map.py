@@ -13,7 +13,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -48,8 +48,9 @@ PHOTO_CLUSTER_GAP_S = 8 * 60
 MEMORY_ROUTE_SNAP_MI = 45.0
 # Skip stray GPS that would yank the whole trip off-corridor (still show pins).
 MAX_PHOTO_ROUTE_MI = 45.0
-PLAYBACK_TARGET_MIN_MS = 45_000
-PLAYBACK_TARGET_MAX_MS = 320_000
+# Longer cinematic timeline — UI speed multiplies on top (default ~0.15×).
+PLAYBACK_TARGET_MIN_MS = 90_000
+PLAYBACK_TARGET_MAX_MS = 720_000
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -166,12 +167,16 @@ def load_photos_index_count() -> int:
 
 
 def parse_waypoint_ts(value: str | None) -> datetime:
+    """Parse stop/photo timestamps to timezone-aware UTC (never mix naive/aware)."""
     if not value:
-        return datetime.min
+        return datetime.min.replace(tzinfo=timezone.utc)
     try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     except ValueError:
-        return datetime.min
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 def normalize_road_stops(stops: list[dict]) -> list[dict]:
@@ -454,28 +459,28 @@ def _renormalize_segment_durations(
     raw = sum(max(1, int(s.get("duration_ms") or 0)) for s in body) or 1
     scale = body_budget / raw
     floors = {
-        "dwell": 750,
-        "travel": 1_600,
-        "memory": 1_500,
+        "dwell": 1_400,
+        "travel": 3_200,
+        "memory": 3_600,
     }
     ceilings = {
-        "dwell": 1_500,
-        "travel": 10_000,
-        "memory": 2_600,
+        "dwell": 3_200,
+        "travel": 22_000,
+        "memory": 6_500,
     }
     for s in body:
         kind = s.get("type") or "travel"
         dur = int(s["duration_ms"] * scale)
-        lo = floors.get(kind, 800)
-        hi = ceilings.get(kind, 8_000)
+        lo = floors.get(kind, 1_200)
+        hi = ceilings.get(kind, 12_000)
         miles = float(s.get("leg_miles") or 0)
         if kind == "travel":
             if miles > 250:
-                lo = max(lo, 3_200)
+                lo = max(lo, 7_000)
             elif miles > 120:
-                lo = max(lo, 2_400)
+                lo = max(lo, 5_200)
             elif miles > 60:
-                lo = max(lo, 1_900)
+                lo = max(lo, 4_000)
         s["duration_ms"] = int(max(lo, min(hi, dur)))
 
     # Second pass: if still over budget, shrink short travels first; protect long drives
@@ -487,11 +492,11 @@ def _renormalize_segment_durations(
         def travel_floor(s: dict) -> int:
             miles = float(s.get("leg_miles") or 0)
             if miles > 250:
-                return 3_000
+                return 6_500
             if miles > 120:
-                return 2_200
+                return 4_800
             if miles > 60:
-                return 1_800
+                return 3_800
             return floors["travel"]
 
         soft = [s for s in travels if s["duration_ms"] > travel_floor(s)]
@@ -919,7 +924,10 @@ def short_location_label(location: str) -> str:
 
 
 def parse_ts(ts: str) -> datetime:
-    return datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 def extract_leg_path(
@@ -1083,10 +1091,10 @@ def build_playback_timeline(
         PLAYBACK_TARGET_MAX_MS,
         max(
             PLAYBACK_TARGET_MIN_MS,
-            int(n_road * 3_000 + n_mem * 2_400 + road_miles * 6),
+            int(n_road * 6_500 + n_mem * 5_500 + road_miles * 14),
         ),
     )
-    intro_ms, outro_ms = 2_000, 2_400
+    intro_ms, outro_ms = 2_800, 3_200
 
     body: list[dict] = []
     road_i = -1
@@ -1104,7 +1112,7 @@ def build_playback_timeline(
         if len(sub) < 2:
             return
         sub_mi = path_miles(sub)
-        dur = max(1_200, min(9_000, int(sub_mi * 28 + 900)))
+        dur = max(2_800, min(20_000, int(sub_mi * 65 + 1_800)))
         body.append({
             "type": "travel",
             "duration_ms": dur,
@@ -1129,7 +1137,7 @@ def build_playback_timeline(
         album = mem.get("album") or "memory"
         row = {
             "type": "memory",
-            "duration_ms": 2_400 if spur <= MEMORY_ROUTE_SNAP_MI else 1_900,
+            "duration_ms": 5_200 if spur <= MEMORY_ROUTE_SNAP_MI else 4_000,
             "lat": lat,
             "lng": lng,
             "photo_lat": mem["lat"],
@@ -1166,7 +1174,7 @@ def build_playback_timeline(
             label = short_location_label(stop["location"])
             pois = stop_pois[i] if i < len(stop_pois) else []
             cap = captions[road_i] if road_i < len(captions) else {}
-            dwell_ms = 1_100 if not is_last else 1_400
+            dwell_ms = 2_200 if not is_last else 2_800
             if pois:
                 dwell_ms = int(dwell_ms * 1.15)
             body.append({

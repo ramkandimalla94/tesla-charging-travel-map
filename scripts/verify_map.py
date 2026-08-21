@@ -251,29 +251,24 @@ def main() -> int:
         print(f"Playback: {play_state}")
         page.screenshot(path=str(SCREENSHOTS / "06-watch-mode.png"))
 
-        # Epic queue dock badge (loop → queue)
-        page.evaluate(
-            """() => {
-              loopTrip = false; queueEpics = false;
-              document.getElementById('btn-loop')?.click(); // loop
-              document.getElementById('btn-loop')?.click(); // queue
-            }"""
+        # Minimal transport dock (play/pause + scrub + speed only)
+        dock_state = page.evaluate(
+            """() => ({
+              play: !!document.getElementById('btn-play'),
+              pause: !!document.getElementById('btn-pause'),
+              speed: !!document.getElementById('speed'),
+              scrubber: !!document.getElementById('scrubber'),
+              exportGone: !document.getElementById('btn-export'),
+              shareGone: !document.getElementById('btn-share'),
+              loopGone: !document.getElementById('btn-loop'),
+              legendGone: !document.getElementById('map-legend'),
+              memoryStage: !!document.getElementById('memory-stage'),
+              defaultSpeed: parseFloat(document.getElementById('speed')?.value || '0'),
+              speedMin: parseFloat(document.getElementById('speed')?.min || '0'),
+            })"""
         )
-        page.wait_for_timeout(200)
-        queue_state = page.evaluate(
-            """() => {
-              const badge = document.getElementById('queue-badge');
-              return {
-                queueEpics,
-                loopTrip,
-                badgeVisible: !!(badge && !badge.hidden && badge.classList.contains('visible')),
-                badgeText: badge?.textContent || '',
-                btnQueue: document.getElementById('btn-loop')?.classList.contains('queue'),
-              };
-            }"""
-        )
-        print(f"Epic queue badge: {queue_state}")
-        page.evaluate("loopTrip = false; queueEpics = false; syncLoopButton()")
+        print(f"Minimal dock: {dock_state}")
+        queue_state = dock_state  # keep name for older assertion block compatibility below
 
         # Mobile sheet regression (iPhone-ish)
         page.set_viewport_size({"width": 390, "height": 844})
@@ -359,7 +354,7 @@ def main() -> int:
         )
         print(f"Export cinema: {cinema}")
 
-        # Share blurb button
+        # Share helpers remain available for optional use; dock no longer shows a share button
         share_state = page.evaluate(
             """() => {
               const btn = document.getElementById('btn-share');
@@ -372,7 +367,7 @@ def main() -> int:
               );
               return {
                 btn: !!btn,
-                enabled: btn && !btn.disabled,
+                enabled: btn ? !btn.disabled : false,
                 hasBlurb: blurb.includes('Relive it:') && blurb.includes('mymilediary'),
                 hasStoryShare: !!(trip?.story?.share_blurb),
                 sampleCaption: dwellSegs[0]?.caption || '',
@@ -389,6 +384,11 @@ def main() -> int:
                   t.classList.remove('visible');
                   return pe === 'auto';
                 })(),
+                minimalDock: !document.getElementById('btn-export')
+                  && !document.getElementById('btn-loop')
+                  && !!document.getElementById('btn-play')
+                  && !!document.getElementById('speed'),
+                defaultSpeed: parseFloat(document.getElementById('speed')?.value || '0'),
               };
             }"""
         )
@@ -477,11 +477,23 @@ def main() -> int:
     if play_state.get("t1", 0) <= play_state.get("t0", 0):
         print(f"FAIL: animTimeMs not advancing: {play_state}")
         ok = False
-    if not queue_state.get("queueEpics") or not queue_state.get("btnQueue"):
-        print(f"FAIL: Epic queue mode not armed: {queue_state}")
+    if not dock_state.get("play") or not dock_state.get("pause") or not dock_state.get("speed"):
+        print(f"FAIL: Minimal dock controls missing: {dock_state}")
         ok = False
-    if not queue_state.get("badgeVisible") or "Epic queue" not in queue_state.get("badgeText", ""):
-        print(f"FAIL: Epic queue dock badge missing: {queue_state}")
+    if not dock_state.get("exportGone") or not dock_state.get("shareGone") or not dock_state.get("loopGone"):
+        print(f"FAIL: Extra dock controls should be removed: {dock_state}")
+        ok = False
+    if not dock_state.get("legendGone"):
+        print(f"FAIL: Trip legend pill should be removed: {dock_state}")
+        ok = False
+    if not dock_state.get("memoryStage"):
+        print(f"FAIL: Memory stage overlay missing: {dock_state}")
+        ok = False
+    if abs(float(dock_state.get("defaultSpeed") or 0) - 0.15) > 0.001:
+        print(f"FAIL: Default playback speed should be 0.15: {dock_state}")
+        ok = False
+    if float(dock_state.get("speedMin") or 1) > 0.05 + 1e-9:
+        print(f"FAIL: Speed range should allow 0.05×: {dock_state}")
         ok = False
     if mobile.get("vw") != 390:
         print(f"FAIL: Mobile viewport not applied: {mobile}")
@@ -513,8 +525,11 @@ def main() -> int:
     if not cinema.get("portraitish"):
         print(f"FAIL: Map frame not portrait-ish for export: {cinema}")
         ok = False
-    if not share_state.get("btn") or not share_state.get("enabled"):
-        print(f"FAIL: Share button missing/disabled on trip: {share_state}")
+    if not share_state.get("minimalDock"):
+        print(f"FAIL: Dock should be minimal (no export/loop): {share_state}")
+        ok = False
+    if share_state.get("btn"):
+        print(f"FAIL: Share button should be removed from dock: {share_state}")
         ok = False
     if not share_state.get("hasBlurb"):
         print(f"FAIL: Share blurb missing live URL: {share_state}")
@@ -522,14 +537,8 @@ def main() -> int:
     if share_state.get("dwellCount", 0) > 2 and share_state.get("richCaptionCount", 0) < 1:
         print(f"FAIL: Expected richer dwell captions: {share_state}")
         ok = False
-    if not share_state.get("hasOfferShare"):
-        print(f"FAIL: offerShareAfterPlay missing: {share_state}")
-        ok = False
-    if not share_state.get("toastClickable"):
-        print(f"FAIL: Share toast must accept clicks when visible: {share_state}")
-        ok = False
-    if not share_state.get("hasHideShare"):
-        print(f"FAIL: hideShareToast missing: {share_state}")
+    if abs(float(share_state.get("defaultSpeed") or 0) - 0.15) > 0.001:
+        print(f"FAIL: Default speed should be 0.15×: {share_state}")
         ok = False
     if story_pacing.get("ok"):
         if story_pacing.get("midTravelVisible"):

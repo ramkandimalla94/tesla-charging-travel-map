@@ -302,6 +302,7 @@
 
     let photoMarkers = [];
     let memoryMapMarker = null;
+    let memoryStageSrc = '';
 
     function clearPhotoPins() {
       photoMarkers.forEach(m => m.remove());
@@ -343,65 +344,49 @@
       document.getElementById('memory-card')?.classList.remove('visible');
     }
 
-    function showMemoryOnMap(state) {
-      if (!state?.thumb || state.lat == null || state.lng == null || !map) {
-        hideMemoryOnMap();
+    function hideMemoryStage() {
+      const stage = document.getElementById('memory-stage');
+      if (stage) {
+        stage.classList.remove('visible');
+        stage.setAttribute('aria-hidden', 'true');
+      }
+      memoryStageSrc = '';
+      hideMemoryOnMap();
+    }
+
+    function showMemoryStage(state) {
+      const stage = document.getElementById('memory-stage');
+      if (!stage || !state?.thumb) {
+        hideMemoryStage();
         return;
       }
       const src = photoThumbUrl(state.thumb);
-      const title = state.album || 'Memory';
+      const title = state.album || state.label || 'Memory';
       const when = state.datetime
         ? new Date(state.datetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
         : (state.label || '');
       const cached = (typeof thumbCache !== 'undefined') ? thumbCache.get(src) : null;
       const resolvedSrc = (cached && cached.complete && cached.naturalWidth) ? cached.src : src;
-
-      if (memoryMapMarker) {
-        const root = memoryMapMarker.getElement();
-        const img = root.querySelector('img');
-        const capStrong = root.querySelector('.cap strong');
-        const capMeta = root.querySelector('.cap span');
-        if (img && img.dataset.src !== src) {
-          img.dataset.src = src;
-          img.src = resolvedSrc;
-        }
-        if (capStrong) capStrong.textContent = title;
-        if (capMeta) capMeta.textContent = when;
-        memoryMapMarker.setLngLat([state.lng, state.lat]);
-        root.classList.add('visible');
-        return;
+      const img = document.getElementById('memory-stage-img');
+      if (img && memoryStageSrc !== src) {
+        memoryStageSrc = src;
+        img.src = resolvedSrc;
+        img.alt = title;
       }
-
-      const el = document.createElement('div');
-      el.className = 'memory-map-pin visible';
-      const frame = document.createElement('div');
-      frame.className = 'memory-map-frame';
-      const img = document.createElement('img');
-      img.dataset.src = src;
-      img.src = resolvedSrc;
-      img.alt = title;
-      const cap = document.createElement('div');
-      cap.className = 'cap';
-      const strong = document.createElement('strong');
-      strong.textContent = title;
-      const meta = document.createElement('span');
-      meta.textContent = when;
-      cap.appendChild(strong);
-      cap.appendChild(meta);
-      frame.appendChild(img);
-      frame.appendChild(cap);
-      const stem = document.createElement('div');
-      stem.className = 'memory-map-stem';
-      el.appendChild(frame);
-      el.appendChild(stem);
-      memoryMapMarker = new mapboxgl.Marker({ element: el, anchor: 'bottom', offset: [0, -6] })
-        .setLngLat([state.lng, state.lat])
-        .addTo(map);
+      const titleEl = document.getElementById('memory-stage-title');
+      const metaEl = document.getElementById('memory-stage-meta');
+      if (titleEl) titleEl.textContent = title;
+      if (metaEl) metaEl.textContent = when;
+      stage.classList.add('visible');
+      stage.setAttribute('aria-hidden', 'false');
+      // Keep map pin off — viewport stage is stable (no camera-linked shake).
+      hideMemoryOnMap();
     }
 
-    // Keep name for older call sites
-    function showMemoryCard(state) { showMemoryOnMap(state); }
-    function hideMemoryCard() { hideMemoryOnMap(); }
+    // Legacy names used by older call sites / export helpers
+    function showMemoryOnMap(state) { showMemoryStage(state); }
+    function hideMemoryCard() { hideMemoryStage(); }
+    function showMemoryCard(state) { showMemoryStage(state); }
 
     function drawPhotoPins() {
       clearPhotoPins();

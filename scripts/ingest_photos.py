@@ -19,7 +19,7 @@ INDEX_FILE = ROOT / "data" / "photos_index.json"
 THUMBS_DIR = ROOT / "output" / "photos" / "thumbs"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".tif", ".tiff", ".webp"}
-THUMB_MAX = 480
+THUMB_MAX = 960
 
 
 def _register_heif() -> None:
@@ -88,7 +88,47 @@ def extract_gps(exif: dict) -> tuple[float, float] | None:
     return lat, lng
 
 
+def _gps_ratio_hours(value) -> float | None:
+    """Convert EXIF GPSTimeStamp component (hours/minutes/seconds) to float."""
+    try:
+        return _ratio_to_float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def extract_gps_datetime(exif: dict) -> datetime | None:
+    """
+    GPSDateStamp + GPSTimeStamp are true UTC (unlike DateTimeOriginal, which is
+    camera local wall-clock with no offset). Prefer these for trip matching.
+    """
+    gps = exif.get("GPSInfo") or {}
+    date_stamp = gps.get("GPSDateStamp")
+    time_stamp = gps.get("GPSTimeStamp")
+    if not date_stamp or not time_stamp or len(time_stamp) < 3:
+        return None
+    try:
+        date_text = str(date_stamp).strip().replace("-", ":")
+        year, month, day = (int(p) for p in date_text.split(":")[:3])
+        hour = _gps_ratio_hours(time_stamp[0])
+        minute = _gps_ratio_hours(time_stamp[1])
+        second = _gps_ratio_hours(time_stamp[2])
+        if hour is None or minute is None or second is None:
+            return None
+        sec_int = int(second)
+        micro = int(round((second - sec_int) * 1_000_000))
+        return datetime(
+            year, month, day, int(hour), int(minute), sec_int, micro, tzinfo=timezone.utc
+        )
+    except (TypeError, ValueError):
+        return None
+
+
 def extract_datetime(exif: dict, path: Path) -> str | None:
+    # Prefer GPS UTC clock — DateTimeOriginal is local wall time without TZ.
+    gps_dt = extract_gps_datetime(exif)
+    if gps_dt is not None:
+        return gps_dt.isoformat()
+
     for key in ("DateTimeOriginal", "DateTimeDigitized", "DateTime"):
         raw = exif.get(key)
         if not raw:
@@ -96,6 +136,8 @@ def extract_datetime(exif: dict, path: Path) -> str | None:
         text = str(raw).strip()
         for fmt in ("%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"):
             try:
+                # No offset in EXIF — treat as UTC only as a last resort so
+                # comparisons stay timezone-aware (same convention as trip CSV).
                 dt = datetime.strptime(text, fmt).replace(tzinfo=timezone.utc)
                 return dt.isoformat()
             except ValueError:

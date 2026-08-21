@@ -25,4 +25,4 @@ python scripts/build_map.py
 - **Hover thumbnails** are written to `output/photos/thumbs/<album>/` and served by the map UI.
 - **Metadata** lands in `data/photos_index.json` + `data/trip_photos.json`.
 
-Photos without GPS are skipped. Capture time is matched to trip windows so hike destinations (e.g. Maroon Bells) become waypoints on the path.
+Photos without GPS are skipped. Capture time prefers **GPS UTC** (`GPSDateStamp` + `GPSTimeStamp`) so photo→trip matching uses the same clock as charging history; EXIF `DateTimeOriginal` is local wall-clock and is only a fallback.

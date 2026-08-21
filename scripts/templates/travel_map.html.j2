@@ -46,10 +46,6 @@
     <div class="map-grain"></div>
   </div>
 
-  <div class="map-legend" id="map-legend" aria-hidden="true">
-    <div class="leg-row"><span class="swatch" id="legend-route-swatch"></span><span id="legend-route-label">Route</span></div>
-  </div>
-
   <button type="button" class="atlas-cta" id="atlas-cta" aria-label="Open a featured journey">
     <span class="atlas-cta-swatch" id="atlas-cta-swatch"></span>
     <span class="atlas-cta-body">
@@ -61,6 +57,13 @@
   <div class="photo-hover" id="photo-hover" aria-hidden="true">
     <img id="photo-hover-img" alt="">
     <div class="cap"><strong id="photo-hover-title">Memory</strong><span id="photo-hover-meta"></span></div>
+  </div>
+  <div class="memory-stage" id="memory-stage" aria-hidden="true">
+    <img id="memory-stage-img" alt="">
+    <div class="memory-stage-cap">
+      <strong id="memory-stage-title">Memory</strong>
+      <span id="memory-stage-meta"></span>
+    </div>
   </div>
   <div class="memory-card" id="memory-card" aria-hidden="true">
     <img id="memory-card-img" alt="">
@@ -186,23 +189,10 @@
       <div class="dock-info">
         <div class="dock-location" id="prog-text">Select a trip to replay</div>
         <div class="dock-sub"><span id="prog-start">—</span> → <span id="prog-end">—</span></div>
-        <div class="queue-badge" id="queue-badge" aria-live="polite" hidden></div>
       </div>
       <div class="dock-actions">
-        <button class="icon-btn" id="btn-reset" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v5h5"/></svg></button>
-        <button class="icon-btn" id="btn-step" title="Next stop"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l12 8-12 8V4z"/></svg></button>
         <button class="icon-btn primary" id="btn-play" disabled title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></button>
         <button class="icon-btn" id="btn-pause" disabled title="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg></button>
-        <button class="icon-btn" id="btn-loop" title="Loop trip · click again for epic queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
-        <button class="icon-btn on" id="btn-director" title="Chase camera · click for north-up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l6 3-6 3V9z"/></svg></button>
-        <button class="icon-btn" id="btn-night" title="Night mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
-        <button class="icon-btn export" id="btn-export" disabled title="Export video">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-          Export
-        </button>
-        <button class="icon-btn share" id="btn-share" disabled title="Share trip (system sheet or copy blurb)" aria-label="Share trip blurb">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
-        </button>
       </div>
     </div>
     <div class="scrub-track">
@@ -211,10 +201,9 @@
     </div>
     <div class="dock-sliders">
       <div class="speed-wrap">
-        <label>Playback speed · <span class="speed-val" id="speed-label">1×</span></label>
-        <input type="range" id="speed" min="0.25" max="8" step="0.25" value="1">
+        <label>Playback speed · <span class="speed-val" id="speed-label">0.15×</span></label>
+        <input type="range" id="speed" min="0.05" max="2" step="0.05" value="0.15">
       </div>
-      <div style="font-size:9px;color:var(--muted);text-align:right;padding-top:14px"><kbd>Space</kbd> play · <kbd>Esc</kbd> back · <kbd>←</kbd><kbd>→</kbd> step</div>
     </div>
   </div>
 
@@ -293,7 +282,7 @@
     let hubMarkers = [];
     let destMarkers = [];
     let isPlaying = false, animFrame = null, lastTs = 0;
-    let speed = 1, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
+    let speed = 0.15, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
     let poiMarkerKey = '';
@@ -841,11 +830,11 @@
     }
 
     function showMemoryCard(state) {
-      if (typeof showMemoryOnMap === 'function') showMemoryOnMap(state);
+      if (typeof showMemoryStage === 'function') showMemoryStage(state);
     }
 
     function hideMemoryCard() {
-      if (typeof hideMemoryOnMap === 'function') hideMemoryOnMap();
+      if (typeof hideMemoryStage === 'function') hideMemoryStage();
     }
 
     function updateLocationHud(state) {
@@ -1066,6 +1055,7 @@
           bearing: directorMode ? navBearing : 0,
           padding,
           duration: 650,
+          lock: true,
         };
       }
       return null;
@@ -1121,6 +1111,9 @@
         map.easeTo({ ...cam, duration: force ? 500 : 420, essential: true });
         return;
       }
+
+      // Hold steady on memory frames — repeated easeTo caused heartbeat shake on the photo.
+      if (target.lock || state.phase === 'memory') return;
 
       // Continuous follow: jumpTo smoothed values every frame (nav SDK style)
       if (state.phase === 'travel') {
@@ -1232,13 +1225,8 @@
 
       if ((state.phase === 'memory' || (state.phase === 'dwell' && state.is_photo)) && state.thumb) {
         const stop = stops[state.stopIndex ?? 0];
-        // Keep the polaroid with the car (exact photo GPS once the path reaches it).
-        const memLat = pos?.lat ?? state.lat ?? stop?.lat;
-        const memLng = pos?.lng ?? state.lng ?? stop?.lng;
-        showMemoryOnMap({
+        showMemoryStage({
           ...state,
-          lat: memLat,
-          lng: memLng,
           datetime: state.datetime || stop?.datetime,
           album: state.album || stop?.album || '',
           label: state.label || shortLabel(stop?.location || ''),
@@ -1251,7 +1239,7 @@
           hotImg?.closest('.photo-pin')?.classList.add('hot');
         }
       } else {
-        hideMemoryOnMap();
+        hideMemoryStage();
         document.querySelectorAll('.photo-pin.hot').forEach(el => el.classList.remove('hot'));
       }
 
@@ -1311,26 +1299,8 @@
       });
     }
 
-    function updateMapLegend(trip) {
-      const legend = document.getElementById('map-legend');
-      if (!legend) return;
-      if (!trip) {
-        legend.classList.remove('visible');
-        legend.setAttribute('aria-hidden', 'true');
-        return;
-      }
-      const swatch = document.getElementById('legend-route-swatch');
-      const routeLbl = document.getElementById('legend-route-label');
-      if (swatch) {
-        swatch.style.background = trip.color;
-        swatch.style.color = trip.color;
-      }
-      if (routeLbl) {
-        const short = (trip.name || '').split('—').pop()?.trim() || 'Route';
-        routeLbl.textContent = short.replace(/\s*·.*$/, '').slice(0, 28);
-      }
-      legend.classList.add('visible');
-      legend.setAttribute('aria-hidden', 'false');
+    function updateMapLegend(_trip) {
+      // Route name pill removed — trip context lives in the dock / panel.
     }
 
     // ── Select trip ──
@@ -1377,11 +1347,8 @@
       setMapLabelsVisible(!isSingleTrip());
       updateMapLegend(activeTrip());
       document.getElementById('btn-play').disabled = !isSingleTrip();
-      document.getElementById('btn-export').disabled = !isSingleTrip();
-      document.getElementById('btn-share').disabled = !isSingleTrip();
       updateDockIdle();
       updateAtlasCta();
-      updateQueueBadge();
       preloadTripThumbs(activeTrip());
       if (id === 'all') {
         applyEraFilter();
@@ -1394,15 +1361,6 @@
       document.getElementById('transport-dock')?.classList.toggle('idle', selectedId === 'all');
     }
 
-    // ── Night mode ──
-    // Tint the canvas instead of reloading the whole base style. A full
-    // setStyle() swap tore down/rebuilt every source + refetched all tiles,
-    // which threw "Style is not done loading" and left dark tile gaps.
-    function toggleNight() {
-      nightMode=!nightMode;
-      document.getElementById('btn-night').classList.toggle('on', nightMode);
-      document.body.classList.toggle('night', nightMode);
-    }
     document.getElementById('trip-list').addEventListener('click', e=>{
       const item=e.target.closest('.trip-item'); if(item) selectTrip(item.dataset.id);
     });
@@ -1426,48 +1384,11 @@
     });
     document.getElementById('btn-play').addEventListener('click', startPlayback);
     document.getElementById('btn-pause').addEventListener('click', stopPlayback);
-    document.getElementById('btn-step').addEventListener('click', ()=>{
-      if (!isSingleTrip()) return;
-      stopPlayback();
-      const pb = activePlayback();
-      if (!pb) return;
-      let cursor = 0, targetIdx = animStopIdx + 1;
-      for (const seg of pb.segments) {
-        if (seg.stop_index >= targetIdx && seg.type === 'dwell') {
-          animTimeMs = cursor;
-          updateTrailFromState(positionAtTime(animTimeMs));
-          return;
-        }
-        cursor += seg.duration_ms;
-      }
-      animTimeMs = pb.total_video_ms;
-      updateTrailFromState(positionAtTime(animTimeMs));
+    document.getElementById('speed').addEventListener('input', e=>{
+      speed = parseFloat(e.target.value);
+      const label = Number.isInteger(speed) ? String(speed) : speed.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+      document.getElementById('speed-label').textContent = label + '×';
     });
-    document.getElementById('btn-reset').addEventListener('click', ()=>{ resetVisuals(); drawStops(); fitTrip(); });
-    document.getElementById('btn-loop').addEventListener('click', ()=>{
-      // off → loop one → epic queue → off
-      if (!loopTrip && !queueEpics) {
-        loopTrip = true; queueEpics = false;
-      } else if (loopTrip && !queueEpics) {
-        loopTrip = false; queueEpics = true;
-      } else {
-        loopTrip = false; queueEpics = false;
-      }
-      syncLoopButton();
-    });
-    document.getElementById('btn-director').addEventListener('click', ()=>{
-      directorMode=!directorMode;
-      const btn = document.getElementById('btn-director');
-      btn.classList.toggle('on', directorMode);
-      btn.title = directorMode ? 'Chase camera · click for north-up' : 'North-up follow · click for chase';
-      lastCamKey = '';
-      if (isPlaying || isRecording) {
-        const state = positionAtTime(animTimeMs);
-        if (state) applyPlaybackCamera(state, true);
-      }
-    });
-    document.getElementById('btn-night').addEventListener('click', toggleNight);
-    document.getElementById('speed').addEventListener('input', e=>{ speed=parseFloat(e.target.value); document.getElementById('speed-label').textContent=speed+'×'; });
     document.getElementById('scrubber').addEventListener('input', e=>{
       if (!isSingleTrip()) return;
       stopPlayback();
@@ -1496,37 +1417,13 @@
     document.addEventListener('keydown', e=>{
       if (e.target.tagName==='INPUT') return;
       if (e.code==='Escape') {
-        const toast = document.getElementById('share-toast');
-        if (toast?.classList.contains('visible') && typeof hideShareToast === 'function') {
-          hideShareToast();
-          return;
-        }
         if (isPlaying) { stopPlayback(); return; }
         if (selectedId !== 'all') { selectTrip('all'); return; }
         return;
       }
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
-      if (e.code==='ArrowRight') { stopPlayback(); document.getElementById('btn-step').click(); }
-      if (e.code==='ArrowLeft') { stopPlayback(); if(isSingleTrip()&&animStopIdx>0){
-        const pb = activePlayback(); if (!pb) return;
-        let cursor = 0, targetIdx = animStopIdx - 1;
-        for (const seg of pb.segments) {
-          if (seg.stop_index === targetIdx && seg.type === 'dwell') {
-            animTimeMs = cursor; updateTrailFromState(positionAtTime(animTimeMs)); return;
-          }
-          cursor += seg.duration_ms;
-        }
-      }}
-      if (e.code==='KeyR') document.getElementById('btn-reset').click();
-      if (e.code==='KeyD') document.getElementById('btn-director').click();
-      if (e.code==='KeyS' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        if (isSingleTrip()) shareTripBlurb({ preferNative: false });
-      }
     });
 
-    document.getElementById('btn-export').addEventListener('click', exportTripVideo);
-    document.getElementById('btn-share')?.addEventListener('click', shareTripBlurb);
     document.getElementById('onboard-featured').addEventListener('click', startWithFeatured);
     document.getElementById('onboard-dismiss').addEventListener('click', dismissOnboarding);
     document.getElementById('onboarding').addEventListener('click', e=>{
