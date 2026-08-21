@@ -18,6 +18,8 @@ Destination constellation, year era filter, snappier dwell + dock %, a11y 44px c
 4. **Cinema caption safe margins** — caption plate + higher portrait placement
 5. **Mobile sheet polish** — grab handle, larger toggle, CTA reposition
 
+6. **Epic queue** — Loop button third state plays featured trips in sequence
+
 ## Later
 
 Shared GeoJSON overview layer consolidation, Jinja template partial split, denser corridor banding.

@@ -61,7 +61,7 @@ Optional: copy `data/owner_config.json.example` → `data/owner_config.json` to 
 3. A `.webm` file downloads when playback finishes (~20–90 seconds)
 4. Convert to MP4 if needed: `ffmpeg -i trip_xxx_instagram.webm -c:v libx264 trip.mp4`
 
-Use **▶ Play** for preview; adjust speed with the slider. **🎬 Director** keeps the camera chasing the car.
+Use **▶ Play** for preview; adjust speed with the slider. **🎬 Director** keeps the camera chasing the car. Click **Loop** once to repeat a trip, twice to **queue all Epic Road Trips** in sequence.
 
 ## Screenshots
 

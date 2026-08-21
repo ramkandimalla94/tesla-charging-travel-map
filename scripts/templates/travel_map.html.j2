@@ -409,7 +409,9 @@
     .icon-btn:focus-visible {
       outline: 2px solid var(--accent); outline-offset: 2px;
     }
-    .icon-btn.on { background: rgba(94,234,212,0.12); border-color: rgba(94,234,212,0.35); color: var(--accent); }
+    .icon-btn.queue {
+      background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.4); color: var(--gold);
+    }
     .icon-btn.primary {
       width: 52px; height: 52px; min-width: 52px; min-height: 52px; border-radius: 14px;
       background: linear-gradient(145deg, #fff, #cbd5e1); border: none; color: #0f172a;
@@ -956,7 +958,7 @@
         <button class="icon-btn" id="btn-step" title="Next stop"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l12 8-12 8V4z"/></svg></button>
         <button class="icon-btn primary" id="btn-play" disabled title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></button>
         <button class="icon-btn" id="btn-pause" disabled title="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg></button>
-        <button class="icon-btn" id="btn-loop" title="Loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+        <button class="icon-btn" id="btn-loop" title="Loop trip · click again for epic queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
         <button class="icon-btn on" id="btn-director" title="Director camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l6 3-6 3V9z"/></svg></button>
         <button class="icon-btn" id="btn-night" title="Night mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
         <button class="icon-btn export" id="btn-export" disabled title="Export video">
@@ -1027,7 +1029,7 @@
     let memoryPaused = false;
     let memoryActiveId = null;
     let isPlaying = false, animFrame = null, lastTs = 0;
-    let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
+    let speed = 1, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
     let poiMarkerKey = '';
@@ -1211,8 +1213,21 @@
       }, 2800);
     }
 
-    function featuredTrip() {
-      return TRIPS.find(t => t.featured) || TRIPS.find(t => t.has_colorado) || TRIPS[0] || null;
+    function nextEpicTrip(currentId) {
+      const list = TRIPS.filter(t => t.featured && tripInEra(t));
+      if (!list.length) return null;
+      const idx = list.findIndex(t => t.id === currentId);
+      return list[(idx + 1) % list.length];
+    }
+
+    function syncLoopButton() {
+      const btn = document.getElementById('btn-loop');
+      if (!btn) return;
+      btn.classList.toggle('on', loopTrip && !queueEpics);
+      btn.classList.toggle('queue', queueEpics);
+      btn.title = queueEpics
+        ? 'Epic queue on — plays featured trips in sequence'
+        : (loopTrip ? 'Loop this trip' : 'Loop off · click for loop · again for epic queue');
     }
 
     function updateAtlasCta() {
@@ -2406,6 +2421,15 @@
           if (!isRecording) { animFrame = requestAnimationFrame(animate); }
           return;
         }
+        if (queueEpics && !isRecording) {
+          const next = nextEpicTrip(selectedId);
+          stopPlayback();
+          if (next) {
+            selectTrip(next.id);
+            setTimeout(() => startPlayback(false), 900);
+          }
+          return;
+        }
         stopPlayback();
         return;
       }
@@ -2647,7 +2671,15 @@
     });
     document.getElementById('btn-reset').addEventListener('click', ()=>{ resetVisuals(); drawStops(); fitTrip(); });
     document.getElementById('btn-loop').addEventListener('click', ()=>{
-      loopTrip=!loopTrip; document.getElementById('btn-loop').classList.toggle('on', loopTrip);
+      // off → loop one → epic queue → off
+      if (!loopTrip && !queueEpics) {
+        loopTrip = true; queueEpics = false;
+      } else if (loopTrip && !queueEpics) {
+        loopTrip = false; queueEpics = true;
+      } else {
+        loopTrip = false; queueEpics = false;
+      }
+      syncLoopButton();
     });
     document.getElementById('btn-director').addEventListener('click', ()=>{
       directorMode=!directorMode; document.getElementById('btn-director').classList.toggle('on', directorMode);
