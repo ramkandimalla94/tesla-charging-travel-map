@@ -132,7 +132,7 @@
       transition: transform 0.45s cubic-bezier(.22,1,.36,1), opacity 0.35s;
     }
     .trip-panel.collapsed { transform: translateX(calc(-1 * var(--panel-w) - 28px)); opacity: 0.4; }
-
+    .panel-grab { display: none; }
     .panel-head { padding: 18px 18px 14px; border-bottom: 1px solid var(--border); }
     .panel-head .eyebrow {
       font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
@@ -775,9 +775,9 @@
         top: auto; left: 10px; right: 10px; bottom: calc(var(--dock-h) + var(--timeline-h) + 16px);
         width: auto; max-height: 38vh; border-radius: 18px 18px 14px 14px;
       }
-      .trip-panel::before {
-        content: ''; display: block; width: 44px; height: 5px; border-radius: 99px;
-        background: rgba(255,255,255,0.28); margin: 10px auto 2px;
+      .panel-grab {
+        display: block; width: 44px; height: 5px; border-radius: 99px;
+        background: rgba(255,255,255,0.35); margin: 10px auto 4px; flex-shrink: 0;
       }
       .trip-panel.collapsed { transform: translateY(110%); opacity: 0; pointer-events: none; }
       .panel-toggle { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 20px); left: 18px; width: 44px; height: 44px; }

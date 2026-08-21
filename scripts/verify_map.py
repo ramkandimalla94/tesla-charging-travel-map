@@ -235,8 +235,8 @@ def main() -> int:
               const tr = toggle?.getBoundingClientRect();
               const styles = getComputedStyle(panel);
               return {
-                panelBottomSheet: styles.top === 'auto' || pr.top > window.innerHeight * 0.4,
-                panelGrab: getComputedStyle(panel, '::before').content !== 'none',
+                panelBottomSheet: pr.top > window.innerHeight * 0.35,
+                panelGrab: !!document.querySelector('.panel-grab') && getComputedStyle(document.querySelector('.panel-grab')).display !== 'none',
                 panelMaxH: pr.height,
                 dockWidth: dr.width,
                 dockInView: dr.bottom <= window.innerHeight + 2 && dr.top >= 0,
@@ -353,6 +353,9 @@ def main() -> int:
         ok = False
     if not mobile.get("dockInView"):
         print(f"FAIL: Mobile dock not fully in view: {mobile}")
+        ok = False
+    if not mobile.get("panelGrab"):
+        print(f"FAIL: Mobile panel grab handle missing: {mobile}")
         ok = False
     if mobile.get("eraChips", 0) < 2:
         print(f"FAIL: Mobile era chips missing: {mobile}")
