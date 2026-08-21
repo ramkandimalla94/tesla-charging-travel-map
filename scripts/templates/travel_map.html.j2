@@ -474,6 +474,7 @@
         antialias: true,
         maxPitch: MAX_PITCH,
         projection: 'mercator',
+        preserveDrawingBuffer: true, // required so export composite can read GL pixels
       });
       map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
       map.on('load', onMapLoad);
