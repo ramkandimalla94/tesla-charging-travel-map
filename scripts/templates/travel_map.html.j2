@@ -37,15 +37,51 @@
     .map-vignette {
       position: absolute; inset: 0; pointer-events: none; z-index: 2;
       background:
-        radial-gradient(ellipse 85% 65% at 50% 45%, transparent 30%, rgba(3,3,6,0.55) 100%),
-        linear-gradient(to bottom, rgba(3,3,6,0.45) 0%, transparent 18%, transparent 72%, rgba(3,3,6,0.82) 100%);
+        radial-gradient(ellipse 80% 60% at 50% 42%, transparent 35%, rgba(3,3,6,0.42) 100%),
+        linear-gradient(to bottom, rgba(3,3,6,0.32) 0%, transparent 16%, transparent 74%, rgba(3,3,6,0.72) 100%);
+      transition: opacity 0.6s ease;
+    }
+    body.trip-focus .map-vignette {
+      background:
+        radial-gradient(ellipse 70% 55% at 55% 45%, transparent 28%, rgba(3,3,6,0.55) 100%),
+        linear-gradient(to bottom, rgba(3,3,6,0.4) 0%, transparent 14%, transparent 70%, rgba(3,3,6,0.78) 100%);
     }
     .map-grain {
-      position: absolute; inset: 0; pointer-events: none; z-index: 3; opacity: 0.035;
+      position: absolute; inset: 0; pointer-events: none; z-index: 3; opacity: 0.028;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     }
     .mapboxgl-canvas { transition: filter 0.8s ease; }
     body.night .mapboxgl-canvas { filter: brightness(0.38) contrast(1.12) saturate(0.78) hue-rotate(205deg); }
+    body.trip-focus:not(.night) .mapboxgl-canvas {
+      filter: brightness(0.72) contrast(1.08) saturate(0.85);
+    }
+
+    /* Floating map legend */
+    .map-legend {
+      position: absolute; top: 72px; right: 22px; z-index: 11;
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 10px 12px; border-radius: 14px;
+      background: var(--surface); backdrop-filter: blur(20px) saturate(1.4);
+      border: 1px solid var(--border); box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+      opacity: 0; transform: translateY(-6px); pointer-events: none;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .map-legend.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .map-legend .leg-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: var(--muted);
+      text-transform: uppercase;
+    }
+    .map-legend .swatch {
+      width: 18px; height: 6px; border-radius: 99px; flex-shrink: 0;
+      box-shadow: 0 0 10px currentColor;
+    }
+    .map-legend .pin {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.9);
+    }
+    .map-legend .pin.start { background: linear-gradient(145deg, #34d399, #059669); }
+    .map-legend .pin.end { background: linear-gradient(145deg, #fbbf24, #d97706); }
 
     /* ── Splash ── */
     #splash {
@@ -332,32 +368,29 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 24px var(--beacon-glow, rgba(94,234,212,0.5));
     }
     .beacon-label {
-      margin-top: 6px; padding: 4px 10px; border-radius: 999px;
+      margin-top: 6px; padding: 5px 11px; border-radius: 12px;
       font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: #fff;
-      background: rgba(8,10,16,0.82); border: 1px solid rgba(255,255,255,0.12);
-      backdrop-filter: blur(8px); white-space: nowrap; max-width: 150px;
-      overflow: hidden; text-overflow: ellipsis;
+      background: rgba(6,8,14,0.9); border: 1px solid rgba(255,255,255,0.14);
+      backdrop-filter: blur(10px); white-space: nowrap; max-width: 128px;
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
       opacity: 0; transform: translateY(6px); transition: opacity 0.35s, transform 0.35s;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    }
+    .beacon-label .role {
+      font-size: 8px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+    }
+    .beacon-label .place {
+      font-size: 11px; font-weight: 800; letter-spacing: -0.01em;
+      max-width: 110px; overflow: hidden; text-overflow: ellipsis;
     }
     .beacon-label.visible { opacity: 1; transform: translateY(0); }
     .beacon-label.active { border-color: rgba(251,191,36,0.5); color: var(--gold); }
     .beacon-wrap.split-start .beacon-label { border-color: rgba(52,211,153,0.45); }
     .beacon-wrap.split-end .beacon-label { border-color: rgba(251,191,36,0.45); }
-    /* Push round-trip home labels outward so they never sit on top of each other */
-    .beacon-wrap.split-start {
-      align-items: flex-end;
-    }
-    .beacon-wrap.split-start .beacon-label {
-      text-align: right;
-      margin-right: 2px;
-    }
-    .beacon-wrap.split-end {
-      align-items: flex-start;
-    }
-    .beacon-wrap.split-end .beacon-label {
-      text-align: left;
-      margin-left: 2px;
-    }
+    /* Keep beacon centered on the Mapbox anchor — only style the label chrome */
+    .beacon-wrap.split-start .beacon-label .role { color: #6ee7b7; }
+    .beacon-wrap.split-end .beacon-label .role { color: #fcd34d; }
 
     .beacon.milestone .beacon-core { width: 36px; height: 36px; font-size: 12px; }
     .beacon.milestone.start .beacon-core {
@@ -371,8 +404,8 @@
     .beacon.waypoint { width: 14px; height: 14px; }
     .beacon.waypoint .beacon-ring { display: none; }
     .beacon.waypoint .beacon-core {
-      inset: 0; font-size: 0; border-width: 1.5px;
-      box-shadow: 0 0 10px var(--beacon-glow, rgba(94,234,212,0.45));
+      inset: 0; font-size: 0; border-width: 2px; border-color: rgba(255,255,255,0.95);
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.45), 0 0 14px var(--beacon-glow, rgba(94,234,212,0.55));
     }
 
     .stop-dot {
@@ -459,6 +492,7 @@
     body.cinema-mode .transport-dock,
     body.cinema-mode .timeline-bar,
     body.cinema-mode #onboarding,
+    body.cinema-mode .map-legend,
     body.cinema-mode .mapboxgl-ctrl-group,
     body.cinema-mode .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
     body.cinema-mode .location-hud { opacity: 0 !important; }
@@ -584,6 +618,12 @@
     <div id="map"></div>
     <div class="map-vignette"></div>
     <div class="map-grain"></div>
+  </div>
+
+  <div class="map-legend" id="map-legend" aria-hidden="true">
+    <div class="leg-row"><span class="swatch" id="legend-route-swatch"></span><span id="legend-route-label">Route</span></div>
+    <div class="leg-row"><span class="pin start"></span><span>Start</span></div>
+    <div class="leg-row"><span class="pin end"></span><span id="legend-end-label">Return</span></div>
   </div>
 
   <!-- Top bar -->
@@ -958,12 +998,17 @@
       const base = `route-${tripId}`;
       return {
         src: base,
-        shadow: `${base}-shadow`,
+        casing: `${base}-casing`,
         glowOuter: `${base}-glow-outer`,
         glowMid: `${base}-glow-mid`,
         core: `${base}-core`,
         highlight: `${base}-highlight`,
       };
+    }
+
+    function zoomWidth(stops) {
+      // Zoom-aware widths so routes stay readable on satellite at every scale.
+      return ['interpolate', ['linear'], ['zoom'], ...stops];
     }
 
     function addRouteLayers(tripId, coords, color, visible, overviewOffset, overviewDash) {
@@ -972,45 +1017,68 @@
       const feature = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } };
       if (!map.getSource(ids.src)) {
         map.addSource(ids.src, { type: 'geojson', lineMetrics: true, data: feature });
+        // Dark casing — classic cartography trick so color pops on satellite
         map.addLayer({
-          id: ids.shadow, type: 'line', source: ids.src,
+          id: ids.casing, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: { 'line-color': '#000', 'line-width': 14, 'line-opacity': 0.22, 'line-blur': 5 },
+          paint: {
+            'line-color': '#05070c',
+            'line-width': zoomWidth([3, 5, 5, 9, 8, 14]),
+            'line-opacity': 0.78,
+            'line-blur': 0.2,
+          },
         });
         map.addLayer({
           id: ids.glowOuter, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: { 'line-color': color, 'line-width': 10, 'line-opacity': 0.18, 'line-blur': 4 },
+          paint: {
+            'line-color': color,
+            'line-width': zoomWidth([3, 4, 5, 8, 8, 12]),
+            'line-opacity': 0.35,
+            'line-blur': 2.5,
+          },
         });
         map.addLayer({
           id: ids.glowMid, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: { 'line-color': color, 'line-width': 4.5, 'line-opacity': 0.55, 'line-blur': 0.5 },
+          paint: {
+            'line-color': color,
+            'line-width': zoomWidth([3, 2.6, 5, 4.5, 8, 7]),
+            'line-opacity': 0.85,
+            'line-blur': 0.15,
+          },
         });
         map.addLayer({
           id: ids.core, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
           paint: {
-            'line-width': 2.4,
+            'line-width': zoomWidth([3, 1.8, 5, 3.2, 8, 5]),
             'line-color': color,
-            'line-opacity': 0.95,
+            'line-opacity': 1,
           },
         });
         map.addLayer({
           id: ids.highlight, type: 'line', source: ids.src,
           layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
-          paint: { 'line-color': '#ffffff', 'line-width': 0.7, 'line-opacity': 0.55 },
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': zoomWidth([3, 0.6, 5, 1.1, 8, 1.6]),
+            'line-opacity': 0.75,
+          },
+        });
+        // Emit light so routes stay vivid under Mapbox lights / satellite
+        [ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+          try { map.setPaintProperty(id, 'line-emissive-strength', 0.9); } catch (_) {}
         });
       } else {
         map.getSource(ids.src).setData(feature);
-        [ids.shadow, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+        [ids.casing, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
           map.setLayoutProperty(id, 'visibility', vis);
         });
         map.setPaintProperty(ids.glowOuter, 'line-color', color);
         map.setPaintProperty(ids.glowMid, 'line-color', color);
         map.setPaintProperty(ids.core, 'line-color', color);
       }
-      // Store style hints for setRouteStyle
       map._tripRouteMeta = map._tripRouteMeta || {};
       map._tripRouteMeta[tripId] = { offset: overviewOffset || 0, dash: overviewDash || null, color };
     }
@@ -1020,13 +1088,42 @@
       if (!map.getLayer(ids.core)) return;
       const meta = (map._tripRouteMeta && map._tripRouteMeta[tripId]) || { offset: 0, dash: null };
       const isHover = hoveredTripId === tripId && selectedId === 'all';
+      // Neon-highway presets: casing keeps color readable on satellite texture
       const styles = {
-        overview: { shadow: 0.08, outer: 0.06, mid: 0.28, coreW: 2.2, hi: 0.25, offset: meta.offset, dash: meta.dash },
-        overviewHover: { shadow: 0.35, outer: 0.4, mid: 0.85, coreW: 3.4, hi: 0.9, offset: meta.offset, dash: null },
-        overviewDim: { shadow: 0.03, outer: 0.02, mid: 0.08, coreW: 1.2, hi: 0.08, offset: meta.offset, dash: meta.dash },
-        active: { shadow: 0.38, outer: 0.32, mid: 0.72, coreW: 2.8, hi: 0.95, offset: 0, dash: null },
-        playback: { shadow: 0.06, outer: 0.04, mid: 0.08, coreW: 0.8, hi: 0.12, offset: 0, dash: null },
-        hidden: { shadow: 0, outer: 0, mid: 0, coreW: 0, hi: 0, offset: 0, dash: null },
+        overview: {
+          casing: 0.45, outer: 0.22, mid: 0.7, coreOp: 1, hi: 0.45,
+          coreW: zoomWidth([3, 1.4, 5, 2.4, 8, 3.6]),
+          casingW: zoomWidth([3, 3.6, 5, 6, 8, 9]),
+          offset: meta.offset, dash: meta.dash,
+        },
+        overviewHover: {
+          casing: 0.85, outer: 0.55, mid: 0.95, coreOp: 1, hi: 0.95,
+          coreW: zoomWidth([3, 2.2, 5, 3.8, 8, 5.5]),
+          casingW: zoomWidth([3, 5.5, 5, 9, 8, 13]),
+          offset: meta.offset, dash: null,
+        },
+        overviewDim: {
+          casing: 0.12, outer: 0.05, mid: 0.18, coreOp: 0.35, hi: 0.08,
+          coreW: zoomWidth([3, 1, 5, 1.6, 8, 2.2]),
+          casingW: zoomWidth([3, 2.4, 5, 4, 8, 5.5]),
+          offset: meta.offset, dash: meta.dash,
+        },
+        active: {
+          casing: 0.92, outer: 0.62, mid: 1, coreOp: 1, hi: 0.95,
+          coreW: zoomWidth([3, 3.2, 5, 5.2, 8, 8]),
+          casingW: zoomWidth([3, 8, 5, 13, 8, 20]),
+          offset: 0, dash: null,
+        },
+        playback: {
+          casing: 0.4, outer: 0.22, mid: 0.4, coreOp: 0.6, hi: 0.3,
+          coreW: zoomWidth([3, 1.6, 5, 2.6, 8, 3.5]),
+          casingW: zoomWidth([3, 4.5, 5, 7, 8, 10]),
+          offset: 0, dash: null,
+        },
+        hidden: {
+          casing: 0, outer: 0, mid: 0, coreOp: 0, hi: 0,
+          coreW: 0, casingW: 0, offset: 0, dash: null,
+        },
       };
       let key = mode;
       if (mode === 'overview') {
@@ -1034,20 +1131,20 @@
         else if (hoveredTripId && !isHover) key = 'overviewDim';
       }
       const s = styles[key] || styles.hidden;
-      map.setPaintProperty(ids.shadow, 'line-opacity', s.shadow);
+      map.setPaintProperty(ids.casing, 'line-opacity', s.casing);
       map.setPaintProperty(ids.glowOuter, 'line-opacity', s.outer);
       map.setPaintProperty(ids.glowMid, 'line-opacity', s.mid);
+      map.setPaintProperty(ids.core, 'line-opacity', s.coreOp);
       map.setPaintProperty(ids.core, 'line-width', s.coreW);
+      map.setPaintProperty(ids.casing, 'line-width', s.casingW);
       map.setPaintProperty(ids.core, 'line-color', color);
       map.setPaintProperty(ids.highlight, 'line-opacity', s.hi);
       map.setPaintProperty(ids.glowOuter, 'line-color', color);
       map.setPaintProperty(ids.glowMid, 'line-color', color);
       try {
-        map.setPaintProperty(ids.core, 'line-offset', s.offset || 0);
-        map.setPaintProperty(ids.glowMid, 'line-offset', s.offset || 0);
-        map.setPaintProperty(ids.glowOuter, 'line-offset', s.offset || 0);
-        map.setPaintProperty(ids.shadow, 'line-offset', s.offset || 0);
-        map.setPaintProperty(ids.highlight, 'line-offset', s.offset || 0);
+        [ids.casing, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+          map.setPaintProperty(id, 'line-offset', s.offset || 0);
+        });
       } catch (_) {}
       try {
         const dash = s.dash;
@@ -1059,30 +1156,50 @@
     }
 
     function ensureTrailLayers(color) {
-      if (map.getSource('active-trail')) return;
+      if (map.getSource('active-trail')) {
+        map.setPaintProperty('active-trail-glow', 'line-color', color);
+        return;
+      }
       map.addSource('active-trail', { type: 'geojson', lineMetrics: true, data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
       map.addLayer({
+        id: 'active-trail-casing', type: 'line', source: 'active-trail',
+        paint: {
+          'line-color': '#05070c',
+          'line-width': zoomWidth([4, 8, 6, 14, 9, 20]),
+          'line-opacity': 0.85,
+        },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      map.addLayer({
         id: 'active-trail-shadow', type: 'line', source: 'active-trail',
-        paint: { 'line-color': '#000', 'line-width': 20, 'line-opacity': 0.35, 'line-blur': 8 },
+        paint: { 'line-color': '#000', 'line-width': 22, 'line-opacity': 0.3, 'line-blur': 8 },
         layout: { 'line-cap': 'round', 'line-join': 'round' },
       });
       map.addLayer({
         id: 'active-trail-glow', type: 'line', source: 'active-trail',
-        paint: { 'line-color': color, 'line-width': 12, 'line-opacity': 0.55, 'line-blur': 4 },
+        paint: {
+          'line-color': color,
+          'line-width': zoomWidth([4, 6, 6, 11, 9, 16]),
+          'line-opacity': 0.7,
+          'line-blur': 3,
+        },
         layout: { 'line-cap': 'round', 'line-join': 'round' },
       });
       map.addLayer({
         id: 'active-trail-line', type: 'line', source: 'active-trail',
         paint: {
-          'line-width': 2.8,
-          'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, color, 0.85, '#ffffff', 1, '#ffffff'],
+          'line-width': zoomWidth([4, 3, 6, 5, 9, 7]),
+          'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, color, 0.7, '#ffffff', 1, '#ffffff'],
         },
         layout: { 'line-cap': 'round', 'line-join': 'round' },
       });
       map.addLayer({
         id: 'active-trail-head', type: 'line', source: 'active-trail',
-        paint: { 'line-color': '#ffffff', 'line-width': 1, 'line-opacity': 1 },
+        paint: { 'line-color': '#ffffff', 'line-width': 1.4, 'line-opacity': 1 },
         layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+      ['active-trail-glow', 'active-trail-line', 'active-trail-head'].forEach(id => {
+        try { map.setPaintProperty(id, 'line-emissive-strength', 1); } catch (_) {}
       });
     }
 
@@ -1176,10 +1293,19 @@
     /** Pixel offsets so round-trip home start/return stay readable at any zoom. */
     function milestoneMarkerOffset(sameHome, isStart, isEnd) {
       if (!sameHome) return [0, 0];
-      // Large enough that ~150px labels do not collide between the pair.
-      if (isStart) return [-118, -10];
-      if (isEnd) return [118, -10];
+      // Diagonal split — beacon stays centered on its own offset anchor.
+      if (isStart) return [-92, -48];
+      if (isEnd) return [92, 40];
       return [0, 0];
+    }
+
+    function cityOnly(location) {
+      return (location || '').split(',')[0].trim() || shortLabel(location);
+    }
+
+    function setMilestoneLabel(el, role, location) {
+      if (!el) return;
+      el.innerHTML = `<span class="role">${role}</span><span class="place">${cityOnly(location)}</span>`;
     }
 
     // ── Beacon markers ──
@@ -1229,9 +1355,11 @@
             const lbl = document.createElement('div');
             lbl.className = 'beacon-label';
             const place = shortLabel(s.location);
-            if (sameHome && isStart) lbl.textContent = `Start · ${place}`;
-            else if (sameHome && isEnd) lbl.textContent = `Return · ${place}`;
-            else lbl.textContent = isStart ? `Start · ${place}` : (isEnd ? `Finish · ${place}` : place);
+            if (sameHome && isStart) setMilestoneLabel(lbl, 'Start', s.location);
+            else if (sameHome && isEnd) setMilestoneLabel(lbl, 'Return', s.location);
+            else if (isStart) setMilestoneLabel(lbl, 'Start', s.location);
+            else if (isEnd) setMilestoneLabel(lbl, 'Finish', s.location);
+            else lbl.textContent = place;
             wrap.appendChild(beacon);
             if (isMilestone) wrap.appendChild(lbl);
             var el = beacon, lblRef = isMilestone ? lbl : null;
@@ -1568,10 +1696,11 @@
           m._lbl.classList.toggle('visible', showLbl);
           m._lbl.classList.toggle('active', showLbl);
           if (showLbl) {
-            const place = shortLabel(m._stop.location);
-            if (sameHome && isStart) m._lbl.textContent = `Start · ${place}`;
-            else if (sameHome && isEnd) m._lbl.textContent = `Return · ${place}`;
-            else m._lbl.textContent = place;
+            if (sameHome && isStart) setMilestoneLabel(m._lbl, 'Start', m._stop.location);
+            else if (sameHome && isEnd) setMilestoneLabel(m._lbl, 'Return', m._stop.location);
+            else if (isStart) setMilestoneLabel(m._lbl, 'Start', m._stop.location);
+            else if (isEnd) setMilestoneLabel(m._lbl, 'Finish', m._stop.location);
+            else m._lbl.textContent = shortLabel(m._stop.location);
           }
         }
       });
@@ -1722,6 +1851,26 @@
       stopPlayback();
     }
 
+    function updateMapLegend(trip) {
+      const legend = document.getElementById('map-legend');
+      if (!legend) return;
+      if (!trip) {
+        legend.classList.remove('visible');
+        legend.setAttribute('aria-hidden', 'true');
+        return;
+      }
+      const swatch = document.getElementById('legend-route-swatch');
+      const routeLbl = document.getElementById('legend-route-label');
+      const endLbl = document.getElementById('legend-end-label');
+      swatch.style.background = trip.color;
+      swatch.style.color = trip.color;
+      const short = (trip.name || '').split('—').pop()?.trim() || 'Route';
+      routeLbl.textContent = short.replace(/\s*·.*$/, '').slice(0, 28);
+      endLbl.textContent = isSameHomeTrip(trip) ? 'Return' : 'Finish';
+      legend.classList.add('visible');
+      legend.setAttribute('aria-hidden', 'false');
+    }
+
     // ── Select trip ──
     function selectTrip(id) {
       if (selectedId === id && id !== 'all') {
@@ -1732,6 +1881,7 @@
       selectedId=id;
       hoveredTripId=null;
       dismissOnboarding();
+      document.body.classList.toggle('trip-focus', id !== 'all');
       document.querySelectorAll('.trip-item').forEach(el=>{
         el.classList.toggle('active',el.dataset.id===id);
         el.classList.remove('preview');
@@ -1739,6 +1889,7 @@
       document.querySelectorAll('.tl-seg').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
       resetVisuals(); drawRoutes(); drawStops(); updateHero(); fitTrip();
       setMapLabelsVisible(!isSingleTrip());
+      updateMapLegend(activeTrip());
       document.getElementById('btn-play').disabled = !isSingleTrip();
       document.getElementById('btn-export').disabled = !isSingleTrip();
     }
