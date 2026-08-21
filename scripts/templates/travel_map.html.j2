@@ -1213,6 +1213,10 @@
       }, 2800);
     }
 
+    function featuredTrip() {
+      return TRIPS.find(t => t.featured) || TRIPS.find(t => t.has_colorado) || TRIPS[0] || null;
+    }
+
     function nextEpicTrip(currentId) {
       const list = TRIPS.filter(t => t.featured && tripInEra(t));
       if (!list.length) return null;
