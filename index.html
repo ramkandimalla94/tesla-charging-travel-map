@@ -648,9 +648,16 @@
       border: 2px solid rgba(255,255,255,0.92);
       box-shadow: 0 2px 10px rgba(0,0,0,0.35);
     }
-    .vehicle-body svg { width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35)); }
-    .vehicle-body .tesla-body { fill: #fff; }
-    .vehicle-body .tesla-accent { fill: rgba(255,255,255,0.85); }
+    /* Face "up" (north) in marker local space so map rotation = travel heading */
+    .vehicle-body svg {
+      width: 20px; height: 20px;
+      transform: rotate(-90deg);
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35));
+    }
+    .vehicle-body .tesla-body,
+    .vehicle-body .car-body { fill: #fff; }
+    .vehicle-body .tesla-accent,
+    .vehicle-body .car-accent { fill: rgba(255,255,255,0.85); }
 
     /* ── Nearby place pins (text only, no heavy discs) ── */
     .poi-wrap {
@@ -1656,7 +1663,16 @@
     let hoverRaf = null;
     let smoothBearing = 0, camBearing = 0, lastTravelBearing = 0;
     let camZoom = 6.5;
+    // Navigation-style chase (Apple/Google followMyLocation · TILTED)
+    let navLat = null, navLng = null, navBearing = 0, navZoom = 6.5, navPitch = 52;
+    let navRecapStarted = false;
+    let lastNavTs = 0;
     const MAX_PITCH = 60;
+    const NAV_LOOKAHEAD_KM = 0.7;        // course window ahead — kills vertex zig-zag
+    const NAV_BEARING_SMOOTH = 0.12;     // bearing EMA after turn cap
+    const NAV_MAX_TURN_DEG_S = 48;       // max turn rate (°/sec) — frame-rate independent
+    const NAV_ZOOM_SMOOTH = 0.08;
+    const NAV_PITCH_TRAVEL = 58;
 
     const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 64 28" aria-hidden="true"><path class="car-body" d="M2 18 Q8 9 16 8 L48 8 Q56 9 62 18 L60 22 L4 22 Z"/><path class="car-accent" d="M18 8 L26 4 L34 8"/><circle cx="14" cy="21" r="3.2" fill="#111"/><circle cx="50" cy="21" r="3.2" fill="#111"/><path class="car-accent" d="M28 8 L32 6 L36 8" opacity="0.6"/></svg></div></div>`;
 
@@ -1795,10 +1811,10 @@
           }
           const path = seg.path || [];
           const pos = pointOnPath(path, frac) || { lat: path[0]?.[0], lng: path[0]?.[1] };
-          const microBearing = path.length >= 2 ? pathBearing(path, frac) : (seg.bearing || 0);
-          const bearing = seg.bearing != null
-            ? smoothAngle(seg.bearing, microBearing, Math.min(1, frac * 3))
-            : microBearing;
+          // Navigation course: look ahead along the path (not adjacent noisy vertices)
+          const bearing = path.length >= 2
+            ? courseAlongPath(path, frac, NAV_LOOKAHEAD_KM)
+            : (seg.bearing || lastTravelBearing || 0);
           return {
             ...pos, phase: 'travel', label: seg.to_label, stopIndex: seg.stop_index,
             frac, bearing, path, seg,
@@ -2160,13 +2176,59 @@
       return { lat: last[0], lng: last[1] };
     }
     function pathBearing(path, prog) {
+      return courseAlongPath(path, prog, 0.15);
+    }
+    function courseAlongPath(path, prog, lookAheadKm) {
       if (!path || path.length < 2) return 0;
-      const a = pointOnPath(path, Math.max(0, prog - 0.01)) || { lat: path[0][0], lng: path[0][1] };
-      const b = pointOnPath(path, Math.min(1, prog + 0.01)) || { lat: path[path.length - 1][0], lng: path[path.length - 1][1] };
-      const dLng = (b.lng - a.lng) * Math.PI / 180, lat1 = a.lat * Math.PI / 180, lat2 = b.lat * Math.PI / 180;
-      const y = Math.sin(dLng) * Math.cos(lat2);
-      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+      const totalKm = (typeof pathLengthKm === 'function' ? pathLengthKm(path) : 0) || 1;
+      const aheadKm = lookAheadKm || NAV_LOOKAHEAD_KM;
+      const origin = pointOnPath(path, Math.max(0, Math.min(1, prog)));
+      if (!origin) return 0;
+      // Average unit vectors over several look-ahead distances (GPS-style course filter)
+      const spans = [0.25, 0.5, 0.85, 1.2].map((f) => aheadKm * f);
+      let x = 0, y = 0, hits = 0;
+      for (const km of spans) {
+        const dProg = Math.max(0.003, Math.min(0.3, km / Math.max(totalKm, 0.2)));
+        const b = pointOnPath(path, Math.min(1, prog + dProg));
+        if (!b) continue;
+        if (haversineKm(origin.lat, origin.lng, b.lat, b.lng) < 0.02) continue;
+        const br = bearingBetween(origin.lat, origin.lng, b.lat, b.lng) * Math.PI / 180;
+        x += Math.sin(br);
+        y += Math.cos(br);
+        hits += 1;
+      }
+      if (hits === 0) {
+        const b = pointOnPath(path, Math.min(1, prog + 0.01));
+        if (!b) return 0;
+        return bearingBetween(origin.lat, origin.lng, b.lat, b.lng);
+      }
+      return (Math.atan2(x / hits, y / hits) * 180 / Math.PI + 360) % 360;
+    }
+    function bearingBetween(lat1, lng1, lat2, lng2) {
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+      const y = Math.sin(dLng) * Math.cos(φ2);
+      const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLng);
       return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+    function clampTurn(fromDeg, toDeg, maxStep) {
+      let diff = ((toDeg - fromDeg + 540) % 360) - 180;
+      if (diff > maxStep) diff = maxStep;
+      if (diff < -maxStep) diff = -maxStep;
+      return (fromDeg + diff + 360) % 360;
+    }
+    function offsetAlongBearing(lng, lat, bearingDeg, meters) {
+      const R = 6378137;
+      const δ = meters / R;
+      const θ = bearingDeg * Math.PI / 180;
+      const φ1 = lat * Math.PI / 180;
+      const λ1 = lng * Math.PI / 180;
+      const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
+      const λ2 = λ1 + Math.atan2(
+        Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+        Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2)
+      );
+      return [((λ2 * 180 / Math.PI + 540) % 360) - 180, φ2 * 180 / Math.PI];
     }
     function findStopIdx(stops, path, prog) {
       const pos = pointOnPath(path, prog); if (!pos||!stops.length) return 0;
@@ -2982,7 +3044,7 @@
     }
 
     // ── Fit trip — frame route in continental US ──
-    function fitTrip(animate=true) {
+    function fitTrip(animate=true, recap=false) {
       const bounds = new mapboxgl.LngLatBounds();
       activeTrips().forEach(t => {
         // Prefer the driving path so round trips with identical home endpoints still frame the loop
@@ -3005,6 +3067,18 @@
         else if (miles > 900) maxZoom = Math.min(maxZoom, 5.0);
         else if (miles < 450) maxZoom = Math.min(6.4, Math.max(maxZoom, 5.4));
       }
+      // End-of-trip recap: north-up overview like Apple/Google route summary
+      if (recap && isSingleTrip()) {
+        map.fitBounds(bounds, {
+          padding: { top: 72, bottom: Math.max(180, Math.floor(window.innerHeight * 0.22)), left: 56, right: 56 },
+          pitch: 40,
+          bearing: 0,
+          duration: animate ? 2000 : 0,
+          maxZoom: Math.min(maxZoom + 0.5, 6.6),
+          minZoom: 3,
+        });
+        return;
+      }
       map.fitBounds(bounds, {
         padding: mapCameraPadding(),
         pitch: isSingleTrip() ? 28 : 0,
@@ -3013,6 +3087,19 @@
         maxZoom,
         minZoom: 3,
       });
+    }
+
+    function resetNavChase() {
+      navLat = null;
+      navLng = null;
+      navBearing = 0;
+      navZoom = 6.5;
+      navPitch = 52;
+      navRecapStarted = false;
+      lastNavTs = 0;
+      camBearing = 0;
+      camZoom = 6.5;
+      lastCamKey = '';
     }
 
     function dwellUiCopy(state, stop) {
@@ -3223,75 +3310,55 @@
     }
 
     function travelZoomForLegKm(km) {
-      // Keep the car visibly crawling across the frame — never stay on continent zoom.
-      if (km < 20) return 11.2;
-      if (km < 50) return 10.2;
-      if (km < 120) return 9.0;
-      if (km < 250) return 7.8;
-      if (km < 450) return 6.9;
-      return 6.2;
+      // Navigation follow stays close — long legs still readable without continent zoom.
+      if (km < 30) return 12.0;
+      if (km < 80) return 11.4;
+      if (km < 160) return 10.8;
+      if (km < 320) return 10.2;
+      return 9.6;
     }
 
     function playbackCameraTarget(state) {
       if (!state || state.lat == null || state.lng == null) return null;
-      const pad = mapCameraPadding();
-      const padding = {
-        top: Math.max(56, Math.floor(pad.top * 0.4)),
-        bottom: Math.max(140, Math.floor(pad.bottom * 0.85)),
-        left: Math.max(32, Math.floor(pad.left * 0.2)),
-        right: 56,
-      };
+      // Navigation padding: keep the car in the lower third (Apple/Google follow mode)
+      const padding = { top: 40, bottom: Math.max(200, Math.floor(window.innerHeight * 0.28)), left: 40, right: 40 };
 
       if (state.phase === 'travel') {
         const km = pathLengthKm(state.path);
         const zoom = travelZoomForLegKm(km);
-        let center = [state.lng, state.lat];
-        if (state.path?.length >= 2) {
-          const ahead = pointOnPath(state.path, Math.min(1, (state.frac || 0) + 0.1));
-          if (ahead?.lng != null) {
-            // Bias center slightly ahead so motion reads as forward travel.
-            center = [
-              state.lng + (ahead.lng - state.lng) * 0.55,
-              state.lat + (ahead.lat - state.lat) * 0.55,
-            ];
-          }
-        }
+        const bearing = navBearing || state.bearing || 0;
+        // Camera looks slightly ahead so the road fills the upper frame
+        const center = offsetAlongBearing(
+          state.lng, state.lat, bearing, 180
+        );
         return {
           center,
           zoom,
-          pitch: Math.min(MAX_PITCH, directorMode ? 50 : 38),
-          bearing: directorMode ? (state.bearing || lastTravelBearing || 0) : 0,
+          pitch: NAV_PITCH_TRAVEL,
+          bearing: directorMode ? bearing : 0,
           padding,
-          duration: 480,
+          duration: 0,
         };
       }
 
       if (state.phase === 'dwell') {
         return {
           center: [state.lng, state.lat],
-          zoom: state.pois?.length ? 9.6 : 8.6,
-          pitch: Math.min(MAX_PITCH, 40),
-          bearing: directorMode ? camBearing : 0,
+          zoom: state.pois?.length ? 11.0 : 10.4,
+          pitch: 48,
+          bearing: directorMode ? navBearing : 0,
           padding,
-          duration: 640,
+          duration: 700,
         };
       }
       if (state.phase === 'memory') {
-        // Soft punch-in on the corridor — never slam to street-level photo GPS.
-        const glance = state.on_corridor !== false && (state.spur_miles || 0) < 18;
-        const center = glance && state.photo_lng != null
-          ? [
-              state.lng + (state.photo_lng - state.lng) * 0.35,
-              state.lat + (state.photo_lat - state.lat) * 0.35,
-            ]
-          : [state.lng, state.lat];
         return {
-          center,
-          zoom: glance ? 9.4 : 8.8,
-          pitch: Math.min(MAX_PITCH, 46),
-          bearing: directorMode ? camBearing : 0,
+          center: [state.lng, state.lat],
+          zoom: 11.2,
+          pitch: 50,
+          bearing: directorMode ? navBearing : 0,
           padding,
-          duration: 720,
+          duration: 650,
         };
       }
       return null;
@@ -3300,54 +3367,61 @@
     function applyPlaybackCamera(state, force = false) {
       if (!map || !state) return;
       if (!force && !(isPlaying || isRecording)) return;
-      if (state.phase === 'intro' || state.phase === 'outro') return;
+      if (state.phase === 'intro') return;
+      if (state.phase === 'outro') {
+        // Trip recap overview — like Apple/Google end-of-route summary
+        if (!navRecapStarted) {
+          navRecapStarted = true;
+          try { map.stop(); } catch (e) { /* ignore */ }
+          fitTrip(true, true);
+        }
+        return;
+      }
       const target = playbackCameraTarget(state);
       if (!target) return;
 
-      const camKey = `${state.phase}|${state.stopIndex}|${state.is_photo ? 'p' : 'r'}|${directorMode ? 'd' : 'n'}`;
-      const phaseChanged = camKey !== lastCamKey;
-      const now = performance.now();
-      // Longer throttle = less thrash; memory holds don't fight travel follow.
-      const throttle = state.phase === 'travel' ? 140 : (state.phase === 'memory' ? 420 : 360);
-      if (!force && !phaseChanged && now - lastDirectorMove < throttle) return;
-      lastCamKey = camKey;
-      lastDirectorMove = now;
+      const phaseKey = `${state.phase}|${directorMode ? 'd' : 'n'}`;
+      const phaseChanged = phaseKey !== lastCamKey;
+      lastCamKey = phaseKey;
 
-      if (directorMode && state.phase === 'travel') {
-        camBearing = smoothAngle(camBearing, target.bearing, phaseChanged ? 0.35 : 0.08);
-        target.bearing = camBearing;
-      } else if (!directorMode) {
-        camBearing = smoothAngle(camBearing, 0, 0.15);
+      const now = performance.now();
+      const dt = lastNavTs ? Math.min(0.05, (now - lastNavTs) / 1000) : 0.016;
+      lastNavTs = now;
+      const maxTurn = phaseChanged ? 25 : NAV_MAX_TURN_DEG_S * dt;
+
+      if (directorMode) {
+        camBearing = clampTurn(camBearing, target.bearing, maxTurn);
         target.bearing = camBearing;
       } else {
+        camBearing = smoothAngle(camBearing, 0, 0.2);
         target.bearing = camBearing;
       }
 
-      // Soft-follow zoom — never jump more than ~0.8 levels per update
-      if (!force && !phaseChanged && state.phase === 'travel') {
-        const dz = target.zoom - camZoom;
-        target.zoom = camZoom + Math.max(-0.35, Math.min(0.35, dz));
-      }
-      camZoom = target.zoom;
+      navZoom = navZoom + (target.zoom - navZoom) * (phaseChanged ? 0.35 : NAV_ZOOM_SMOOTH);
+      navPitch = navPitch + (target.pitch - navPitch) * (phaseChanged ? 0.4 : 0.1);
+      camZoom = navZoom;
+
       const cam = {
         center: target.center,
-        zoom: target.zoom,
-        pitch: target.pitch,
+        zoom: navZoom,
+        pitch: Math.min(MAX_PITCH, navPitch),
         bearing: target.bearing,
         padding: target.padding,
       };
 
-      // Only cancel in-flight overview eases on phase changes — not every travel tick.
       if (phaseChanged || force) {
         try { map.stop(); } catch (e) { /* ignore */ }
+        map.easeTo({ ...cam, duration: force ? 500 : 420, essential: true });
+        return;
       }
 
-      if (state.phase === 'travel' && !phaseChanged) {
+      // Continuous follow: jumpTo smoothed values every frame (nav SDK style)
+      if (state.phase === 'travel') {
         map.jumpTo(cam);
-      } else if (state.phase === 'travel' && phaseChanged) {
-        map.easeTo({ ...cam, duration: Math.min(560, target.duration || 560), essential: true });
       } else {
-        map.easeTo({ ...cam, duration: Math.min(720, target.duration || 640), essential: true });
+        if (now - lastDirectorMove < 280) return;
+        lastDirectorMove = now;
+        map.easeTo({ ...cam, duration: target.duration || 600, essential: true });
       }
     }
 
@@ -3375,23 +3449,49 @@
         if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker = null; }
         clearPoiMarkers();
         hideMemoryCard();
+        // Paint the completed corridor for the recap map
+        ensureTrailLayers(color);
+        const fullTrail = trailCoordsAtTime(activePlayback()?.total_video_ms || animTimeMs);
+        if (fullTrail.length >= 2) {
+          map.getSource('active-trail').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: fullTrail } });
+          map.setPaintProperty('active-trail-glow', 'line-color', color);
+          map.setPaintProperty('active-trail-line', 'line-gradient', ['interpolate', ['linear'], ['line-progress'], 0, color, 0.85, '#ffffff', 1, '#ffffff']);
+        }
         updateStoryOverlay(state);
         updateLocationHud(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'outro', state);
         setPlaybackChrome(animProg, 'Journey complete');
+        applyPlaybackCamera(state); // recap overview
         if (typeof paintExportComposite === 'function') paintExportComposite(state);
         return;
       }
       if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), state.phase, state);
 
-      const pos = { lat: state.lat, lng: state.lng };
       const trailCoords = trailCoordsAtTime(animTimeMs);
 
-      if (state.phase === 'travel') {
-        lastTravelBearing = smoothAngle(lastTravelBearing, state.bearing || 0, 0.18);
-        smoothBearing = lastTravelBearing;
+      // Stay glued to the path (no lat/lng EMA — that cuts corners / zig-zags).
+      // Only smooth bearing with look-ahead + turn-rate cap, like nav SDKs.
+      if (state.lat != null && state.lng != null) {
+        navLat = state.lat;
+        navLng = state.lng;
+        const rawBearing = state.bearing != null ? state.bearing : lastTravelBearing;
+        if (state.phase === 'travel') {
+          const now = performance.now();
+          const dt = lastNavTs ? Math.min(0.05, (now - lastNavTs) / 1000) : 0.016;
+          // Snap only after reset / huge discontinuity (U-turn), not on noisy spikes
+          let diff = ((rawBearing - navBearing + 540) % 360) - 180;
+          if (Math.abs(diff) > 135) {
+            navBearing = rawBearing || navBearing;
+          } else {
+            const turned = clampTurn(navBearing, rawBearing || navBearing, NAV_MAX_TURN_DEG_S * dt);
+            navBearing = smoothAngle(navBearing, turned, NAV_BEARING_SMOOTH);
+          }
+          lastTravelBearing = navBearing;
+          smoothBearing = navBearing;
+        }
       }
-      const bearing = (state.phase === 'dwell' || state.phase === 'memory') ? lastTravelBearing : smoothBearing;
+      const pos = { lat: navLat != null ? navLat : state.lat, lng: navLng != null ? navLng : state.lng };
+      const bearing = navBearing;
 
       ensureTrailLayers(color);
       if (trailCoords.length >= 2) {
@@ -3403,15 +3503,22 @@
       if (pos.lat != null) {
         if (vehicleMarker) {
           vehicleMarker.setLngLat([pos.lng, pos.lat]);
-          const body = vehicleMarker.getElement().querySelector('.vehicle-body');
-          if (body) body.style.transform = `rotate(${bearing}deg)`;
+          // Map-aligned rotation only — do NOT also CSS-rotate the body (double-spin)
+          if (typeof vehicleMarker.setRotation === 'function') vehicleMarker.setRotation(bearing);
         } else {
           const el = document.createElement('div');
           el.innerHTML = carHtml;
-          vehicleMarker = new mapboxgl.Marker({ element: el, anchor: 'center', rotationAlignment: 'map' })
-            .setLngLat([pos.lng, pos.lat]).addTo(map);
+          vehicleMarker = new mapboxgl.Marker({
+            element: el,
+            anchor: 'center',
+            rotationAlignment: 'map',
+            // Keep puck upright on screen while map pitches (Google TILTED style)
+            pitchAlignment: 'viewport',
+          }).setLngLat([pos.lng, pos.lat]).addTo(map);
+          if (typeof vehicleMarker.setRotation === 'function') vehicleMarker.setRotation(bearing);
         }
-        applyPlaybackCamera(state);
+        // Feed path coords into camera chase
+        applyPlaybackCamera({ ...state, lat: pos.lat, lng: pos.lng, bearing });
       }
 
       updatePoiMarkers(state.pois, state.phase === 'dwell' && !state.is_photo);
@@ -3484,6 +3591,7 @@
         if (isRecording) finishRecording();
         if (loopTrip) {
           animTimeMs = 0; animStopIdx = 0;
+          resetNavChase();
           applyIdleStopVisuals();
           lastTs = 0;
           if (!isRecording) { animFrame = requestAnimationFrame(animate); }
@@ -3513,7 +3621,7 @@
       if (!activePlayback()?.total_video_ms) return;
       if (animTimeMs >= activePlayback().total_video_ms) { animTimeMs = 0; resetVisuals(false); drawStops(); }
       isPlaying = true; lastTs = 0;
-      lastCamKey = '';
+      resetNavChase();
       setPanelCollapsed(true);
       if (!forRecording) setWatching(true);
       setPlaybackVisuals(true);
@@ -3526,6 +3634,11 @@
       updateQueueBadge();
       // Dive from overview into the first moving frame so the car is readable immediately.
       const warm = positionAtTime(Math.max(animTimeMs, 80));
+      if (warm?.bearing != null) {
+        navBearing = warm.bearing;
+        lastTravelBearing = warm.bearing;
+        camBearing = directorMode ? warm.bearing : 0;
+      }
       if (warm) applyPlaybackCamera(warm, true);
       animFrame = requestAnimationFrame(animate);
     }
@@ -3543,9 +3656,8 @@
     }
     function resetVisuals(clearHud=true) {
       stopPlayback(); animTimeMs=0; animProg=0; animStopIdx=0;
-      smoothBearing = 0; camBearing = 0; lastTravelBearing = 0;
-      lastCamKey = '';
-      camZoom = 6.5;
+      smoothBearing = 0; lastTravelBearing = 0;
+      resetNavChase();
       if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
       clearPoiMarkers();
       if (map?.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
