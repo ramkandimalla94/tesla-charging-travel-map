@@ -26,7 +26,9 @@ Destination constellation, year era filter, snappier dwell + dock %, a11y 44px c
 12. **Era rail discoverability** — labeled Era chips, larger hit targets
 13. **Epic-queue dock badge** — `Epic queue · i/n` when Loop is in queue mode
 14. **Playback JS partial** — `travel_map/_playback_js.html.j2`
+15. **Routes JS partial** — `travel_map/_routes_js.html.j2`
+16. **Mobile sheet regression** — 390×844 verify + denser grab handle / dock fit
 
 ## Later
 
-Route/layer JS partial, denser corridor polish, mobile sheet regression pass.
+Denser corridor polish, README screenshot gallery captions, Sprint 4 share/export cinema.

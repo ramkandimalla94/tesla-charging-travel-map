@@ -220,6 +220,51 @@ def main() -> int:
         print(f"Epic queue badge: {queue_state}")
         page.evaluate("loopTrip = false; queueEpics = false; syncLoopButton()")
 
+        # Mobile sheet regression (iPhone-ish)
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.evaluate("selectTrip('all'); setPanelCollapsed(false)")
+        page.wait_for_timeout(700)
+        mobile = page.evaluate(
+            """() => {
+              const panel = document.getElementById('sidebar');
+              const dock = document.getElementById('transport-dock');
+              const toggle = document.getElementById('sidebar-toggle');
+              const era = document.getElementById('era-rail');
+              const pr = panel?.getBoundingClientRect();
+              const dr = dock?.getBoundingClientRect();
+              const tr = toggle?.getBoundingClientRect();
+              const styles = getComputedStyle(panel);
+              return {
+                panelBottomSheet: styles.top === 'auto' || pr.top > window.innerHeight * 0.4,
+                panelGrab: getComputedStyle(panel, '::before').content !== 'none',
+                panelMaxH: pr.height,
+                dockWidth: dr.width,
+                dockInView: dr.bottom <= window.innerHeight + 2 && dr.top >= 0,
+                toggleSize: Math.min(tr.width, tr.height),
+                eraScrollable: era ? era.scrollWidth >= era.clientWidth - 1 : false,
+                eraChips: document.querySelectorAll('.era-chip').length,
+                hubs: document.querySelectorAll('.home-hub').length,
+                vw: window.innerWidth,
+                vh: window.innerHeight,
+              };
+            }"""
+        )
+        print(f"Mobile 390x844: {mobile}")
+        page.screenshot(path=str(SCREENSHOTS / "08-mobile-sheet.png"))
+        page.evaluate("selectTrip('all'); startPlayback()")  # should no-op / ask select
+        page.evaluate(f"selectTrip({json.dumps(trip_co)}); startPlayback()")
+        page.wait_for_timeout(900)
+        mobile_play = page.evaluate(
+            """() => ({
+              playing: isPlaying,
+              watching: document.body.classList.contains('watching'),
+              panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
+              pad: typeof mapCameraPadding === 'function' ? mapCameraPadding() : null,
+            })"""
+        )
+        page.evaluate("stopPlayback()")
+        print(f"Mobile playback: {mobile_play}")
+
         browser.close()
 
     critical_errors = [
@@ -299,6 +344,21 @@ def main() -> int:
         ok = False
     if not queue_state.get("badgeVisible") or "Epic queue" not in queue_state.get("badgeText", ""):
         print(f"FAIL: Epic queue dock badge missing: {queue_state}")
+        ok = False
+    if mobile.get("vw") != 390:
+        print(f"FAIL: Mobile viewport not applied: {mobile}")
+        ok = False
+    if mobile.get("toggleSize", 0) < 40:
+        print(f"FAIL: Mobile panel toggle too small: {mobile}")
+        ok = False
+    if not mobile.get("dockInView"):
+        print(f"FAIL: Mobile dock not fully in view: {mobile}")
+        ok = False
+    if mobile.get("eraChips", 0) < 2:
+        print(f"FAIL: Mobile era chips missing: {mobile}")
+        ok = False
+    if not mobile_play.get("playing") or not mobile_play.get("panelCollapsed"):
+        print(f"FAIL: Mobile watch/play sheet state bad: {mobile_play}")
         ok = False
     if critical_errors:
         print("WARN: Console errors detected")
