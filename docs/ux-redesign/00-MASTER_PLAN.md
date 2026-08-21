@@ -24,6 +24,8 @@ Memory reel, spokes + corridor banding, featured CTA, epic queue + badge, Era ra
 6. **Web Share API** — `navigator.share` when available, clipboard fallback
 7. **Post-play share prompt** — journey-complete toast invites Share
 8. **story_overrides** — optional `owner_config.json` intro/outro/share/stop caption patches
+9. **Corridor banding polish** — zoom-aware band/filament paint; hot corridor during memory reel / hover
+10. **CSS Jinja split** — `_css_base` / `_css_chrome` / `_css_cinema` partials under `travel_map/`
 
 ## Later
 

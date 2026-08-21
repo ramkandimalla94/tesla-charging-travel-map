@@ -1,0 +1,73 @@
+    :root {
+      --bg: #030306;
+      --surface: rgba(12, 14, 20, 0.78);
+      --surface-2: rgba(255, 255, 255, 0.035);
+      --border: rgba(255, 255, 255, 0.09);
+      --border-bright: rgba(255, 255, 255, 0.16);
+      --text: #f4f6fa;
+      --muted: #8b93a3;
+      --accent: #5eead4;
+      --accent-2: #38bdf8;
+      --gold: #fbbf24;
+      --panel-w: 320px;
+      --dock-h: 140px;
+      --timeline-h: 72px;
+      --font-display: 'Syne', system-ui, sans-serif;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; overflow: hidden;
+      font-family: var(--font-body); background: var(--bg); color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #map-wrap { position: absolute; inset: 0; overflow: hidden; }
+    #map { position: absolute; inset: 0; }
+    .map-vignette {
+      position: absolute; inset: 0; pointer-events: none; z-index: 2;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 42%, transparent 35%, rgba(3,3,6,0.42) 100%),
+        linear-gradient(to bottom, rgba(3,3,6,0.32) 0%, transparent 16%, transparent 74%, rgba(3,3,6,0.72) 100%);
+      transition: opacity 0.6s ease;
+    }
+    body.trip-focus .map-vignette {
+      background:
+        radial-gradient(ellipse 70% 55% at 55% 45%, transparent 28%, rgba(3,3,6,0.55) 100%),
+        linear-gradient(to bottom, rgba(3,3,6,0.4) 0%, transparent 14%, transparent 70%, rgba(3,3,6,0.78) 100%);
+    }
+    .map-grain {
+      position: absolute; inset: 0; pointer-events: none; z-index: 3; opacity: 0.028;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .mapboxgl-canvas { transition: filter 0.8s ease; }
+    body.night .mapboxgl-canvas { filter: brightness(0.38) contrast(1.12) saturate(0.78) hue-rotate(205deg); }
+    /* Do NOT filter the whole canvas in trip-focus — that also dims neon routes. */
+
+    /* Floating map legend */
+    .map-legend {
+      position: absolute; top: 72px; right: 22px; z-index: 11;
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 10px 12px; border-radius: 14px;
+      background: var(--surface); backdrop-filter: blur(20px) saturate(1.4);
+      border: 1px solid var(--border); box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+      opacity: 0; transform: translateY(-6px); pointer-events: none;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .map-legend.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .map-legend .leg-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: var(--muted);
+      text-transform: uppercase;
+    }
+    .map-legend .swatch {
+      width: 18px; height: 6px; border-radius: 99px; flex-shrink: 0;
+      box-shadow: 0 0 10px currentColor;
+    }
+    .map-legend .pin {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.9);
+    }
+    .map-legend .pin.start { background: linear-gradient(145deg, #34d399, #059669); }
+    .map-legend .pin.end { background: linear-gradient(145deg, #fbbf24, #d97706); }
+

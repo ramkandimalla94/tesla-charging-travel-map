@@ -109,20 +109,29 @@ def main() -> int:
         reel = page.evaluate(
             """() => {
               let spokeCount = 0;
+              let hotCount = 0;
+              let bandHot = false;
               try {
-                spokeCount = map.querySourceFeatures('atlas-spokes')?.length || 0;
+                const raw = map.getSource('atlas-spokes')?._data;
+                const feats = raw?.features || [];
+                spokeCount = feats.length || map.querySourceFeatures('atlas-spokes')?.length || 0;
+                hotCount = feats.filter(f => f.properties?.hot === 1).length;
+                bandHot = feats.some(f => f.properties?.kind === 'band' && f.properties?.hot === 1);
               } catch (e) {
                 try {
-                  const raw = map.getSource('atlas-spokes')?._data;
-                  spokeCount = raw?.features?.length || 0;
+                  spokeCount = map.querySourceFeatures('atlas-spokes')?.length || 0;
                 } catch (e2) {}
               }
+              const bandOpacity = map.getPaintProperty('atlas-spokes-band', 'line-opacity');
               return {
                 badge: document.getElementById('memory-badge')?.classList.contains('visible'),
                 cta: document.getElementById('atlas-cta')?.classList.contains('visible'),
                 spokes: !!map.getLayer('atlas-spokes-line'),
                 spokeBand: !!map.getLayer('atlas-spokes-band'),
                 spokeCount,
+                hotCount,
+                bandHot,
+                zoomPaint: JSON.stringify(bandOpacity || '').includes('zoom'),
               };
             }"""
         )
@@ -441,6 +450,12 @@ def main() -> int:
     # querySourceFeatures can be empty at low zoom; layer presence is enough
     if reel.get("spokes") and reel.get("spokeCount", 0) == 0:
         print(f"WARN: Spokes layer present but no features queried at this zoom: {reel}")
+    if reel.get("badge") and reel.get("hotCount", 0) < 1:
+        print(f"FAIL: Memory reel should hot-highlight a corridor: {reel}")
+        ok = False
+    if not reel.get("zoomPaint"):
+        print(f"FAIL: Corridor band should use zoom-aware width: {reel}")
+        ok = False
     if not play_state.get("playing"):
         print(f"FAIL: Playback did not start: {play_state}")
         ok = False
