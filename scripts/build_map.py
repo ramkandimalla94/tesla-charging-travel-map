@@ -41,12 +41,12 @@ MIN_ROUTE_MILES = 0.3
 ROUTE_FETCH_DELAY_S = 0.25
 WALK_SPUR_MILES = 18.0
 # Playback: photos are memories on the charge corridor — never route vertices.
-MAX_PLAYBACK_MEMORIES = 8
-PHOTO_CLUSTER_MI = 3.5
-PHOTO_CLUSTER_GAP_S = 40 * 60
+MAX_PLAYBACK_MEMORIES = 80
+PHOTO_CLUSTER_MI = 0.35
+PHOTO_CLUSTER_GAP_S = 8 * 60
 MEMORY_ROUTE_SNAP_MI = 45.0  # if farther, still show card but keep car on corridor
-PLAYBACK_TARGET_MIN_MS = 40_000
-PLAYBACK_TARGET_MAX_MS = 120_000
+PLAYBACK_TARGET_MIN_MS = 45_000
+PLAYBACK_TARGET_MAX_MS = 320_000
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -287,7 +287,7 @@ def select_playback_memories(
     route_path: list[list[float]],
     limit: int = MAX_PLAYBACK_MEMORIES,
 ) -> list[dict]:
-    """Pick geographically/time-spaced memories snapped onto the charge corridor."""
+    """Pick memories snapped onto the charge corridor, spread across the whole trip."""
     if not clusters or not road_stops:
         return []
     t_start = parse_waypoint_ts(road_stops[0].get("datetime"))
@@ -300,7 +300,6 @@ def select_playback_memories(
         if not c.get("thumb"):
             continue
         ts = parse_waypoint_ts(c.get("datetime"))
-        # Soft clamp into trip window
         if ts < t_start - timedelta(hours=18):
             continue
         if ts > t_end + timedelta(hours=18):
@@ -319,34 +318,19 @@ def select_playback_memories(
     if not scored:
         return []
 
-    # Greedy space along path_frac / time
-    scored.sort(key=lambda m: parse_waypoint_ts(m.get("datetime")))
+    scored.sort(key=lambda m: (
+        float(m.get("path_frac") or 0),
+        parse_waypoint_ts(m.get("datetime")),
+    ))
     if len(scored) <= limit:
         return scored
 
-    selected: list[dict] = []
-    min_frac_gap = 0.045
-    for m in scored:
-        if not selected:
-            selected.append(m)
-            continue
-        if abs(m["path_frac"] - selected[-1]["path_frac"]) < min_frac_gap:
-            # Prefer larger cluster / closer to corridor
-            prev = selected[-1]
-            if (m.get("cluster_size", 1), -m.get("spur_miles", 99)) > (
-                prev.get("cluster_size", 1), -prev.get("spur_miles", 99)
-            ):
-                selected[-1] = m
-            continue
-        selected.append(m)
-        if len(selected) >= limit:
-            break
-
-    # If still too many (dense trip), downsample evenly
-    if len(selected) > limit:
-        step = len(selected) / limit
-        selected = [selected[int(i * step)] for i in range(limit)]
-    return selected
+    # Evenly sample across the full journey (not just the first N outbound shots)
+    if limit <= 1:
+        return scored[:1]
+    step = (len(scored) - 1) / (limit - 1)
+    idxs = sorted({int(round(i * step)) for i in range(limit)})
+    return [scored[i] for i in idxs]
 
 
 def path_arc_lengths(path: list[list[float]]) -> tuple[list[float], float]:
@@ -440,12 +424,12 @@ def _renormalize_segment_durations(
     floors = {
         "dwell": 750,
         "travel": 1_600,
-        "memory": 2_400,
+        "memory": 1_500,
     }
     ceilings = {
         "dwell": 1_500,
         "travel": 10_000,
-        "memory": 3_200,
+        "memory": 2_600,
     }
     for s in body:
         kind = s.get("type") or "travel"
@@ -954,8 +938,19 @@ def build_playback_timeline(
     photo_list = photos if photos is not None else [
         s for s in stops if s.get("is_photo") or s.get("kind") == "photo"
     ]
+    # One playback beat per photo (not an 8-memory subsample) so Colorado albums fully play.
+    raw_memories = []
+    for p in photo_list:
+        if not p.get("thumb") or not is_valid_coord(p.get("lat"), p.get("lng")):
+            continue
+        row = dict(p)
+        row["kind"] = "photo"
+        row["is_photo"] = True
+        row["cluster_size"] = 1
+        row.setdefault("location", f"Photo · {p.get('album', 'memory')}")
+        raw_memories.append(row)
     memories = select_playback_memories(
-        cluster_photo_memories(photo_list), road, route_path or [],
+        raw_memories, road, route_path or [],
     )
 
     legs: list[dict] = []
@@ -1126,7 +1121,7 @@ def build_playback_timeline(
             album = mem.get("album") or "memory"
             body.append({
                 "type": "memory",
-                "duration_ms": 3_200 if spur <= MEMORY_ROUTE_SNAP_MI else 2_600,
+                "duration_ms": 2_400 if spur <= MEMORY_ROUTE_SNAP_MI else 1_900,
                 "lat": slat,
                 "lng": slng,
                 "photo_lat": mem["lat"],
@@ -1134,9 +1129,7 @@ def build_playback_timeline(
                 "label": short_location_label(mem.get("location") or album),
                 "stop_index": i,
                 "caption": f"Memory · {album.title() if str(album).islower() else album}",
-                "subcaption": mem.get("source_name") or (
-                    f"{mem.get('cluster_size', 1)} photos" if mem.get("cluster_size", 1) > 1 else ""
-                ),
+                "subcaption": mem.get("source_name") or "",
                 "is_photo": True,
                 "thumb": mem.get("thumb") or "",
                 "album": album,

@@ -296,7 +296,8 @@
         // Atlas stays path-first — no stop dots or photo thumbnails covering routes.
         return;
       }
-      // Trip focus: no waypoint dots. Photos appear on-map during playback dwells.
+      // Trip focus: show every photo location on the map (light pins, no dark blobs).
+      drawPhotoPins();
     }
 
     let photoMarkers = [];
@@ -403,25 +404,84 @@
     function hideMemoryCard() { hideMemoryOnMap(); }
 
     function drawPhotoPins() {
-      // Intentionally empty — photo thumbs only appear as the active memory pin during playback.
       clearPhotoPins();
+      if (!isSingleTrip()) return;
+      const trip = activeTrip();
+      const photos = trip?.photos || [];
+      const seen = new Set();
+      photos.forEach(photo => {
+        if (!photo?.lat || !photo?.lng || !photo.thumb) return;
+        const key = photo.id || `${photo.lat},${photo.lng},${photo.thumb}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const el = document.createElement('div');
+        el.className = 'photo-pin';
+        el.dataset.photoId = photo.id || '';
+        const img = document.createElement('img');
+        img.src = photoThumbUrl(photo.thumb);
+        img.alt = photo.album || 'Photo';
+        el.appendChild(img);
+        el.addEventListener('mouseenter', (ev) => showPhotoHover(photo, ev.clientX, ev.clientY));
+        el.addEventListener('mousemove', (ev) => showPhotoHover(photo, ev.clientX, ev.clientY));
+        el.addEventListener('mouseleave', hidePhotoHover);
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (map) {
+            map.easeTo({
+              center: [photo.lng, photo.lat],
+              zoom: Math.max(map.getZoom(), 10.5),
+              pitch: 45,
+              duration: 700,
+              essential: true,
+            });
+          }
+          showMemoryOnMap({
+            thumb: photo.thumb,
+            lat: photo.lat,
+            lng: photo.lng,
+            album: photo.album,
+            datetime: photo.datetime,
+            label: photo.location || photo.album || 'Memory',
+            photo_id: photo.id,
+          });
+        });
+        const m = new mapboxgl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([photo.lng, photo.lat])
+          .addTo(map);
+        m._photo = photo;
+        photoMarkers.push(m);
+      });
     }
 
     function renderFilmstrip(photos) {
       const strip = document.getElementById('trip-filmstrip');
       if (!strip) return;
       strip.innerHTML = '';
-      (photos || []).slice(0, 24).forEach(photo => {
+      (photos || []).forEach(photo => {
         if (!photo.thumb) return;
         const img = document.createElement('img');
         img.src = photoThumbUrl(photo.thumb);
         img.alt = photo.album || 'Photo';
         img.title = photo.album || 'Memory';
-        img.addEventListener('mouseenter', () => {
-          if (isPlaying || isRecording) return;
+        img.addEventListener('click', () => {
           if (map && photo.lng != null) {
-            map.easeTo({ center: [photo.lng, photo.lat], duration: 600, bearing: 0 });
+            map.easeTo({
+              center: [photo.lng, photo.lat],
+              zoom: Math.max(map.getZoom(), 10.5),
+              pitch: 45,
+              duration: 700,
+              essential: true,
+            });
           }
+          showMemoryOnMap({
+            thumb: photo.thumb,
+            lat: photo.lat,
+            lng: photo.lng,
+            album: photo.album,
+            datetime: photo.datetime,
+            label: photo.location || photo.album || 'Memory',
+            photo_id: photo.id,
+          });
         });
         strip.appendChild(img);
       });

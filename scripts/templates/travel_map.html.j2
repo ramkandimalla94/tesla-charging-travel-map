@@ -728,6 +728,29 @@
     // ── Fit trip — frame route in continental US ──
     function fitTrip(animate=true, recap=false) {
       const bounds = new mapboxgl.LngLatBounds();
+      const trip = activeTrip();
+      const photoHeavy = isSingleTrip() && (trip?.photos?.length || 0) >= 5;
+
+      // Photo-heavy trips: frame the memories first so Colorado pins aren't lost
+      // inside a continent-wide TX↔CO overview.
+      if (photoHeavy && !recap) {
+        trip.photos.forEach(p => {
+          if (p?.lng != null && p?.lat != null) bounds.extend([p.lng, p.lat]);
+        });
+        if (!bounds.isEmpty()) {
+          setMapLabelsVisible(false);
+          map.fitBounds(bounds, {
+            padding: mapCameraPadding(),
+            pitch: 36,
+            bearing: 0,
+            duration: animate ? 1100 : 0,
+            maxZoom: 9.2,
+            minZoom: 5.5,
+          });
+          return;
+        }
+      }
+
       activeTrips().forEach(t => {
         // Prefer the driving path so round trips with identical home endpoints still frame the loop
         const path = t.route_path || [];
@@ -736,9 +759,11 @@
         } else {
           t.stops.forEach(s => bounds.extend([s.lng, s.lat]));
         }
+        (t.photos || []).forEach(p => {
+          if (p?.lng != null && p?.lat != null) bounds.extend([p.lng, p.lat]);
+        });
       });
       if (bounds.isEmpty()) return;
-      const trip = activeTrip();
       const stopCount = activeTrips().reduce((sum, t) => sum + (t.stop_count || t.stops?.length || 0), 0);
       const miles = trip?.miles || 0;
       setMapLabelsVisible(!isSingleTrip());
@@ -1207,17 +1232,28 @@
 
       if ((state.phase === 'memory' || (state.phase === 'dwell' && state.is_photo)) && state.thumb) {
         const stop = stops[state.stopIndex ?? 0];
+        // Keep the polaroid with the car (corridor snap). Using photo GPS left
+        // the image behind on the trail while the car continued down the highway.
+        const memLat = pos?.lat ?? state.lat ?? stop?.lat;
+        const memLng = pos?.lng ?? state.lng ?? stop?.lng;
         showMemoryOnMap({
           ...state,
-          // Pin rides with the car on the corridor so photo never appears "behind" the vehicle.
-          lat: state.lat ?? stop?.lat,
-          lng: state.lng ?? stop?.lng,
-          datetime: stop?.datetime || state.datetime,
+          lat: memLat,
+          lng: memLng,
+          datetime: state.datetime || stop?.datetime,
           album: state.album || stop?.album || '',
           label: state.label || shortLabel(stop?.location || ''),
         });
+        document.querySelectorAll('.photo-pin').forEach(el => el.classList.remove('hot'));
+        const leaf = (state.thumb || '').split('/').pop();
+        if (leaf) {
+          const hotImg = [...document.querySelectorAll('.photo-pin img')]
+            .find(i => (i.getAttribute('src') || '').includes(leaf));
+          hotImg?.closest('.photo-pin')?.classList.add('hot');
+        }
       } else {
         hideMemoryOnMap();
+        document.querySelectorAll('.photo-pin.hot').forEach(el => el.classList.remove('hot'));
       }
 
       const cur = stops[animStopIdx];

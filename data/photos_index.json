@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-21T17:04:52.574909+00:00",
-  "photo_count": 76,
+  "generated_at": "2026-08-21T20:51:11.617302+00:00",
+  "photo_count": 33,
   "skipped_no_gps": 0,
   "errors": 0,
   "photos": [
@@ -68,15 +68,6 @@
       "thumb": "photos/thumbs/colorado/IMG_9374_5188f578410b.jpg"
     },
     {
-      "id": "IMG_9375_621f357971ff",
-      "album": "colorado",
-      "source_name": "IMG_9375.HEIC",
-      "lat": 39.098197,
-      "lng": -106.942458,
-      "captured_at": "2025-09-26T12:13:23+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9375_621f357971ff.jpg"
-    },
-    {
       "id": "IMG_9376_e8f900c9a2f2",
       "album": "colorado",
       "source_name": "IMG_9376.HEIC",
@@ -84,60 +75,6 @@
       "lng": -106.942392,
       "captured_at": "2025-09-26T12:13:57+00:00",
       "thumb": "photos/thumbs/colorado/IMG_9376_e8f900c9a2f2.jpg"
-    },
-    {
-      "id": "IMG_9377_e190c2261936",
-      "album": "colorado",
-      "source_name": "IMG_9377.HEIC",
-      "lat": 39.098214,
-      "lng": -106.942383,
-      "captured_at": "2025-09-26T12:13:59+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9377_e190c2261936.jpg"
-    },
-    {
-      "id": "IMG_9378_3a15d85245c9",
-      "album": "colorado",
-      "source_name": "IMG_9378.HEIC",
-      "lat": 39.098214,
-      "lng": -106.942375,
-      "captured_at": "2025-09-26T12:14:00+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9378_3a15d85245c9.jpg"
-    },
-    {
-      "id": "IMG_9379_963d64d27169",
-      "album": "colorado",
-      "source_name": "IMG_9379.HEIC",
-      "lat": 39.098214,
-      "lng": -106.942375,
-      "captured_at": "2025-09-26T12:14:02+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9379_963d64d27169.jpg"
-    },
-    {
-      "id": "IMG_9380_9bdbf386ce48",
-      "album": "colorado",
-      "source_name": "IMG_9380.HEIC",
-      "lat": 39.098214,
-      "lng": -106.942375,
-      "captured_at": "2025-09-26T12:14:04+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9380_9bdbf386ce48.jpg"
-    },
-    {
-      "id": "IMG_9381_b82355e0dfd5",
-      "album": "colorado",
-      "source_name": "IMG_9381.HEIC",
-      "lat": 39.098214,
-      "lng": -106.942383,
-      "captured_at": "2025-09-26T12:14:05+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9381_b82355e0dfd5.jpg"
-    },
-    {
-      "id": "IMG_2853_833cf0befffc",
-      "album": "colorado",
-      "source_name": "IMG_2853.HEIC",
-      "lat": 39.094986,
-      "lng": -106.952019,
-      "captured_at": "2025-09-26T12:34:13+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_2853_833cf0befffc.jpg"
     },
     {
       "id": "IMG_2855_0eb696b75709",
@@ -185,15 +122,6 @@
       "thumb": "photos/thumbs/colorado/IMG_9383_cbe45656e295.jpg"
     },
     {
-      "id": "IMG_9384_1169c529302a",
-      "album": "colorado",
-      "source_name": "IMG_9384.HEIC",
-      "lat": 39.085981,
-      "lng": -106.966203,
-      "captured_at": "2025-09-26T13:26:00+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9384_1169c529302a.jpg"
-    },
-    {
       "id": "IMG_2859_8e0d0458ef19",
       "album": "colorado",
       "source_name": "IMG_2859.HEIC",
@@ -201,78 +129,6 @@
       "lng": -106.966233,
       "captured_at": "2025-09-26T13:26:55+00:00",
       "thumb": "photos/thumbs/colorado/IMG_2859_8e0d0458ef19.jpg"
-    },
-    {
-      "id": "IMG_2863_8bc15259d97e",
-      "album": "colorado",
-      "source_name": "IMG_2863.HEIC",
-      "lat": 39.086003,
-      "lng": -106.966233,
-      "captured_at": "2025-09-26T14:33:29+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_2863_8bc15259d97e.jpg"
-    },
-    {
-      "id": "IMG_9385_b027c0e8bb95",
-      "album": "colorado",
-      "source_name": "IMG_9385.HEIC",
-      "lat": 39.086667,
-      "lng": -106.966575,
-      "captured_at": "2025-09-26T14:48:12+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9385_b027c0e8bb95.jpg"
-    },
-    {
-      "id": "IMG_9386_4866b56e1f02",
-      "album": "colorado",
-      "source_name": "IMG_9386.HEIC",
-      "lat": 39.086667,
-      "lng": -106.966567,
-      "captured_at": "2025-09-26T14:48:15+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9386_4866b56e1f02.jpg"
-    },
-    {
-      "id": "IMG_9387_ffcdc272c3c5",
-      "album": "colorado",
-      "source_name": "IMG_9387.HEIC",
-      "lat": 39.086667,
-      "lng": -106.966567,
-      "captured_at": "2025-09-26T14:48:16+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9387_ffcdc272c3c5.jpg"
-    },
-    {
-      "id": "IMG_9388_ef04e7783952",
-      "album": "colorado",
-      "source_name": "IMG_9388.HEIC",
-      "lat": 39.086667,
-      "lng": -106.966567,
-      "captured_at": "2025-09-26T14:48:17+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9388_ef04e7783952.jpg"
-    },
-    {
-      "id": "IMG_9389_30002f5bf58e",
-      "album": "colorado",
-      "source_name": "IMG_9389.HEIC",
-      "lat": 39.086661,
-      "lng": -106.966575,
-      "captured_at": "2025-09-26T14:48:19+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9389_30002f5bf58e.jpg"
-    },
-    {
-      "id": "IMG_9390_e173b9cb8a7a",
-      "album": "colorado",
-      "source_name": "IMG_9390.HEIC",
-      "lat": 39.086647,
-      "lng": -106.966567,
-      "captured_at": "2025-09-26T14:48:37+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9390_e173b9cb8a7a.jpg"
-    },
-    {
-      "id": "IMG_9391_728a8215f76c",
-      "album": "colorado",
-      "source_name": "IMG_9391.HEIC",
-      "lat": 39.08665,
-      "lng": -106.966561,
-      "captured_at": "2025-09-26T14:48:41+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9391_728a8215f76c.jpg"
     },
     {
       "id": "IMG_9392_77154c8902fc",
@@ -293,42 +149,6 @@
       "thumb": "photos/thumbs/colorado/IMG_2885_1ea43e9a9cb8.jpg"
     },
     {
-      "id": "IMG_9393_0d68d18c54dc",
-      "album": "colorado",
-      "source_name": "IMG_9393.HEIC",
-      "lat": 39.093522,
-      "lng": -106.955489,
-      "captured_at": "2025-09-26T15:23:42+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9393_0d68d18c54dc.jpg"
-    },
-    {
-      "id": "IMG_9394_16e7cc58b2a2",
-      "album": "colorado",
-      "source_name": "IMG_9394.HEIC",
-      "lat": 39.093522,
-      "lng": -106.955497,
-      "captured_at": "2025-09-26T15:23:45+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9394_16e7cc58b2a2.jpg"
-    },
-    {
-      "id": "IMG_9395_7973ba5c8c34",
-      "album": "colorado",
-      "source_name": "IMG_9395.HEIC",
-      "lat": 39.093525,
-      "lng": -106.955497,
-      "captured_at": "2025-09-26T15:23:46+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9395_7973ba5c8c34.jpg"
-    },
-    {
-      "id": "IMG_9396_6638ee8b0c05",
-      "album": "colorado",
-      "source_name": "IMG_9396.HEIC",
-      "lat": 39.093761,
-      "lng": -106.955017,
-      "captured_at": "2025-09-26T15:24:56+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9396_6638ee8b0c05.jpg"
-    },
-    {
       "id": "IMG_9397_5102c0bfcc51",
       "album": "colorado",
       "source_name": "IMG_9397.HEIC",
@@ -347,24 +167,6 @@
       "thumb": "photos/thumbs/colorado/IMG_9398_7dcf3d4fc2cd.jpg"
     },
     {
-      "id": "IMG_9399_be5be914edd6",
-      "album": "colorado",
-      "source_name": "IMG_9399.HEIC",
-      "lat": 39.094983,
-      "lng": -106.952064,
-      "captured_at": "2025-09-26T15:31:54+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9399_be5be914edd6.jpg"
-    },
-    {
-      "id": "IMG_9400_f40048de4ac1",
-      "album": "colorado",
-      "source_name": "IMG_9400.HEIC",
-      "lat": 39.095078,
-      "lng": -106.951789,
-      "captured_at": "2025-09-26T15:32:50+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9400_f40048de4ac1.jpg"
-    },
-    {
       "id": "IMG_9401_29e53ee44f85",
       "album": "colorado",
       "source_name": "IMG_9401.HEIC",
@@ -372,15 +174,6 @@
       "lng": -106.951789,
       "captured_at": "2025-09-26T15:32:52+00:00",
       "thumb": "photos/thumbs/colorado/IMG_9401_29e53ee44f85.jpg"
-    },
-    {
-      "id": "IMG_9403_75313866bdfa",
-      "album": "colorado",
-      "source_name": "IMG_9403.heic",
-      "lat": 39.096333,
-      "lng": -106.949508,
-      "captured_at": "2025-09-26T15:39:04+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9403_75313866bdfa.jpg"
     },
     {
       "id": "IMG_2892_e202d7ed7bc0",
@@ -419,15 +212,6 @@
       "thumb": "photos/thumbs/colorado/IMG_2898_842ae9872dfe.jpg"
     },
     {
-      "id": "IMG_9407_30e2ae0e14ec",
-      "album": "colorado",
-      "source_name": "IMG_9407.HEIC",
-      "lat": 39.101764,
-      "lng": -106.578256,
-      "captured_at": "2025-09-27T12:32:09+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9407_30e2ae0e14ec.jpg"
-    },
-    {
       "id": "IMG_2899_ed012b0a18a3",
       "album": "colorado",
       "source_name": "IMG_2899.HEIC",
@@ -455,42 +239,6 @@
       "thumb": "photos/thumbs/colorado/IMG_2904_24a97e4f63e7.jpg"
     },
     {
-      "id": "IMG_9425_6933c9f5dc3b",
-      "album": "colorado",
-      "source_name": "IMG_9425.HEIC",
-      "lat": 39.092247,
-      "lng": -106.586014,
-      "captured_at": "2025-09-27T14:12:28+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9425_6933c9f5dc3b.jpg"
-    },
-    {
-      "id": "IMG_9426_996d2c3c4851",
-      "album": "colorado",
-      "source_name": "IMG_9426.HEIC",
-      "lat": 39.092244,
-      "lng": -106.586006,
-      "captured_at": "2025-09-27T14:12:28+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9426_996d2c3c4851.jpg"
-    },
-    {
-      "id": "IMG_9427_9b977ef43636",
-      "album": "colorado",
-      "source_name": "IMG_9427.HEIC",
-      "lat": 39.092244,
-      "lng": -106.586006,
-      "captured_at": "2025-09-27T14:12:30+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9427_9b977ef43636.jpg"
-    },
-    {
-      "id": "IMG_9428_5d841f10a1e4",
-      "album": "colorado",
-      "source_name": "IMG_9428.HEIC",
-      "lat": 39.092244,
-      "lng": -106.586014,
-      "captured_at": "2025-09-27T14:12:31+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9428_5d841f10a1e4.jpg"
-    },
-    {
       "id": "IMG_9429_28b68ae870e7",
       "album": "colorado",
       "source_name": "IMG_9429.HEIC",
@@ -498,87 +246,6 @@
       "lng": -106.586014,
       "captured_at": "2025-09-27T14:12:32+00:00",
       "thumb": "photos/thumbs/colorado/IMG_9429_28b68ae870e7.jpg"
-    },
-    {
-      "id": "IMG_9430_03c4665d472b",
-      "album": "colorado",
-      "source_name": "IMG_9430.HEIC",
-      "lat": 39.092244,
-      "lng": -106.586014,
-      "captured_at": "2025-09-27T14:12:34+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9430_03c4665d472b.jpg"
-    },
-    {
-      "id": "IMG_9431_34f34791cbbb",
-      "album": "colorado",
-      "source_name": "IMG_9431.HEIC",
-      "lat": 39.092244,
-      "lng": -106.586014,
-      "captured_at": "2025-09-27T14:12:36+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9431_34f34791cbbb.jpg"
-    },
-    {
-      "id": "IMG_9432_0e197bf53e45",
-      "album": "colorado",
-      "source_name": "IMG_9432.HEIC",
-      "lat": 39.092244,
-      "lng": -106.586006,
-      "captured_at": "2025-09-27T14:12:37+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9432_0e197bf53e45.jpg"
-    },
-    {
-      "id": "IMG_9433_a3d0c3ad569c",
-      "album": "colorado",
-      "source_name": "IMG_9433.HEIC",
-      "lat": 39.092244,
-      "lng": -106.586006,
-      "captured_at": "2025-09-27T14:12:38+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9433_a3d0c3ad569c.jpg"
-    },
-    {
-      "id": "IMG_9434_21e9badbe495",
-      "album": "colorado",
-      "source_name": "IMG_9434.HEIC",
-      "lat": 39.092244,
-      "lng": -106.586006,
-      "captured_at": "2025-09-27T14:12:39+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9434_21e9badbe495.jpg"
-    },
-    {
-      "id": "IMG_9435_afbdf52c77cd",
-      "album": "colorado",
-      "source_name": "IMG_9435.HEIC",
-      "lat": 39.092244,
-      "lng": -106.586006,
-      "captured_at": "2025-09-27T14:12:40+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9435_afbdf52c77cd.jpg"
-    },
-    {
-      "id": "IMG_9436_acce88b543a0",
-      "album": "colorado",
-      "source_name": "IMG_9436.HEIC",
-      "lat": 39.092361,
-      "lng": -106.586067,
-      "captured_at": "2025-09-27T14:13:58+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9436_acce88b543a0.jpg"
-    },
-    {
-      "id": "IMG_9437_d5738295a17f",
-      "album": "colorado",
-      "source_name": "IMG_9437.HEIC",
-      "lat": 39.092361,
-      "lng": -106.586067,
-      "captured_at": "2025-09-27T14:14:01+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9437_d5738295a17f.jpg"
-    },
-    {
-      "id": "IMG_9438_fa8696f6a75e",
-      "album": "colorado",
-      "source_name": "IMG_9438.HEIC",
-      "lat": 39.092361,
-      "lng": -106.586067,
-      "captured_at": "2025-09-27T14:14:03+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9438_fa8696f6a75e.jpg"
     },
     {
       "id": "IMG_9439_4814a2415f0c",
@@ -590,24 +257,6 @@
       "thumb": "photos/thumbs/colorado/IMG_9439_4814a2415f0c.jpg"
     },
     {
-      "id": "IMG_9440_93419576730f",
-      "album": "colorado",
-      "source_name": "IMG_9440.HEIC",
-      "lat": 39.361136,
-      "lng": -106.843269,
-      "captured_at": "2025-09-28T10:13:16+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9440_93419576730f.jpg"
-    },
-    {
-      "id": "IMG_9441_4a97376c7864",
-      "album": "colorado",
-      "source_name": "IMG_9441.HEIC",
-      "lat": 39.361136,
-      "lng": -106.843261,
-      "captured_at": "2025-09-28T10:13:17+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9441_4a97376c7864.jpg"
-    },
-    {
       "id": "IMG_9442_c885b6484e48",
       "album": "colorado",
       "source_name": "IMG_9442.HEIC",
@@ -615,15 +264,6 @@
       "lng": -106.843261,
       "captured_at": "2025-09-28T10:13:18+00:00",
       "thumb": "photos/thumbs/colorado/IMG_9442_c885b6484e48.jpg"
-    },
-    {
-      "id": "IMG_9443_2c111de04376",
-      "album": "colorado",
-      "source_name": "IMG_9443.HEIC",
-      "lat": 39.361142,
-      "lng": -106.843261,
-      "captured_at": "2025-09-28T10:13:19+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9443_2c111de04376.jpg"
     },
     {
       "id": "IMG_9444_e8c3736c11db",
@@ -635,15 +275,6 @@
       "thumb": "photos/thumbs/colorado/IMG_9444_e8c3736c11db.jpg"
     },
     {
-      "id": "IMG_9445_7a5367cc6c06",
-      "album": "colorado",
-      "source_name": "IMG_9445.HEIC",
-      "lat": 39.068353,
-      "lng": -106.509789,
-      "captured_at": "2025-09-28T14:42:36+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9445_7a5367cc6c06.jpg"
-    },
-    {
       "id": "IMG_9446_2a6e1a87d782",
       "album": "colorado",
       "source_name": "IMG_9446.HEIC",
@@ -651,24 +282,6 @@
       "lng": -106.509789,
       "captured_at": "2025-09-28T14:42:48+00:00",
       "thumb": "photos/thumbs/colorado/IMG_9446_2a6e1a87d782.jpg"
-    },
-    {
-      "id": "IMG_9447_c07ae7abd6a5",
-      "album": "colorado",
-      "source_name": "IMG_9447.HEIC",
-      "lat": 39.082133,
-      "lng": -106.374778,
-      "captured_at": "2025-09-28T15:29:42+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9447_c07ae7abd6a5.jpg"
-    },
-    {
-      "id": "IMG_9448_4cefd3c93941",
-      "album": "colorado",
-      "source_name": "IMG_9448.heic",
-      "lat": 39.082111,
-      "lng": -106.374786,
-      "captured_at": "2025-09-28T15:30:01+00:00",
-      "thumb": "photos/thumbs/colorado/IMG_9448_4cefd3c93941.jpg"
     },
     {
       "id": "IMG_9449_36dcdf41363d",
