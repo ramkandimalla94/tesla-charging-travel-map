@@ -21,7 +21,10 @@ Destination constellation, year era filter, snappier dwell + dock %, a11y 44px c
 7. **Corridor banding** — soft band + parallel filaments for multi-visit destinations
 8. **Template CSS partial** — `travel_map/_map_css.html.j2` include
 9. **Playback DOM cache** — hot-path scrubber/prog updates skip repeated `getElementById`
+10. **Atlas JS partial** — `travel_map/_atlas_js.html.j2` (CTA / reel / spokes)
+11. **Shared spokes GeoJSON** — band + filaments from one `atlas-spokes` source with `kind` filters
+12. **Era rail discoverability** — labeled Era chips, larger hit targets
 
 ## Later
 
-Shared GeoJSON overview layer consolidation, fuller Jinja JS split, denser corridor polish.
+Fuller Jinja JS split (playback/routes), denser corridor polish, README screenshot refresh.

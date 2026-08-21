@@ -449,18 +449,28 @@
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
     .timeline-label { font-size: 9px; font-weight: 600; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
-    .era-rail { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-    .era-chip {
-      border: 1px solid var(--border); background: rgba(255,255,255,0.04);
-      color: var(--muted); font-size: 10px; font-weight: 700; font-family: inherit;
-      padding: 4px 9px; border-radius: 999px; cursor: pointer; min-height: 28px;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    .era-rail {
+      display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; align-items: center;
     }
-    .era-chip:hover { color: var(--text); border-color: var(--border-bright); }
+    .era-rail-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-right: 2px; user-select: none;
+    }
+    .era-chip {
+      border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.08);
+      color: var(--text); font-size: 11px; font-weight: 700; font-family: inherit;
+      padding: 5px 11px; border-radius: 999px; cursor: pointer; min-height: 32px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .era-chip:hover { color: #fff; border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.12); }
     .era-chip.active {
       color: #0f172a; background: #e8e4dc; border-color: transparent;
+      box-shadow: 0 0 0 1px rgba(232,228,220,0.35);
     }
     .era-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    body.trip-focus .era-rail { opacity: 0.55; }
+    body.watching .era-rail,
+    body.cinema-mode .era-rail { opacity: 0; pointer-events: none; }
     .timeline-track { position: relative; flex: 1; height: 22px; background: rgba(0,0,0,0.35); border-radius: 8px; overflow: hidden; cursor: pointer; }
     .tl-seg {
       position: absolute; top: 3px; bottom: 3px; border-radius: 5px;
