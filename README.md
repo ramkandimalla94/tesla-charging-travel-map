@@ -18,11 +18,11 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 
 - **Atlas overview** — home hubs + destination constellation + corridor spokes; destination-grouped trip list
 - **Featured journey CTA** — one clear “open a journey” action on the atlas (no mystery auto-reel)
-- **Photo memories** — dump albums into `data/photos/<album>/`; EXIF GPS + time attach as cinematic memory beats along the **charge corridor** (the car never zigzags off-route to every photo GPS); playback shows the memory pin at the photo
+- **Photo memories** — dump albums into `data/photos/<album>/`; EXIF GPS clusters become real path waypoints (hike spurs to places like Maroon Bells) plus cinematic memory beats during replay
 - **Year era filter** — isolate diary chapters by year
 - **3D satellite map** with Mapbox terrain and elevated route lines
 - **Watch mode** — Play hides chrome for a passenger-seat replay
-- **Steady corridor playback** — distance-paced travel between Superchargers; photo clusters become short memory holds without backtracking
+- **Steady journey playback** — distance-paced travel along chargers and photo GPS; memory holds park at the shot
 - **Navigation-style chase** — heading-up follow camera (Apple/Google Maps feel): look-ahead course, capped turn rate, car glued to the path; end-of-trip pulls back to a north-up route recap
 - **Location labels** — city/state names during replay
 - **Video export** — one-click 9:16 `.webm` that composites the map, title cards, car marker, captions, and memory frames (not a bare GL canvas)

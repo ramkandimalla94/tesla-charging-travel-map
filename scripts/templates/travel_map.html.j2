@@ -1232,8 +1232,7 @@
 
       if ((state.phase === 'memory' || (state.phase === 'dwell' && state.is_photo)) && state.thumb) {
         const stop = stops[state.stopIndex ?? 0];
-        // Keep the polaroid with the car (corridor snap). Using photo GPS left
-        // the image behind on the trail while the car continued down the highway.
+        // Keep the polaroid with the car (exact photo GPS once the path reaches it).
         const memLat = pos?.lat ?? state.lat ?? stop?.lat;
         const memLng = pos?.lng ?? state.lng ?? stop?.lng;
         showMemoryOnMap({

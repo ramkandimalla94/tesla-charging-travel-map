@@ -40,11 +40,14 @@ POI_MAX_PER_STOP = 3
 MIN_ROUTE_MILES = 0.3
 ROUTE_FETCH_DELAY_S = 0.25
 WALK_SPUR_MILES = 18.0
-# Playback: photos are memories on the charge corridor — never route vertices.
+# Photo GPS becomes real route waypoints (hike spurs to Maroon Bells, etc.).
+# Cluster bursts so the path follows places, not every shutter click.
 MAX_PLAYBACK_MEMORIES = 80
 PHOTO_CLUSTER_MI = 0.35
 PHOTO_CLUSTER_GAP_S = 8 * 60
-MEMORY_ROUTE_SNAP_MI = 45.0  # if farther, still show card but keep car on corridor
+MEMORY_ROUTE_SNAP_MI = 45.0
+# Skip stray GPS that would yank the whole trip off-corridor (still show pins).
+MAX_PHOTO_ROUTE_MI = 45.0
 PLAYBACK_TARGET_MIN_MS = 45_000
 PLAYBACK_TARGET_MAX_MS = 320_000
 
@@ -185,7 +188,7 @@ def normalize_road_stops(stops: list[dict]) -> list[dict]:
 
 
 def merge_photo_waypoints(stops: list[dict], photos: list[dict]) -> list[dict]:
-    """Legacy helper kept for tests — prefer road-only path + memory beats."""
+    """Chronologically interleave road stops with photo GPS waypoints."""
     road = normalize_road_stops(stops)
     photo_rows = []
     for p in photos:
@@ -198,6 +201,27 @@ def merge_photo_waypoints(stops: list[dict], photos: list[dict]) -> list[dict]:
     merged = road + photo_rows
     merged.sort(key=lambda s: (parse_waypoint_ts(s.get("datetime")), 0 if s.get("is_photo") else 1))
     return merged
+
+
+def photos_near_road_stops(
+    photos: list[dict],
+    road_stops: list[dict],
+    max_mi: float = MAX_PHOTO_ROUTE_MI,
+) -> list[dict]:
+    """Keep photo GPS that can form a spur from the charge corridor."""
+    if not road_stops:
+        return []
+    out: list[dict] = []
+    for p in photos:
+        if not is_valid_coord(p.get("lat"), p.get("lng")):
+            continue
+        nearest = min(
+            haversine_miles(float(p["lat"]), float(p["lng"]), float(s["lat"]), float(s["lng"]))
+            for s in road_stops
+        )
+        if nearest <= max_mi:
+            out.append(p)
+    return out
 
 
 def cluster_photo_memories(photos: list[dict]) -> list[dict]:
@@ -406,11 +430,19 @@ def leg_path_between_stops(
     refresh: bool,
     stats: dict | None,
 ) -> list[list[float]]:
-    return extract_leg_path(
-        float(stop_a["lat"]), float(stop_a["lng"]),
-        float(stop_b["lat"]), float(stop_b["lng"]),
-        cache, token, refresh, stats,
-    )
+    lat1, lng1 = float(stop_a["lat"]), float(stop_a["lng"])
+    lat2, lng2 = float(stop_b["lat"]), float(stop_b["lng"])
+    dist = haversine_miles(lat1, lng1, lat2, lng2)
+    profile = "walking" if leg_wants_walking(stop_a, stop_b, dist) else "driving"
+    if cache is not None and stats is not None:
+        path = get_route_segment(lat1, lng1, lat2, lng2, cache, token, refresh, stats, profile)
+    else:
+        path = extract_leg_path(lat1, lng1, lat2, lng2, cache, token, refresh, stats)
+    if path:
+        path = list(path)
+        path[0] = [lat1, lng1]
+        path[-1] = [lat2, lng2]
+    return path
 
 
 def _renormalize_segment_durations(
@@ -922,45 +954,67 @@ def build_playback_timeline(
     photos: list[dict] | None = None,
 ) -> dict:
     """
-    Cinematic replay along the Tesla charge corridor only.
+    Cinematic replay along the journey path (chargers + photo GPS waypoints).
 
-    Photos become short memory beats snapped onto the driving path — the car never
-    detours A→photo→B (that caused backtracking / juggling). Duration is budgeted
-    from road-stop count + memory count, then renormalized after floors.
+    Photo clusters sit on the route at exact EXIF coordinates, so hike destinations
+    like Maroon Bells are visited — not snapped sideways onto the nearest highway.
+    Extra album photos (non-cluster reps) still appear as memory beats snapped onto
+    the enriched path (near-zero spur when the trail is already in route_path).
     """
-    road = normalize_road_stops(stops)
-    if len(road) < 1:
+    journey: list[dict] = []
+    for s in stops:
+        if not is_valid_coord(s.get("lat"), s.get("lng")):
+            continue
+        row = dict(s)
+        if row.get("is_photo") or row.get("kind") == "photo":
+            row["is_photo"] = True
+            row["kind"] = "photo"
+            row.setdefault("location", f"Photo · {row.get('album', 'memory')}")
+        else:
+            row["is_photo"] = False
+            row.setdefault("kind", "home" if row.get("is_home_anchor") else "stop")
+        journey.append(row)
+
+    if len(journey) < 1:
         return {"segments": [], "total_video_ms": 0, "real_duration_ms": 0, "story": story or {}}
 
-    stop_pois = stop_pois or [[] for _ in road]
+    stop_pois = stop_pois or [[] for _ in journey]
     story = story or {}
-    captions = story.get("stop_captions", [{}] * len(road))
+    road_only = [s for s in journey if not s.get("is_photo")]
+    captions = story.get("stop_captions", [{}] * len(road_only))
+
+    # Cluster reps already on the journey; add remaining thumbs as path memories.
+    on_path_ids = {s.get("id") for s in journey if s.get("is_photo") and s.get("id")}
     photo_list = photos if photos is not None else [
-        s for s in stops if s.get("is_photo") or s.get("kind") == "photo"
+        s for s in journey if s.get("is_photo")
     ]
-    # One playback beat per photo (not an 8-memory subsample) so Colorado albums fully play.
     raw_memories = []
     for p in photo_list:
         if not p.get("thumb") or not is_valid_coord(p.get("lat"), p.get("lng")):
             continue
+        if p.get("id") and p.get("id") in on_path_ids:
+            continue  # held when we dwell on that photo waypoint
         row = dict(p)
         row["kind"] = "photo"
         row["is_photo"] = True
-        row["cluster_size"] = 1
+        row["cluster_size"] = int(p.get("cluster_size") or 1)
         row.setdefault("location", f"Photo · {p.get('album', 'memory')}")
         raw_memories.append(row)
     memories = select_playback_memories(
-        raw_memories, road, route_path or [],
+        raw_memories, road_only or journey, route_path or [],
     )
 
     legs: list[dict] = []
     real_total_ms = 0
-    for i in range(len(road) - 1):
-        a, b = road[i], road[i + 1]
-        gap_ms = max(
-            60_000,
-            int((parse_ts(b["datetime"]) - parse_ts(a["datetime"])).total_seconds() * 1000),
-        )
+    for i in range(len(journey) - 1):
+        a, b = journey[i], journey[i + 1]
+        try:
+            gap_ms = max(
+                30_000,
+                int((parse_ts(b["datetime"]) - parse_ts(a["datetime"])).total_seconds() * 1000),
+            )
+        except Exception:
+            gap_ms = 60_000
         real_total_ms += gap_ms
         path = leg_path_between_stops(a, b, cache, token, refresh, stats)
         miles = path_miles(path) if path else haversine_miles(
@@ -972,22 +1026,22 @@ def build_playback_timeline(
             "path": path,
             "miles": miles,
             "gap_ms": gap_ms,
-            "t0": parse_ts(a["datetime"]),
-            "t1": parse_ts(b["datetime"]),
-            "from_label": short_location_label(a["location"]),
-            "to_label": short_location_label(b["location"]),
+            "t0": parse_waypoint_ts(a.get("datetime")),
+            "t1": parse_waypoint_ts(b.get("datetime")),
+            "from_label": short_location_label(a.get("location") or ""),
+            "to_label": short_location_label(b.get("location") or ""),
             "bearing": round(leg_bearing_deg(a["lat"], a["lng"], b["lat"], b["lng"]), 1),
         })
 
+    # Place extra photo memories on the closest journey leg (enriched path).
     leg_memories: list[list[dict]] = [[] for _ in legs]
     for mem in memories:
         ts = parse_waypoint_ts(mem.get("datetime"))
-        # Prefer the leg whose driving path is closest to the photo GPS (avoids
-        # time-only placement that parks the car hundreds of miles from the memory).
         best_li = None
-        best_d = float("inf")
+        best_score = float("inf")
         best_frac = 0.5
-        best_snap = (mem["lat"], mem["lng"])
+        best_snap = (float(mem["lat"]), float(mem["lng"]))
+        best_spur = 0.0
         for li, leg in enumerate(legs):
             path = leg.get("path") or []
             if len(path) >= 2:
@@ -995,36 +1049,35 @@ def build_playback_timeline(
                     float(mem["lat"]), float(mem["lng"]), path
                 )
             else:
-                slat, slng, gfrac, dist = (
-                    leg["path"][0][0] if path else float(mem["lat"]),
-                    leg["path"][0][1] if path else float(mem["lng"]),
-                    0.5,
-                    9999.0,
-                )
-            # Soft preference for legs whose time window contains the photo
+                slat, slng = float(mem["lat"]), float(mem["lng"])
+                gfrac, dist = 0.5, 9999.0
             in_window = leg["t0"] < ts <= leg["t1"]
             score = dist - (8.0 if in_window else 0.0)
-            if score < best_d:
-                best_d = score
+            if score < best_score:
+                best_score = score
                 best_li = li
                 best_frac = max(0.04, min(0.96, gfrac))
                 best_snap = (slat, slng)
+                best_spur = dist
         if best_li is None:
-            best_li = 0 if (not legs or ts <= legs[0]["t0"]) else len(legs) - 1
-            best_frac = 0.08 if best_li == 0 else 0.92
-            best_snap = (float(mem["lat"]), float(mem["lng"]))
+            continue
         m = dict(mem)
+        # Prefer exact EXIF when the enriched path already reaches the shot.
+        if best_spur <= 1.25:
+            m["route_lat"], m["route_lng"] = float(mem["lat"]), float(mem["lng"])
+            m["spur_miles"] = round(best_spur, 2)
+        else:
+            m["route_lat"], m["route_lng"] = best_snap[0], best_snap[1]
+            m["spur_miles"] = round(best_spur, 2)
         m["leg_frac"] = best_frac
-        m["route_lat"], m["route_lng"] = best_snap[0], best_snap[1]
-        m["spur_miles"] = round(max(0.0, best_d if best_d < 9000 else 0.0), 2)
-        m["on_corridor"] = (m["spur_miles"] <= MEMORY_ROUTE_SNAP_MI)
+        m["on_corridor"] = m["spur_miles"] <= MEMORY_ROUTE_SNAP_MI
         leg_memories[best_li].append(m)
 
     for bucket in leg_memories:
         bucket.sort(key=lambda m: m.get("leg_frac", 0))
 
-    n_road = len(road)
-    n_mem = sum(len(b) for b in leg_memories)
+    n_road = len(road_only)
+    n_mem = sum(1 for s in journey if s.get("is_photo")) + sum(len(b) for b in leg_memories)
     road_miles = sum(float(leg.get("miles") or 0) for leg in legs)
     target_ms = min(
         PLAYBACK_TARGET_MAX_MS,
@@ -1036,29 +1089,102 @@ def build_playback_timeline(
     intro_ms, outro_ms = 2_000, 2_400
 
     body: list[dict] = []
-    for i, stop in enumerate(road):
-        label = short_location_label(stop["location"])
-        pois = stop_pois[i] if i < len(stop_pois) else []
-        cap = captions[i] if i < len(captions) else {}
-        is_last = i == len(road) - 1
-        dwell_ms = 1_100 if not is_last else 1_400
-        if pois:
-            dwell_ms = int(dwell_ms * 1.15)
+    road_i = -1
+
+    def append_travel(
+        path: list[list[float]],
+        f0: float,
+        f1: float,
+        leg: dict,
+        stop_index: int,
+    ) -> None:
+        if f1 - f0 < 0.012:
+            return
+        sub = slice_path_by_frac(path, f0, f1)
+        if len(sub) < 2:
+            return
+        sub_mi = path_miles(sub)
+        dur = max(1_200, min(9_000, int(sub_mi * 28 + 900)))
         body.append({
-            "type": "dwell",
-            "duration_ms": dwell_ms,
-            "lat": stop["lat"],
-            "lng": stop["lng"],
-            "label": label,
-            "stop_index": i,
-            "pois": pois,
-            "caption": cap.get(
-                "caption",
-                f"Final stop · {label}" if is_last else f"Stopped in {label}",
+            "type": "travel",
+            "duration_ms": dur,
+            "path": sub,
+            "bearing": round(
+                leg_bearing_deg(sub[0][0], sub[0][1], sub[-1][0], sub[-1][1]), 1
             ),
-            "subcaption": cap.get("sub", "Journey complete" if is_last else ""),
-            "is_photo": False,
+            "from_label": leg["from_label"],
+            "to_label": leg["to_label"],
+            "stop_index": stop_index,
+            "leg_miles": round(sub_mi, 1),
         })
+
+    def append_memory_at(
+        mem: dict,
+        lat: float,
+        lng: float,
+        spur: float,
+        stop_index: int,
+        leg_frac: float | None = None,
+    ) -> None:
+        album = mem.get("album") or "memory"
+        row = {
+            "type": "memory",
+            "duration_ms": 2_400 if spur <= MEMORY_ROUTE_SNAP_MI else 1_900,
+            "lat": lat,
+            "lng": lng,
+            "photo_lat": mem["lat"],
+            "photo_lng": mem["lng"],
+            "label": short_location_label(mem.get("location") or album),
+            "stop_index": stop_index,
+            "caption": f"Memory · {album.title() if str(album).islower() else album}",
+            "subcaption": mem.get("source_name") or "",
+            "is_photo": True,
+            "thumb": mem.get("thumb") or "",
+            "album": album,
+            "photo_id": mem.get("id") or "",
+            "spur_miles": round(float(spur), 2),
+            "on_corridor": float(spur) <= MEMORY_ROUTE_SNAP_MI,
+            "pois": [],
+        }
+        if leg_frac is not None:
+            row["leg_frac"] = leg_frac
+        body.append(row)
+
+    for i, stop in enumerate(journey):
+        is_last = i == len(journey) - 1
+        if stop.get("is_photo"):
+            album = stop.get("album") or "memory"
+            append_memory_at(
+                stop,
+                float(stop["lat"]),
+                float(stop["lng"]),
+                0.0,
+                max(0, road_i),
+            )
+        else:
+            road_i += 1
+            label = short_location_label(stop["location"])
+            pois = stop_pois[i] if i < len(stop_pois) else []
+            cap = captions[road_i] if road_i < len(captions) else {}
+            dwell_ms = 1_100 if not is_last else 1_400
+            if pois:
+                dwell_ms = int(dwell_ms * 1.15)
+            body.append({
+                "type": "dwell",
+                "duration_ms": dwell_ms,
+                "lat": stop["lat"],
+                "lng": stop["lng"],
+                "label": label,
+                "stop_index": road_i,
+                "pois": pois,
+                "caption": cap.get(
+                    "caption",
+                    f"Final stop · {label}" if is_last else f"Stopped in {label}",
+                ),
+                "subcaption": cap.get("sub", "Journey complete" if is_last else ""),
+                "is_photo": False,
+            })
+
         if is_last:
             break
 
@@ -1067,80 +1193,45 @@ def build_playback_timeline(
         cursor_frac = 0.0
         path = leg["path"] or [
             [stop["lat"], stop["lng"]],
-            [road[i + 1]["lat"], road[i + 1]["lng"]],
+            [journey[i + 1]["lat"], journey[i + 1]["lng"]],
         ]
 
-        def append_travel(f0: float, f1: float, path=path, leg=leg, i=i) -> None:
-            if f1 - f0 < 0.012:
-                return
-            sub = slice_path_by_frac(path, f0, f1)
-            if len(sub) < 2:
-                return
-            sub_mi = path_miles(sub)
-            dur = max(1_200, min(9_000, int(sub_mi * 28 + 900)))
-            body.append({
-                "type": "travel",
-                "duration_ms": dur,
-                "path": sub,
-                "bearing": round(
-                    leg_bearing_deg(sub[0][0], sub[0][1], sub[-1][0], sub[-1][1]), 1
-                ),
-                "from_label": leg["from_label"],
-                "to_label": leg["to_label"],
-                "stop_index": i,
-                "leg_miles": round(sub_mi, 1),
-            })
-
         for mem in mems:
-            # Single source of truth: arc-length frac on THIS leg path.
-            # Travel must end at exactly the same coordinates the memory holds the car.
             if path and len(path) >= 2:
-                slat, slng, snap_frac, spur = nearest_point_on_path(
-                    float(mem["lat"]), float(mem["lng"]), path
-                )
-                frac = float(snap_frac)
+                # Hold at exact photo GPS when the path already reaches it.
+                spur = float(mem.get("spur_miles") or 0)
+                if spur <= 1.25:
+                    slat, slng = float(mem["lat"]), float(mem["lng"])
+                    _, _, snap_frac, _ = nearest_point_on_path(slat, slng, path)
+                    frac = float(snap_frac)
+                else:
+                    slat = float(mem.get("route_lat", mem["lat"]))
+                    slng = float(mem.get("route_lng", mem["lng"]))
+                    frac = float(mem.get("leg_frac") or 0.5)
             else:
                 slat = float(mem.get("route_lat", mem["lat"]))
                 slng = float(mem.get("route_lng", mem["lng"]))
                 frac = float(mem.get("leg_frac") or 0.5)
                 spur = float(mem.get("spur_miles") or 0)
 
-            # Forward-only: if two snaps collapse, nudge BOTH travel end + car together
             if frac < cursor_frac + 0.012:
                 frac = min(0.98, cursor_frac + 0.015)
-                if path and len(path) >= 2:
+                if path and len(path) >= 2 and float(mem.get("spur_miles") or 0) > 1.25:
                     slat, slng = point_at_arc_frac(path, frac)
 
-            append_travel(cursor_frac, frac)
-            # If travel was skipped (tiny gap), still park car on the snap
+            append_travel(path, cursor_frac, frac, leg, max(0, road_i))
             if body and body[-1]["type"] == "travel":
-                # Force travel endpoint == memory car position (kill float/slice drift)
                 body[-1]["path"][-1] = [slat, slng]
                 slat, slng = body[-1]["path"][-1][0], body[-1]["path"][-1][1]
 
-            album = mem.get("album") or "memory"
-            body.append({
-                "type": "memory",
-                "duration_ms": 2_400 if spur <= MEMORY_ROUTE_SNAP_MI else 1_900,
-                "lat": slat,
-                "lng": slng,
-                "photo_lat": mem["lat"],
-                "photo_lng": mem["lng"],
-                "label": short_location_label(mem.get("location") or album),
-                "stop_index": i,
-                "caption": f"Memory · {album.title() if str(album).islower() else album}",
-                "subcaption": mem.get("source_name") or "",
-                "is_photo": True,
-                "thumb": mem.get("thumb") or "",
-                "album": album,
-                "photo_id": mem.get("id") or "",
-                "spur_miles": round(float(spur), 2),
-                "on_corridor": float(spur) <= MEMORY_ROUTE_SNAP_MI,
-                "pois": [],
-                "leg_frac": frac,
-            })
+            append_memory_at(
+                mem, slat, slng, float(mem.get("spur_miles") or 0), max(0, road_i), frac
+            )
             cursor_frac = frac
-        append_travel(cursor_frac, 1.0)
+
+        append_travel(path, cursor_frac, 1.0, leg, max(0, road_i))
+        if body and body[-1]["type"] == "travel":
+            body[-1]["path"][-1] = [journey[i + 1]["lat"], journey[i + 1]["lng"]]
 
     body = _renormalize_segment_durations(body, target_ms, intro_ms, outro_ms)
 
@@ -1349,13 +1440,18 @@ def prepare_trips(
         if not base_stops:
             continue
         photos = trip_photos.get(trip["id"], [])
-        # Charge corridor only — photos are memory beats, not route vertices.
-        stops = normalize_road_stops(base_stops)
+        road_stops = normalize_road_stops(base_stops)
+        near_photos = photos_near_road_stops(photos, road_stops)
+        photo_clusters = cluster_photo_memories(near_photos)
+        # Path visits exact photo GPS (Maroon Bells, trailheads, etc.).
+        route_stops = merge_photo_waypoints(road_stops, photo_clusters)
         stats["_last_memory_spurs"] = []
-        route_path = build_route_path(stops, cache, token, refresh, stats)
+        route_path = build_route_path(route_stops, cache, token, refresh, stats)
         memory_spurs = list(stats.get("_last_memory_spurs") or [])
         miles = path_miles(route_path)
         photo_count = len(photos)
+        # UI / atlas use chargers only; photos are pins + route vertices.
+        stops = road_stops
         place_count = len(stops)
         states = trip.get("via_states") or sorted({
             st for s in stops
@@ -1369,8 +1465,17 @@ def prepare_trips(
             match_pois_for_stop(s, all_places, visited_for_trip)
             for s in stops
         ]
+        # POIs align with journey waypoints (empty for photo GPS nodes).
+        journey_pois: list[list[dict]] = []
+        road_poi_i = 0
+        for s in route_stops:
+            if s.get("is_photo") or s.get("kind") == "photo":
+                journey_pois.append([])
+            else:
+                journey_pois.append(stop_pois[road_poi_i] if road_poi_i < len(stop_pois) else [])
+                road_poi_i += 1
         story = build_trip_story(trip, stops, stop_pois)
-        # Photo count for narrative even though photos aren't stop nodes
+        # Photo count for narrative (photos are path waypoints + map pins)
         if photo_count:
             origin = short_location_label(stops[0]["location"]) if stops else ""
             via = ", ".join(states) if states else "the open road"
@@ -1396,7 +1501,7 @@ def prepare_trips(
         )
         story = apply_story_overrides(trip, story)
         playback = build_playback_timeline(
-            stops, route_path, story, stop_pois, cache, token, refresh, stats, photos=photos
+            route_stops, route_path, story, journey_pois, cache, token, refresh, stats, photos=photos
         )
         featured = is_featured_trip(trip, miles, len(stops))
         style = TRIP_OVERVIEW_STYLES[i % len(TRIP_OVERVIEW_STYLES)]
