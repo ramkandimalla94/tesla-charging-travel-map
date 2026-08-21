@@ -974,7 +974,7 @@
         <label>Playback speed · <span class="speed-val" id="speed-label">1×</span></label>
         <input type="range" id="speed" min="0.25" max="8" step="0.25" value="1">
       </div>
-      <div style="font-size:9px;color:var(--muted);text-align:right;padding-top:14px"><kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> step</div>
+      <div style="font-size:9px;color:var(--muted);text-align:right;padding-top:14px"><kbd>Space</kbd> play · <kbd>Esc</kbd> back · <kbd>←</kbd><kbd>→</kbd> step</div>
     </div>
   </div>
 
@@ -2312,11 +2312,18 @@
               ? smoothAngle(camBearing, bearing, 0.06)
               : camBearing;
             const zoom = state.phase === 'dwell' && state.pois?.length ? 7.2 : Math.min(6.8, Math.max(5.2, map.getZoom()));
+            const pad = mapCameraPadding();
             const cam = {
               center: [lookPos.lng, lookPos.lat],
               zoom,
               pitch: Math.min(MAX_PITCH, state.phase === 'dwell' ? 38 : 42),
               bearing: camBearing,
+              padding: {
+                top: Math.max(40, Math.floor(pad.top * 0.5)),
+                bottom: Math.max(100, pad.bottom),
+                left: Math.max(24, Math.floor(pad.left * 0.35)),
+                right: 40,
+              },
             };
             if (isRecording) map.jumpTo(cam);
             else map.easeTo({ ...cam, duration: 420, essential: true });
@@ -2684,6 +2691,17 @@
     });
     document.addEventListener('keydown', e=>{
       if (e.target.tagName==='INPUT') return;
+      if (e.code==='Escape') {
+        if (isPlaying) { stopPlayback(); return; }
+        if (selectedId !== 'all') { selectTrip('all'); return; }
+        if (!memoryPaused) {
+          memoryPaused = true;
+          const btn = document.getElementById('memory-pause');
+          if (btn) btn.textContent = 'Resume';
+          stopMemoryReel();
+        }
+        return;
+      }
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
       if (e.code==='ArrowRight') { stopPlayback(); document.getElementById('btn-step').click(); }
       if (e.code==='ArrowLeft') { stopPlayback(); if(isSingleTrip()&&animStopIdx>0){
