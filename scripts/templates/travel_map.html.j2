@@ -196,8 +196,8 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
           Export
         </button>
-        <button class="icon-btn share" id="btn-share" disabled title="Copy share blurb" aria-label="Copy share text">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+        <button class="icon-btn share" id="btn-share" disabled title="Share trip (system sheet or copy blurb)" aria-label="Share trip blurb">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
         </button>
       </div>
     </div>
@@ -1153,6 +1153,10 @@
       }}
       if (e.code==='KeyR') document.getElementById('btn-reset').click();
       if (e.code==='KeyD') document.getElementById('btn-director').click();
+      if (e.code==='KeyS' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        if (isSingleTrip()) shareTripBlurb({ preferNative: false });
+      }
     });
 
     document.getElementById('btn-export').addEventListener('click', exportTripVideo);

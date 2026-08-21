@@ -53,7 +53,7 @@ python scripts/segment_trips.py
 python scripts/build_map.py
 ```
 
-Optional: copy `data/owner_config.json.example` → `data/owner_config.json` to pin your home base if auto-detection isn't right.
+Optional: copy `data/owner_config.json.example` → `data/owner_config.json` to pin your home base if auto-detection isn't right. You can also set `story_overrides` (by trip id / id prefix / name) to customize intro, outro, share blurb, or individual stop captions.
 
 ### Export a trip video for Instagram
 
@@ -124,6 +124,7 @@ output/               # Generated (gitignored except GPX/GeoJSON)
 | Space | Play / pause |
 | ← → | Step stops |
 | Esc | Stop play → atlas · pause memory reel |
+| S | Copy share blurb (selected trip) |
 | R | Reset |
 | D | Director camera |
 

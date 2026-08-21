@@ -23,7 +23,8 @@ Memory reel, spokes + corridor banding, featured CTA, epic queue + badge, Era ra
 5. **Share blurb** — dock Share copies trip caption + live demo URL; toast after export
 6. **Web Share API** — `navigator.share` when available, clipboard fallback
 7. **Post-play share prompt** — journey-complete toast invites Share
+8. **story_overrides** — optional `owner_config.json` intro/outro/share/stop caption patches
 
 ## Later
 
-Per-stop story overrides in owner config.
+Further share UI polish as needed.

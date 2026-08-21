@@ -24,5 +24,14 @@
       "driver": "Akash",
       "vehicle_label": "Akash's car"
     }
-  ]
+  ],
+  "story_overrides": {
+    "2024-06-29_Addison": {
+      "intro": "Optional custom intro for the Colorado epic (id prefix match).",
+      "share_blurb": "Optional custom share text\\nRelive it: https://ramkandimalla94.github.io/tesla-charging-travel-map/",
+      "stop_captions": [
+        { "index": 0, "caption": "Optional first-stop caption", "sub": "Optional subtitle" }
+      ]
+    }
+  }
 }

@@ -19,6 +19,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 
+from home_config import load_owner_config
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "output"
@@ -198,6 +200,53 @@ def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]])
         "nearby_count": len(all_pois),
         "stop_captions": stop_captions,
     }
+
+
+def apply_story_overrides(trip: dict, story: dict, cfg: dict | None = None) -> dict:
+    """Optional owner_config.story_overrides keyed by trip id, id prefix, or name substring."""
+    cfg = cfg if cfg is not None else load_owner_config()
+    overrides = (cfg or {}).get("story_overrides") or {}
+    if not overrides:
+        return story
+    trip_id = str(trip.get("id") or "")
+    trip_name = str(trip.get("name") or "")
+    matched: dict | None = None
+    if trip_id in overrides:
+        matched = overrides[trip_id]
+    else:
+        for key, val in overrides.items():
+            if not isinstance(val, dict):
+                continue
+            k = str(key)
+            if trip_id.startswith(k) or (k and k.lower() in trip_name.lower()):
+                matched = val
+                break
+    if not matched:
+        return story
+    out = dict(story)
+    for field in ("intro", "outro", "intro_title", "share_blurb"):
+        if matched.get(field):
+            out[field] = matched[field]
+    if isinstance(matched.get("highlights"), list) and matched["highlights"]:
+        out["highlights"] = [str(h) for h in matched["highlights"][:6]]
+    # Optional per-stop caption patches: [{index, caption, sub}]
+    patches = matched.get("stop_captions") or []
+    if patches and out.get("stop_captions"):
+        caps = list(out["stop_captions"])
+        for patch in patches:
+            if not isinstance(patch, dict):
+                continue
+            idx = patch.get("index")
+            if not isinstance(idx, int) or idx < 0 or idx >= len(caps):
+                continue
+            row = dict(caps[idx])
+            if patch.get("caption"):
+                row["caption"] = patch["caption"]
+            if patch.get("sub") is not None:
+                row["sub"] = patch["sub"]
+            caps[idx] = row
+        out["stop_captions"] = caps
+    return out
 
 
 def trip_color(index: int) -> str:
@@ -788,6 +837,7 @@ def prepare_trips(
             f"{trip['name']} — {miles:,.0f} mi · {len(stops)} Supercharger stops · {days}d\n"
             "Relive it: https://ramkandimalla94.github.io/tesla-charging-travel-map/"
         )
+        story = apply_story_overrides(trip, story)
         playback = build_playback_timeline(
             stops, route_path, story, stop_pois, cache, token, refresh, stats
         )
