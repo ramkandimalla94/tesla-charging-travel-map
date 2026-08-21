@@ -8,7 +8,7 @@ A personal **travel diary** on a 3D satellite map — replay road trips, enrich 
 
 **https://ramkandimalla94.github.io/mymilediary/**
 
-> **Rename step:** In GitHub → Settings → General, rename the repository to `mymilediary` so this Pages URL resolves. Until then the old Pages path may still be active.
+> **Repo name:** GitHub already maps this project to [`ramkandimalla94/mymilediary`](https://github.com/ramkandimalla94/mymilediary). Live Pages URL: **https://ramkandimalla94.github.io/mymilediary/** (after the next successful Pages deploy from `main`).
 
 The Mapbox **public** token (`pk.…`) is baked into the Pages build as base64 (decoded in the browser) so GitHub push protection does not block `gh-pages` deploys. Do not use a secret `sk.…` token.
 
