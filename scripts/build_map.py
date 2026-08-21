@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build premium 3D satellite travel map with Mapbox GL JS + deck.gl arcs."""
+"""Build cinematic Tesla travel map with Mapbox GL JS (playback + Instagram export)."""
 
 from __future__ import annotations
 
@@ -587,6 +587,122 @@ def trip_duration_days(start: str, end: str) -> int:
         return 1
 
 
+def parse_story_destination(trip: dict) -> str:
+    """Human destination for atlas grouping (Houston, Colorado, Leavenworth…)."""
+    name = trip.get("name") or ""
+    if "→" in name:
+        part = name.split("→", 1)[1]
+        part = re.sub(r"\s*·.*$", "", part)
+        part = re.sub(r"\s*\([^)]*via[^)]*\)", "", part, flags=re.I)
+        part = re.sub(r"\s*\(Round Trip\)", "", part, flags=re.I)
+        part = part.strip(" —-\t")
+        if part:
+            return part
+    dest = (trip.get("dest_label") or "").strip()
+    origin = (trip.get("origin_label") or "").strip()
+    if dest and dest != origin:
+        return dest
+    return dest or origin or "Journey"
+
+
+def _point_in_home_regions(lat: float, lng: float, location: str, regions: list[dict]) -> str | None:
+    """Return matching home hub label, or None."""
+    loc = location or ""
+    for region in regions:
+        bases = region.get("bases") or []
+        if isinstance(bases, set):
+            bases = list(bases)
+        if loc in bases:
+            return region.get("label") or "Home"
+        radius = float(region.get("radius_miles") or 55)
+        try:
+            if haversine_miles(lat, lng, float(region["lat"]), float(region["lng"])) <= radius:
+                return region.get("label") or "Home"
+        except (KeyError, TypeError, ValueError):
+            continue
+    return None
+
+
+def destination_label_coords(
+    stops: list[dict],
+    route_path: list[list[float]],
+    home_regions: list[dict],
+) -> tuple[float, float]:
+    """Place overview labels away from home hubs — prefer farthest non-home stop."""
+    non_home = [
+        s for s in stops
+        if s.get("lat") is not None and s.get("lng") is not None
+        and not _point_in_home_regions(
+            float(s["lat"]), float(s["lng"]), s.get("location") or "", home_regions
+        )
+    ]
+    if non_home:
+        origin = stops[0]
+        best = max(
+            non_home,
+            key=lambda s: haversine_miles(
+                float(origin["lat"]), float(origin["lng"]), float(s["lat"]), float(s["lng"])
+            ),
+        )
+        return float(best["lat"]), float(best["lng"])
+    if route_path and len(route_path) >= 4:
+        idx = int(len(route_path) * 0.55)
+        return float(route_path[idx][0]), float(route_path[idx][1])
+    mid = stops[len(stops) // 2]
+    return float(mid["lat"]), float(mid["lng"])
+
+
+def build_hubs(trips_data: dict, prepared: list[dict]) -> list[dict]:
+    """One overview hub per home region with trip membership for declutter."""
+    regions = trips_data.get("home_regions") or []
+    hubs: list[dict] = []
+    for region in regions:
+        label = region.get("label") or "Home"
+        trip_ids: list[str] = []
+        for trip in prepared:
+            start = trip["stops"][0]
+            hub = _point_in_home_regions(
+                float(start["lat"]), float(start["lng"]), start.get("location") or "", [region]
+            )
+            if hub:
+                trip_ids.append(trip["id"])
+        if not trip_ids:
+            continue
+        hubs.append({
+            "id": f"hub_{re.sub(r'[^a-z0-9]+', '_', label.lower()).strip('_')}",
+            "label": label,
+            "lat": float(region["lat"]),
+            "lng": float(region["lng"]),
+            "trip_ids": trip_ids,
+            "trip_count": len(trip_ids),
+        })
+    return hubs
+
+
+def build_destination_groups(prepared: list[dict]) -> list[dict]:
+    """Sidebar atlas groups keyed by story destination."""
+    buckets: dict[str, list[dict]] = {}
+    for trip in prepared:
+        key = trip.get("story_dest") or "Journey"
+        buckets.setdefault(key, []).append(trip)
+    groups: list[dict] = []
+    for dest, trips in buckets.items():
+        trips_sorted = sorted(trips, key=lambda t: t["start"], reverse=True)
+        groups.append({
+            "dest": dest,
+            "trip_count": len(trips_sorted),
+            "total_miles": sum(t["miles"] for t in trips_sorted),
+            "trip_ids": [t["id"] for t in trips_sorted],
+            "featured": any(t.get("featured") for t in trips_sorted),
+            "color": next(
+                (t["color"] for t in trips_sorted if t.get("featured")),
+                trips_sorted[0]["color"],
+            ),
+        })
+    groups.sort(key=lambda g: (-int(g["featured"]), -g["total_miles"], g["dest"]))
+    return groups
+
+
 def prepare_trips(
     trips_data: dict,
     cache: dict,
@@ -596,6 +712,7 @@ def prepare_trips(
 ) -> list[dict]:
     all_places = load_nearby_places()
     visited_all = load_visited_places()
+    home_regions = trips_data.get("home_regions") or []
     prepared: list[dict] = []
     for i, trip in enumerate(trips_data["trips"]):
         stops = [
@@ -625,6 +742,16 @@ def prepare_trips(
         )
         featured = is_featured_trip(trip, miles, len(stops))
         style = TRIP_OVERVIEW_STYLES[i % len(TRIP_OVERVIEW_STYLES)]
+        story_dest = parse_story_destination(trip)
+        label_lat, label_lng = destination_label_coords(stops, route_path, home_regions)
+        start_hub = _point_in_home_regions(
+            float(stops[0]["lat"]), float(stops[0]["lng"]),
+            stops[0].get("location") or "", home_regions,
+        )
+        end_hub = _point_in_home_regions(
+            float(stops[-1]["lat"]), float(stops[-1]["lng"]),
+            stops[-1].get("location") or "", home_regions,
+        )
         prepared.append({
             "id": trip["id"],
             "name": trip["name"],
@@ -646,6 +773,11 @@ def prepare_trips(
             "via_summary": via_summary,
             "origin_label": trip.get("origin_label", ""),
             "dest_label": trip.get("dest_label", ""),
+            "story_dest": story_dest,
+            "label_lat": label_lat,
+            "label_lng": label_lng,
+            "start_hub": start_hub,
+            "end_hub": end_hub,
             "has_colorado": trip.get("has_colorado", False),
             "colorado_stops": trip.get("colorado_stops", 0),
             "featured": featured,
@@ -668,7 +800,8 @@ def prepare_trips(
     return prepared
 
 
-def build_dashboard(trips: list[dict]) -> dict:
+def build_dashboard(trips: list[dict], hubs: list[dict] | None = None,
+                    destination_groups: list[dict] | None = None) -> dict:
     all_states: set[str] = set()
     owners: set[str] = set()
     for t in trips:
@@ -691,6 +824,8 @@ def build_dashboard(trips: list[dict]) -> dict:
         "featured_trips": sum(1 for t in trips if t.get("featured")),
         "owners": sorted(owners),
         "us_bounds": US_BOUNDS,
+        "hubs": hubs or [],
+        "destination_groups": destination_groups or [],
     }
 
 
@@ -869,7 +1004,9 @@ def main() -> None:
     prepared = prepare_trips(trips_data, cache, mapbox_token, args.refresh_routes, stats)
     if stats["fetched"] or args.refresh_routes:
         save_routes_cache(cache)
-    dashboard = build_dashboard(prepared)
+    hubs = build_hubs(trips_data, prepared)
+    destination_groups = build_destination_groups(prepared)
+    dashboard = build_dashboard(prepared, hubs, destination_groups)
     timeline = build_timeline(prepared)
 
     validate_output(prepared)

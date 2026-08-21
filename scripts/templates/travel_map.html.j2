@@ -215,7 +215,7 @@
       transform: translate(-50%, -130%);
       font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
       padding: 4px 8px; border-radius: 8px; white-space: nowrap;
-      background: rgba(8,10,16,0.9); border: 1px solid rgba(255,255,255,0.22);
+      background: rgba(8,10,16,0.92); border: 1px solid rgba(255,255,255,0.22);
       color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.45);
       opacity: 0; transition: opacity 0.2s;
     }
@@ -223,6 +223,82 @@
     .route-chip .dot {
       display: inline-block; width: 7px; height: 7px; border-radius: 50%;
       margin-right: 6px; vertical-align: middle;
+    }
+
+    /* Home hubs — one pin per home base on overview */
+    .home-hub {
+      display: flex; flex-direction: column; align-items: center;
+      pointer-events: auto; cursor: pointer; transform: translateY(-4px);
+    }
+    .home-hub-core {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: linear-gradient(145deg, #e8e4dc, #c4b8a8);
+      border: 2px solid rgba(255,255,255,0.95);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 11px; font-weight: 800; color: #1a1612;
+    }
+    .home-hub-label {
+      margin-top: 5px; padding: 4px 9px; border-radius: 8px;
+      background: rgba(8,10,16,0.9); border: 1px solid rgba(255,255,255,0.2);
+      font-size: 10px; font-weight: 700; color: #f4f6fa; white-space: nowrap;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+    .home-hub-label span { color: var(--muted); font-weight: 600; margin-left: 4px; }
+    .home-hub.dim { opacity: 0.35; }
+    .home-hub.hot .home-hub-core {
+      box-shadow: 0 0 0 3px rgba(251,191,36,0.45), 0 4px 18px rgba(0,0,0,0.55);
+    }
+
+    .dest-group-label {
+      font-size: 10px; font-weight: 700; color: var(--text);
+      letter-spacing: 0.04em; padding: 10px 8px 4px;
+      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    }
+    .dest-group-label .meta { font-size: 9px; color: var(--muted); font-weight: 600; }
+    .trip-item.nested { margin-left: 8px; padding: 9px 10px; }
+    .trip-item.nested .trip-name { font-size: 11px; }
+
+    .transport-dock.idle {
+      opacity: 0.72; transform: translateX(-50%) translateY(4px);
+    }
+    body.trip-focus .stat-rail { opacity: 0.35; transition: opacity 0.35s; }
+    body.trip-focus .stat-rail:hover { opacity: 1; }
+
+    /* Soft watch mode — cinema feel without portrait export */
+    body.watching .trip-panel,
+    body.watching .panel-toggle,
+    body.watching .top-bar,
+    body.watching .timeline-bar,
+    body.watching #onboarding,
+    body.watching .map-legend,
+    body.watching .mapboxgl-ctrl-group,
+    body.watching .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
+    body.watching .location-hud { opacity: 0 !important; pointer-events: none !important; }
+    body.watching .transport-dock {
+      opacity: 0.28; transition: opacity 0.35s ease;
+    }
+    body.watching .transport-dock:hover,
+    body.watching .transport-dock:focus-within { opacity: 0.95; }
+    body.watching .story-overlay { bottom: 100px; }
+    body.watching .cinema-title.visible { display: block; bottom: 120px; }
+
+    @media (max-width: 900px) {
+      :root { --panel-w: 280px; }
+      .stat-rail { display: none; }
+      .transport-dock { width: min(640px, calc(100vw - 24px)); padding: 12px 14px 14px; }
+    }
+    @media (max-width: 640px) {
+      .trip-panel {
+        top: auto; left: 10px; right: 10px; bottom: calc(var(--dock-h) + var(--timeline-h) + 16px);
+        width: auto; max-height: 42vh;
+      }
+      .trip-panel.collapsed { transform: translateY(110%); opacity: 0; pointer-events: none; }
+      .panel-toggle { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 20px); left: 18px; }
+      .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
+      .location-hud { top: 56px; left: 12px; right: 12px; max-width: none; }
+      .map-legend { top: 56px; right: 12px; }
+      .onboard-card { margin-left: 0 !important; max-width: calc(100vw - 32px); }
     }
 
     .panel-toggle {
@@ -346,6 +422,8 @@
 
     /* ── Beacons & labels ── */
     .beacon-wrap { display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+    .beacon-wrap .beacon-core,
+    .beacon-wrap .stop-dot { pointer-events: auto; cursor: pointer; }
     .beacon {
       position: relative; width: 32px; height: 32px;
       opacity: 0; transform: scale(0.4); transition: opacity 0.45s, transform 0.45s cubic-bezier(.34,1.4,.64,1);
@@ -354,6 +432,7 @@
     .beacon-ring {
       position: absolute; inset: -6px; border-radius: 50%;
       border: 1px solid rgba(255,255,255,0.35);
+      pointer-events: none;
       animation: beacon-pulse 2.4s ease-in-out infinite;
     }
     .beacon.active .beacon-ring { inset: -10px; border-color: rgba(255,255,255,0.7); animation-duration: 1.2s; }
@@ -506,6 +585,7 @@
       text-align: center; display: none; pointer-events: none;
     }
     body.cinema-mode .cinema-title.visible { display: block; }
+    body.watching .cinema-title.visible { display: block; }
     .cinema-title h2 {
       font-family: var(--font-display); font-size: clamp(22px, 4vw, 32px); font-weight: 800;
       text-shadow: 0 4px 24px rgba(0,0,0,0.95);
@@ -681,8 +761,8 @@
     <div class="trip-scroll" id="trip-list">
       <div class="group-label">Overview</div>
       <div class="trip-item active" data-id="all">
-        <div class="trip-swatch" style="background:linear-gradient(180deg,#5eead4,#38bdf8)"></div>
-        <div><div class="trip-name">All Routes</div><div class="trip-meta">{{ trips|length }} journeys · lifetime map</div></div>
+        <div class="trip-swatch" style="background:linear-gradient(180deg,#c4b8a8,#e8e4dc)"></div>
+        <div><div class="trip-name">Atlas · All Routes</div><div class="trip-meta">{{ trips|length }} journeys · home hubs</div></div>
       </div>
       {% set featured_trips = trips|selectattr('featured')|list %}
       {% if featured_trips %}
@@ -697,6 +777,28 @@
       </div>
       {% endfor %}
       {% endif %}
+      {% set dest_groups = dashboard.destination_groups or [] %}
+      {% if dest_groups %}
+      <div class="group-label">Destinations</div>
+      {% for group in dest_groups %}
+      <div class="dest-group-label">
+        <span>{{ group.dest }}</span>
+        <span class="meta">{{ group.trip_count }} trip{% if group.trip_count != 1 %}s{% endif %} · {{ group.total_miles }} mi</span>
+      </div>
+      {% for tid in group.trip_ids %}
+        {% set trip = trips|selectattr('id', 'equalto', tid)|first %}
+        {% if trip %}
+      <div class="trip-item nested{% if trip.featured %} featured{% endif %}" data-id="{{ trip.id }}" style="color:{{ trip.color }}">
+        <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
+        <div>
+          <div class="trip-name">{{ trip.start }} · {{ trip.story_dest or trip.dest_label }}</div>
+          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops{% if trip.is_shared %} · {{ trip.trip_crew }}{% endif %}</div>
+        </div>
+      </div>
+        {% endif %}
+      {% endfor %}
+      {% endfor %}
+      {% else %}
       <div class="group-label">All Trips</div>
       {% for trip in trips if not trip.featured %}
       <div class="trip-item" data-id="{{ trip.id }}" style="color:{{ trip.color }}">
@@ -707,6 +809,7 @@
         </div>
       </div>
       {% endfor %}
+      {% endif %}
     </div>
   </aside>
 
@@ -761,6 +864,7 @@
   <script>
     const TRIPS = {{ trips_json | safe }};
     const DASHBOARD = {{ dashboard_json | safe }};
+    const HUBS = DASHBOARD.hubs || [];
     // Public pk. token is stored base64-encoded so GitHub push protection does not
     // block gh-pages deploys (literal Mapbox tokens in commits are rejected).
     const MAPBOX_TOKEN_B64 = {{ mapbox_token_b64 | tojson }};
@@ -774,6 +878,7 @@
     let selectedId = 'all', animTimeMs = 0, animProg = 0, animStopIdx = 0;
     let hoveredTripId = null;
     let routeLabelMarkers = [];
+    let hubMarkers = [];
     let isPlaying = false, animFrame = null, lastTs = 0;
     let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
@@ -945,6 +1050,7 @@
       drawRoutes();
       drawStops();
       updateHero();
+      updateDockIdle();
       setMapLabelsVisible(true);
       document.getElementById('btn-play').disabled = true;
       document.getElementById('prog-text').textContent = 'Select a trip to play';
@@ -1258,23 +1364,84 @@
     }
 
     function shortTripLabel(trip) {
+      if (trip.story_dest) return String(trip.story_dest).slice(0, 36);
       const raw = (trip.name || '').split('—').pop()?.trim() || trip.name || '';
       return raw.replace(/\s*·.*$/, '').slice(0, 42);
+    }
+
+    function isPanelCollapsed() {
+      return document.getElementById('sidebar')?.classList.contains('collapsed');
+    }
+
+    function setPanelCollapsed(collapsed) {
+      const sb = document.getElementById('sidebar');
+      if (!sb) return;
+      sb.classList.toggle('collapsed', !!collapsed);
+    }
+
+    function mapCameraPadding() {
+      const w = map?.getContainer()?.clientWidth || window.innerWidth || 1200;
+      const h = map?.getContainer()?.clientHeight || window.innerHeight || 800;
+      const leftNeed = (!isPanelCollapsed() && w > 640)
+        ? Math.min(360, Math.floor(w * 0.34))
+        : (w <= 640 ? 24 : 48);
+      const bottomNeed = document.body.classList.contains('watching')
+        ? Math.min(120, Math.floor(h * 0.16))
+        : Math.min(200, Math.floor(h * 0.28));
+      return {
+        top: Math.min(88, Math.floor(h * 0.1)),
+        bottom: bottomNeed,
+        left: leftNeed,
+        right: Math.min(48, Math.floor(w * 0.06)),
+      };
+    }
+
+    function setWatching(on) {
+      if (isRecording) return;
+      document.body.classList.toggle('watching', !!on);
+      if (!on) {
+        document.getElementById('cinema-title')?.classList.remove('visible');
+      }
+    }
+
+    function showWatchTitleCard(trip, phase, state) {
+      const title = document.getElementById('cinema-title');
+      if (!title || isRecording) return;
+      if (phase === 'intro') {
+        document.getElementById('cinema-title-text').textContent = trip?.name || state?.label || '';
+        document.getElementById('cinema-subtitle').textContent = state?.caption
+          || (trip ? `${trip.miles.toLocaleString()} mi · ${trip.stop_count} stops · ${trip.duration_days}d` : '');
+        const hlEl = document.getElementById('cinema-highlights');
+        hlEl.innerHTML = (state?.highlights || trip?.story?.highlights || []).slice(0, 4)
+          .map(h => `<span>${h}</span>`).join('');
+        title.classList.add('visible');
+      } else if (phase === 'outro') {
+        document.getElementById('cinema-title-text').textContent = 'Journey Complete';
+        document.getElementById('cinema-subtitle').textContent = state?.caption || '';
+        document.getElementById('cinema-highlights').innerHTML = '';
+        title.classList.add('visible');
+      } else {
+        title.classList.remove('visible');
+      }
     }
 
     function drawRouteLabels() {
       routeLabelMarkers.forEach(m => m.remove());
       routeLabelMarkers = [];
       if (selectedId !== 'all') return;
-      TRIPS.forEach(trip => {
-        const start = trip.stops && trip.stops[0];
-        if (!start) return;
+      // Only show a destination chip while hovering — never stack all 23 at home.
+      const trips = hoveredTripId
+        ? TRIPS.filter(t => t.id === hoveredTripId)
+        : TRIPS.filter(t => t.featured).slice(0, 4);
+      trips.forEach(trip => {
+        const lat = trip.label_lat ?? trip.stops?.[Math.floor((trip.stops?.length || 1) / 2)]?.lat;
+        const lng = trip.label_lng ?? trip.stops?.[Math.floor((trip.stops?.length || 1) / 2)]?.lng;
+        if (lat == null || lng == null) return;
         const el = document.createElement('div');
-        el.className = 'route-chip' + (hoveredTripId === trip.id || !hoveredTripId ? ' visible' : '');
-        if (hoveredTripId && hoveredTripId !== trip.id) el.style.opacity = '0.15';
+        el.className = 'route-chip visible';
         el.innerHTML = `<span class="dot" style="background:${trip.color}"></span>${shortTripLabel(trip)}`;
         const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-          .setLngLat([start.lng, start.lat])
+          .setLngLat([lng, lat])
           .addTo(map);
         routeLabelMarkers.push(m);
       });
@@ -1286,8 +1453,12 @@
       document.querySelectorAll('.trip-item').forEach(el => {
         el.classList.toggle('preview', !!id && el.dataset.id === id);
       });
+      hubMarkers.forEach(m => {
+        const ids = m._tripIds || [];
+        m.getElement().classList.toggle('dim', !!id && !ids.includes(id));
+        m.getElement().classList.toggle('hot', !!id && ids.includes(id));
+      });
       if (selectedId !== 'all') return;
-      // Coalesce rapid sidebar hover into one paint pass (major lag source).
       if (hoverRaf) cancelAnimationFrame(hoverRaf);
       hoverRaf = requestAnimationFrame(() => {
         hoverRaf = null;
@@ -1368,16 +1539,52 @@
       });
     }
 
+    function clearHubMarkers() {
+      hubMarkers.forEach(m => m.remove());
+      hubMarkers = [];
+    }
+
+    function drawHomeHubs() {
+      clearHubMarkers();
+      if (selectedId !== 'all' || !HUBS.length) return;
+      HUBS.forEach(hub => {
+        const el = document.createElement('div');
+        el.className = 'home-hub';
+        el.innerHTML = `<div class="home-hub-core">${hub.trip_count}</div>`
+          + `<div class="home-hub-label">${hub.label}<span>· home</span></div>`;
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const first = hub.trip_ids?.[0];
+          if (first) {
+            // Prefer an epic from this hub if available
+            const epic = hub.trip_ids.map(id => TRIPS.find(t => t.id === id)).find(t => t?.featured);
+            selectTrip((epic || TRIPS.find(t => t.id === first)).id);
+          }
+        });
+        el.addEventListener('mouseenter', () => {
+          if (hub.trip_ids?.length === 1) setHoveredTrip(hub.trip_ids[0]);
+        });
+        el.addEventListener('mouseleave', () => setHoveredTrip(null));
+        const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([hub.lng, hub.lat])
+          .addTo(map);
+        m._tripIds = hub.trip_ids || [];
+        hubMarkers.push(m);
+      });
+    }
+
     function drawStops() {
       stopMarkers.forEach(m => m.remove()); stopMarkers = [];
+      clearHubMarkers();
       const single = isSingleTrip();
+      if (!single) {
+        drawHomeHubs();
+        applyIdleStopVisuals();
+        return;
+      }
       activeTrips().forEach(trip => {
         const lastIdx = trip.stops.length - 1;
-        // Overview: only start + finish pins to cut marker clutter on overlapping corridors
-        const indices = single
-          ? trip.stops.map((_, i) => i)
-          : [...new Set([0, lastIdx])];
-        const start = trip.stops[0];
+        const indices = trip.stops.map((_, i) => i);
         const sameHome = isSameHomeTrip(trip);
         const startLngLat = sameHome ? endpointLngLat(trip, true, false, null) : null;
         const endLngLat = sameHome ? endpointLngLat(trip, false, true, startLngLat) : null;
@@ -1393,43 +1600,20 @@
           const isMilestone = isStart || isEnd;
           if (sameHome && isStart) wrap.classList.add('split-start');
           if (sameHome && isEnd) wrap.classList.add('split-end');
-          if (single) {
-            const beacon = document.createElement('div');
-            beacon.className = 'beacon' + (isMilestone ? ` milestone ${isStart ? 'start' : 'end'}` : ' waypoint');
-            beacon.style.setProperty('--beacon-glow', trip.color + '88');
-            const coreText = isStart ? '▶' : (isEnd ? '◆' : '');
-            beacon.innerHTML = `<div class="beacon-ring"></div><div class="beacon-core" style="background:${trip.color}">${coreText}</div>`;
-            const lbl = document.createElement('div');
-            lbl.className = 'beacon-label';
-            const place = shortLabel(s.location);
-            if (sameHome && isStart) setMilestoneLabel(lbl, 'Start', s.location);
-            else if (sameHome && isEnd) setMilestoneLabel(lbl, 'Return', s.location);
-            else if (isStart) setMilestoneLabel(lbl, 'Start', s.location);
-            else if (isEnd) setMilestoneLabel(lbl, 'Finish', s.location);
-            else lbl.textContent = place;
-            wrap.appendChild(beacon);
-            if (isMilestone) wrap.appendChild(lbl);
-            var el = beacon, lblRef = isMilestone ? lbl : null;
-          } else {
-            const dot = document.createElement('div');
-            dot.className = 'stop-dot';
-            dot.style.background = trip.color;
-            dot.style.color = trip.color;
-            // Round-trip overview: keep both home endpoints visible via size + ring
-            if (sameHome && isStart) {
-              dot.style.width = '12px'; dot.style.height = '12px';
-              dot.style.boxShadow = '0 0 0 3px rgba(52,211,153,0.55), 0 0 10px currentColor';
-            } else if (sameHome && isEnd) {
-              dot.style.width = '12px'; dot.style.height = '12px';
-              dot.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.55), 0 0 10px currentColor';
-            } else {
-              dot.style.width = isStart ? '14px' : '10px';
-              dot.style.height = isStart ? '14px' : '10px';
-            }
-            dot.style.border = '2px solid rgba(255,255,255,0.85)';
-            wrap.appendChild(dot);
-            var el = dot, lblRef = null;
-          }
+          const beacon = document.createElement('div');
+          beacon.className = 'beacon' + (isMilestone ? ` milestone ${isStart ? 'start' : 'end'}` : ' waypoint');
+          beacon.style.setProperty('--beacon-glow', trip.color + '88');
+          const coreText = isStart ? '▶' : (isEnd ? '◆' : '');
+          beacon.innerHTML = `<div class="beacon-ring"></div><div class="beacon-core" style="background:${trip.color}">${coreText}</div>`;
+          const lbl = document.createElement('div');
+          lbl.className = 'beacon-label';
+          if (sameHome && isStart) setMilestoneLabel(lbl, 'Start', s.location);
+          else if (sameHome && isEnd) setMilestoneLabel(lbl, 'Return', s.location);
+          else if (isStart) setMilestoneLabel(lbl, 'Start', s.location);
+          else if (isEnd) setMilestoneLabel(lbl, 'Finish', s.location);
+          else lbl.textContent = shortLabel(s.location);
+          wrap.appendChild(beacon);
+          if (isMilestone) wrap.appendChild(lbl);
           let lngLat = [s.lng, s.lat];
           if (isMilestone && sameHome) lngLat = isStart ? startLngLat : endLngLat;
           const pixelOffset = milestoneMarkerOffset(sameHome, isStart, isEnd, homeGeoSep);
@@ -1441,7 +1625,7 @@
             .setLngLat(lngLat)
             .setPopup(new mapboxgl.Popup({ offset: 14, maxWidth: '280px' }).setHTML(popupHtml(s)))
             .addTo(map);
-          m._idx = i; m._el = el; m._lbl = lblRef; m._stop = s;
+          m._idx = i; m._el = beacon; m._lbl = isMilestone ? lbl : null; m._stop = s;
           m._isMilestone = isMilestone;
           m._sameHome = sameHome;
           stopMarkers.push(m);
@@ -1457,9 +1641,12 @@
       const viaEl = document.getElementById('hero-via');
       const panelTitle = document.getElementById('panel-title');
       if (selectedId === 'all') {
-        panelTitle.textContent = 'All Routes';
+        panelTitle.textContent = 'Atlas';
         document.getElementById('hero-name').textContent = 'Lifetime Overview';
-        viaEl.innerHTML = 'Select an <em>Epic Road Trip</em> for cinematic replay and video export.';
+        const hubBits = (HUBS || []).map(h => `${h.label} (${h.trip_count})`).join(' · ');
+        viaEl.innerHTML = hubBits
+          ? `Home hubs: <em>${hubBits}</em> — pick an Epic or destination to replay.`
+          : 'Select an <em>Epic Road Trip</em> for cinematic replay and video export.';
         document.getElementById('hero-miles').textContent = DASHBOARD.total_miles.toLocaleString();
         document.getElementById('hero-kwh').textContent = DASHBOARD.total_kwh.toLocaleString();
         document.getElementById('hero-days').textContent = TRIPS.length;
@@ -1487,7 +1674,7 @@
     // ── Intro — continental US, flat mercator view ──
     function introFlyover() {
       map.fitBounds([[US_BOUNDS.west, US_BOUNDS.south], [US_BOUNDS.east, US_BOUNDS.north]], {
-        padding:{top:72,bottom:200,left:360,right:48},
+        padding: mapCameraPadding(),
         pitch:0, bearing:0, duration:1400, maxZoom:5,
       });
       setTimeout(hideSplash, 2200);
@@ -1518,7 +1705,7 @@
         else if (miles < 450) maxZoom = Math.min(6.4, Math.max(maxZoom, 5.4));
       }
       map.fitBounds(bounds, {
-        padding:{top:88,bottom:200,left:360,right:48},
+        padding: mapCameraPadding(),
         pitch: isSingleTrip() ? 28 : 0,
         bearing: 0,
         duration: animate ? 1100 : 0,
@@ -1530,7 +1717,9 @@
     function updateLocationHud(state) {
       const hud = document.getElementById('location-hud');
       const icon = document.getElementById('hud-icon');
-      if (!state || !isSingleTrip() || state.phase === 'intro' || state.phase === 'outro') {
+      // While watching, story captions own the narrative — hide the competing HUD.
+      if (!state || !isSingleTrip() || state.phase === 'intro' || state.phase === 'outro'
+          || document.body.classList.contains('watching') || isRecording) {
         hud.classList.remove('visible');
         return;
       }
@@ -1653,6 +1842,7 @@
         map.getSource('active-trail').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
         updateStoryOverlay(state);
         updateLocationHud(state);
+        if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'intro', state);
         document.getElementById('scrubber').value = Math.round(animProg * 1000);
         document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
         document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
@@ -1664,12 +1854,14 @@
         clearPoiMarkers();
         updateStoryOverlay(state);
         updateLocationHud(state);
+        if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'outro', state);
         document.getElementById('scrubber').value = Math.round(animProg * 1000);
         document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
         document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
         document.getElementById('prog-text').textContent = 'Journey complete';
         return;
       }
+      if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), state.phase, state);
 
       const pos = { lat: state.lat, lng: state.lng };
       const trailCoords = trailCoordsAtTime(animTimeMs);
@@ -1778,7 +1970,9 @@
       if (!lastTs) lastTs=ts;
       const pb = activePlayback();
       if (!pb?.total_video_ms) { stopPlayback(); return; }
-      animTimeMs += (ts - lastTs) * speed;
+      const rawDelta = ts - lastTs;
+      const delta = Math.min(rawDelta, 250);
+      animTimeMs += delta * speed;
       lastTs = ts;
       if (animTimeMs >= pb.total_video_ms) {
         animTimeMs = pb.total_video_ms;
@@ -1805,10 +1999,13 @@
       if (!activePlayback()?.total_video_ms) return;
       if (animTimeMs >= activePlayback().total_video_ms) { animTimeMs = 0; resetVisuals(false); drawStops(); }
       isPlaying = true; lastTs = 0;
+      setPanelCollapsed(true);
+      if (!forRecording) setWatching(true);
       setPlaybackVisuals(true);
       document.getElementById('btn-play').disabled = true;
       document.getElementById('btn-pause').disabled = false;
-      document.getElementById('location-hud').classList.add('visible');
+      document.getElementById('location-hud').classList.remove('visible');
+      document.getElementById('transport-dock')?.classList.remove('idle');
       animFrame = requestAnimationFrame(animate);
     }
     function stopPlayback() {
@@ -1816,7 +2013,10 @@
       if (animFrame) cancelAnimationFrame(animFrame);
       document.getElementById('btn-play').disabled = !isSingleTrip();
       document.getElementById('btn-pause').disabled = true;
-      if (!isRecording) setPlaybackVisuals(false);
+      if (!isRecording) {
+        setPlaybackVisuals(false);
+        setWatching(false);
+      }
     }
     function resetVisuals(clearHud=true) {
       stopPlayback(); animTimeMs=0; animProg=0; animStopIdx=0;
@@ -1834,6 +2034,7 @@
         document.getElementById('story-overlay').classList.remove('visible');
       }
       setPlaybackVisuals(false);
+      setWatching(false);
     }
 
     async function exportTripVideo() {
@@ -1939,6 +2140,7 @@
       if (selectedId === id && id !== 'all') {
         // Re-clicking the same trip should feel instant — just refit, don't rebuild layers.
         resetVisuals(); drawStops(); updateHero(); fitTrip();
+        updateDockIdle();
         return;
       }
       selectedId=id;
@@ -1946,6 +2148,8 @@
       dismissOnboarding();
       document.body.classList.toggle('trip-focus', id !== 'all');
       setBasemapTripFocus(id !== 'all');
+      // Map-first on trip focus; restore panel when returning to atlas.
+      setPanelCollapsed(id !== 'all');
       document.querySelectorAll('.trip-item').forEach(el=>{
         el.classList.toggle('active',el.dataset.id===id);
         el.classList.remove('preview');
@@ -1956,6 +2160,11 @@
       updateMapLegend(activeTrip());
       document.getElementById('btn-play').disabled = !isSingleTrip();
       document.getElementById('btn-export').disabled = !isSingleTrip();
+      updateDockIdle();
+    }
+
+    function updateDockIdle() {
+      document.getElementById('transport-dock')?.classList.toggle('idle', selectedId === 'all');
     }
 
     // ── Night mode ──
@@ -2027,6 +2236,8 @@
     document.getElementById('sidebar-toggle').addEventListener('click', ()=>{
       const sb=document.getElementById('sidebar');
       sb.classList.toggle('collapsed');
+      // Reframe so the route isn't under chrome after toggle.
+      if (map) fitTrip(true);
     });
     document.addEventListener('keydown', e=>{
       if (e.target.tagName==='INPUT') return;
