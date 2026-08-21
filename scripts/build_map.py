@@ -349,37 +349,68 @@ def select_playback_memories(
     return selected
 
 
+def path_arc_lengths(path: list[list[float]]) -> tuple[list[float], float]:
+    """Cumulative arc lengths (miles) at each vertex + total."""
+    if not path:
+        return [], 0.0
+    cum = [0.0]
+    for i in range(1, len(path)):
+        cum.append(
+            cum[-1]
+            + haversine_miles(path[i - 1][0], path[i - 1][1], path[i][0], path[i][1])
+        )
+    return cum, cum[-1]
+
+
+def point_at_arc_frac(path: list[list[float]], frac: float) -> list[float]:
+    """Interpolate a point by arc-length fraction (0..1). Matches JS pointOnPath."""
+    if not path:
+        return [0.0, 0.0]
+    if len(path) == 1:
+        return [path[0][0], path[0][1]]
+    frac = max(0.0, min(1.0, frac))
+    cum, total = path_arc_lengths(path)
+    if total <= 1e-9:
+        return [path[0][0], path[0][1]]
+    target = frac * total
+    for i in range(1, len(path)):
+        if target <= cum[i] or i == len(path) - 1:
+            seg = cum[i] - cum[i - 1]
+            t = 0.0 if seg <= 1e-12 else (target - cum[i - 1]) / seg
+            t = max(0.0, min(1.0, t))
+            a, b = path[i - 1], path[i]
+            return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
+    return [path[-1][0], path[-1][1]]
+
+
 def slice_path_by_frac(
     path: list[list[float]], start_frac: float, end_frac: float
 ) -> list[list[float]]:
+    """Slice a polyline by arc-length fraction — MUST match nearest_point_on_path fracs."""
     if not path or len(path) < 2:
         return list(path or [])
     start_frac = max(0.0, min(1.0, start_frac))
     end_frac = max(0.0, min(1.0, end_frac))
     if end_frac < start_frac:
         start_frac, end_frac = end_frac, start_frac
+    start_pt = point_at_arc_frac(path, start_frac)
+    end_pt = point_at_arc_frac(path, end_frac)
     if end_frac - start_frac < 1e-6:
-        # Degenerate — single point
-        idx = int(round(start_frac * (len(path) - 1)))
-        pt = path[idx]
-        return [pt, pt]
+        return [start_pt, end_pt]
 
-    def point_at(frac: float) -> list[float]:
-        ex = frac * (len(path) - 1)
-        i = int(math.floor(ex))
-        t = ex - i
-        i = min(i, len(path) - 2)
-        a, b = path[i], path[i + 1]
-        return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
-
-    i0 = int(math.floor(start_frac * (len(path) - 1)))
-    i1 = int(math.ceil(end_frac * (len(path) - 1)))
-    out = [point_at(start_frac)]
-    for i in range(i0 + 1, i1):
-        out.append(path[i])
-    end_pt = point_at(end_frac)
+    cum, total = path_arc_lengths(path)
+    if total <= 1e-9:
+        return [start_pt, end_pt]
+    d0, d1 = start_frac * total, end_frac * total
+    out = [start_pt]
+    for i in range(1, len(path) - 1):
+        if d0 < cum[i] < d1:
+            out.append(path[i])
     if out[-1] != end_pt:
         out.append(end_pt)
+    # Ensure at least 2 distinct-enough points for travel animation
+    if len(out) < 2:
+        out = [start_pt, end_pt]
     return out
 
 
@@ -1066,28 +1097,38 @@ def build_playback_timeline(
             })
 
         for mem in mems:
-            frac = float(mem.get("leg_frac") or 0.5)
-            # Keep playback moving only forward along the leg
-            if frac < cursor_frac + 0.01:
-                frac = min(0.98, cursor_frac + 0.02)
-            append_travel(cursor_frac, frac)
-            # Vehicle stays on corridor snap — never teleports to off-route photo GPS
+            # Single source of truth: arc-length frac on THIS leg path.
+            # Travel must end at exactly the same coordinates the memory holds the car.
             if path and len(path) >= 2:
-                slat, slng, _, spur = nearest_point_on_path(
+                slat, slng, snap_frac, spur = nearest_point_on_path(
                     float(mem["lat"]), float(mem["lng"]), path
                 )
-                route_lat, route_lng = slat, slng
-                mem["spur_miles"] = round(spur, 2)
-                mem["on_corridor"] = spur <= MEMORY_ROUTE_SNAP_MI
+                frac = float(snap_frac)
             else:
-                route_lat = mem.get("route_lat", mem["lat"])
-                route_lng = mem.get("route_lng", mem["lng"])
+                slat = float(mem.get("route_lat", mem["lat"]))
+                slng = float(mem.get("route_lng", mem["lng"]))
+                frac = float(mem.get("leg_frac") or 0.5)
+                spur = float(mem.get("spur_miles") or 0)
+
+            # Forward-only: if two snaps collapse, nudge BOTH travel end + car together
+            if frac < cursor_frac + 0.012:
+                frac = min(0.98, cursor_frac + 0.015)
+                if path and len(path) >= 2:
+                    slat, slng = point_at_arc_frac(path, frac)
+
+            append_travel(cursor_frac, frac)
+            # If travel was skipped (tiny gap), still park car on the snap
+            if body and body[-1]["type"] == "travel":
+                # Force travel endpoint == memory car position (kill float/slice drift)
+                body[-1]["path"][-1] = [slat, slng]
+                slat, slng = body[-1]["path"][-1][0], body[-1]["path"][-1][1]
+
             album = mem.get("album") or "memory"
             body.append({
                 "type": "memory",
-                "duration_ms": 2_800 if mem.get("on_corridor", True) else 2_200,
-                "lat": route_lat if route_lat is not None else mem["lat"],
-                "lng": route_lng if route_lng is not None else mem["lng"],
+                "duration_ms": 3_200 if spur <= MEMORY_ROUTE_SNAP_MI else 2_600,
+                "lat": slat,
+                "lng": slng,
                 "photo_lat": mem["lat"],
                 "photo_lng": mem["lng"],
                 "label": short_location_label(mem.get("location") or album),
@@ -1100,9 +1141,10 @@ def build_playback_timeline(
                 "thumb": mem.get("thumb") or "",
                 "album": album,
                 "photo_id": mem.get("id") or "",
-                "spur_miles": mem.get("spur_miles", 0),
-                "on_corridor": bool(mem.get("on_corridor", True)),
+                "spur_miles": round(float(spur), 2),
+                "on_corridor": float(spur) <= MEMORY_ROUTE_SNAP_MI,
                 "pois": [],
+                "leg_frac": frac,
             })
             cursor_frac = frac
         append_travel(cursor_frac, 1.0)
