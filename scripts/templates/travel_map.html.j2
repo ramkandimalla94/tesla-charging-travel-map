@@ -48,8 +48,6 @@
 
   <div class="map-legend" id="map-legend" aria-hidden="true">
     <div class="leg-row"><span class="swatch" id="legend-route-swatch"></span><span id="legend-route-label">Route</span></div>
-    <div class="leg-row"><span class="pin start"></span><span>Start</span></div>
-    <div class="leg-row"><span class="pin end"></span><span id="legend-end-label">Return</span></div>
   </div>
 
   <button type="button" class="atlas-cta" id="atlas-cta" aria-label="Open a featured journey">
@@ -63,6 +61,10 @@
   <div class="photo-hover" id="photo-hover" aria-hidden="true">
     <img id="photo-hover-img" alt="">
     <div class="cap"><strong id="photo-hover-title">Memory</strong><span id="photo-hover-meta"></span></div>
+  </div>
+  <div class="memory-card" id="memory-card" aria-hidden="true">
+    <img id="memory-card-img" alt="">
+    <div class="cap"><strong id="memory-card-title">Memory</strong><span id="memory-card-meta"></span></div>
   </div>
 
   <!-- Top bar -->
@@ -105,9 +107,9 @@
   <aside class="trip-panel" id="sidebar">
     <div class="panel-grab" aria-hidden="true"></div>
     <div class="panel-head">
-      <div class="eyebrow">Your diary</div>
-      <h2 id="panel-title">Select a journey</h2>
-      <div class="sub" id="panel-sub">{{ dashboard.trip_count }} road trips · miles become memories</div>
+      <div class="eyebrow">Travel diary</div>
+      <h2 id="panel-title">Atlas</h2>
+      <div class="sub" id="panel-sub">{{ dashboard.trip_count }} journeys across the map</div>
     </div>
 
     <div class="trip-hero" id="hero-card">
@@ -137,7 +139,7 @@
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.name }}</div>
-          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% elif trip.photo_count %} · {{ trip.photo_count }} photos{% endif %}</div>
+          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops · {{ trip.duration_days }}d{% if trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}{% if trip.photo_count %} · {{ trip.photo_count }} photos{% endif %}</div>
         </div>
       </div>
       {% endfor %}
@@ -157,7 +159,7 @@
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.start }} · {{ trip.story_dest or trip.dest_label }}</div>
-          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops{% if trip.is_shared %} · {{ trip.trip_crew }}{% endif %}</div>
+          <div class="trip-meta">{{ trip.miles }} mi · {{ trip.stop_count }} stops{% if trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}{% if trip.photo_count %} · {{ trip.photo_count }} photos{% endif %}</div>
         </div>
       </div>
         {% endif %}
@@ -170,7 +172,7 @@
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.name }}</div>
-          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi · {{ trip.stop_count }} stops{% if trip.is_shared %} · {{ trip.trip_crew }}{% elif trip.trip_crew %} · {{ trip.trip_crew }}{% elif trip.photo_count %} · {{ trip.photo_count }} photos{% endif %}</div>
+          <div class="trip-meta">{{ trip.start }} · {{ trip.miles }} mi · {{ trip.stop_count }} stops{% if trip.trip_crew %} · {{ trip.trip_crew }}{% endif %}{% if trip.photo_count %} · {{ trip.photo_count }} photos{% endif %}</div>
         </div>
       </div>
       {% endfor %}
@@ -192,7 +194,7 @@
         <button class="icon-btn primary" id="btn-play" disabled title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></button>
         <button class="icon-btn" id="btn-pause" disabled title="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg></button>
         <button class="icon-btn" id="btn-loop" title="Loop trip · click again for epic queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
-        <button class="icon-btn on" id="btn-director" title="Director camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l6 3-6 3V9z"/></svg></button>
+        <button class="icon-btn on" id="btn-director" title="Chase camera · click for north-up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l6 3-6 3V9z"/></svg></button>
         <button class="icon-btn" id="btn-night" title="Night mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
         <button class="icon-btn export" id="btn-export" disabled title="Export video">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
@@ -290,15 +292,17 @@
     let routeLabelMarkers = [];
     let hubMarkers = [];
     let destMarkers = [];
-        let isPlaying = false, animFrame = null, lastTs = 0;
+    let isPlaying = false, animFrame = null, lastTs = 0;
     let speed = 1, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
     let poiMarkerKey = '';
     let lastDirectorMove = 0;
+    let lastCamKey = '';
     let hoverRaf = null;
     let smoothBearing = 0, camBearing = 0, lastTravelBearing = 0;
-    const MAX_PITCH = 45;
+    let camZoom = 6.5;
+    const MAX_PITCH = 60;
 
     const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 64 28" aria-hidden="true"><path class="car-body" d="M2 18 Q8 9 16 8 L48 8 Q56 9 62 18 L60 22 L4 22 Z"/><path class="car-accent" d="M18 8 L26 4 L34 8"/><circle cx="14" cy="21" r="3.2" fill="#111"/><circle cx="50" cy="21" r="3.2" fill="#111"/><path class="car-accent" d="M28 8 L32 6 L36 8" opacity="0.6"/></svg></div></div>`;
 
@@ -408,6 +412,8 @@
               caption: seg.caption || '', subcaption: seg.subcaption || '',
               pois: seg.pois || [], stopIndex: seg.stop_index, frac,
               bearing: lastTravelBearing, seg,
+              is_photo: !!seg.is_photo, thumb: seg.thumb || '', album: seg.album || '',
+              photo_id: seg.photo_id || '',
             };
           }
           const path = seg.path || [];
@@ -647,6 +653,45 @@
       });
     }
 
+    function dwellUiCopy(state, stop) {
+      const isPhoto = !!(state?.is_photo || stop?.is_photo || stop?.kind === 'photo');
+      const isHome = !!(stop?.is_home_anchor || stop?.kind === 'home');
+      if (isPhoto) {
+        const place = (state?.album || stop?.album || shortLabel(state?.label || stop?.location || 'photo'));
+        return {
+          phase: 'Memory',
+          icon: '📷',
+          mode: 'memory',
+          dock: `Memory · ${place}`,
+          caption: state?.caption || `Memory · ${place}`,
+        };
+      }
+      if (isHome) {
+        return {
+          phase: 'Home',
+          icon: '⌂',
+          mode: 'halt',
+          dock: `Home · ${shortLabel(stop?.location || state?.label || '')}`,
+          caption: state?.caption || `Home · ${shortLabel(stop?.location || '')}`,
+        };
+      }
+      return {
+        phase: 'Stopped',
+        icon: '⏸',
+        mode: 'halt',
+        dock: `Stopped · ${shortLabel(state?.label || stop?.location || '')}`,
+        caption: state?.caption || `Stopped · ${shortLabel(state?.label || stop?.location || '')}`,
+      };
+    }
+
+    function showMemoryCard(state) {
+      if (typeof showMemoryOnMap === 'function') showMemoryOnMap(state);
+    }
+
+    function hideMemoryCard() {
+      if (typeof hideMemoryOnMap === 'function') hideMemoryOnMap();
+    }
+
     function updateLocationHud(state) {
       const hud = document.getElementById('location-hud');
       const icon = document.getElementById('hud-icon');
@@ -657,10 +702,18 @@
         return;
       }
       hud.classList.add('visible');
-      const charging = state.phase === 'dwell';
-      icon.textContent = charging ? '⚡' : '🚗';
-      icon.classList.toggle('charging', charging);
-      document.getElementById('hud-phase').textContent = charging ? 'Charging' : 'En Route';
+      const stop = activeStops()[state.stopIndex ?? 0];
+      if (state.phase === 'dwell') {
+        const copy = dwellUiCopy(state, stop);
+        icon.textContent = copy.icon;
+        icon.classList.toggle('halt', copy.mode === 'halt');
+        icon.classList.toggle('memory', copy.mode === 'memory');
+        document.getElementById('hud-phase').textContent = copy.phase;
+      } else {
+        icon.textContent = '🚗';
+        icon.classList.remove('halt', 'memory');
+        document.getElementById('hud-phase').textContent = 'En Route';
+      }
       document.getElementById('hud-text').textContent = state.label || '';
     }
 
@@ -693,17 +746,19 @@
               ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
               : '',
           };
-        } else if (state.phase === 'dwell' && (state.caption || state.pois?.length || state.label)) {
+        } else if (state.phase === 'dwell' && (state.caption || state.pois?.length || state.label || state.thumb)) {
           // Hold dwell captions; reveal POI chips after a short settle-in beat
           const frac = state.frac || 0;
-          const poisHtml = frac >= 0.14
+          const stop = activeStops()[state.stopIndex ?? 0];
+          const copy = dwellUiCopy(state, stop);
+          const poisHtml = (!state.is_photo && frac >= 0.14)
             ? (state.pois || []).map(p =>
                 `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
               ).join('')
             : '';
           next = {
-            visible: true, mode: 'dwell',
-            caption: state.caption || `Charging · ${state.label}`,
+            visible: true, mode: state.is_photo ? 'dwell memory' : 'dwell',
+            caption: copy.caption,
             sub: state.subcaption || '',
             pois: poisHtml,
           };
@@ -785,6 +840,131 @@
       setRouteStyle(t.id, t.color, playing ? 'playback' : 'active');
     }
 
+    function haversineKm(lat1, lng1, lat2, lng2) {
+      const toR = Math.PI / 180;
+      const dLat = (lat2 - lat1) * toR;
+      const dLng = (lng2 - lng1) * toR;
+      const s = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat1 * toR) * Math.cos(lat2 * toR) * Math.sin(dLng / 2) ** 2;
+      return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(s)));
+    }
+
+    function pathLengthKm(path) {
+      if (!path || path.length < 2) return 0;
+      let km = 0;
+      for (let i = 1; i < path.length; i++) {
+        const a = path[i - 1], b = path[i];
+        if (!a || !b) continue;
+        km += haversineKm(a[0], a[1], b[0], b[1]);
+      }
+      return km;
+    }
+
+    function travelZoomForLegKm(km) {
+      // Keep the car visibly crawling across the frame — never stay on continent zoom.
+      if (km < 20) return 11.2;
+      if (km < 50) return 10.2;
+      if (km < 120) return 9.0;
+      if (km < 250) return 7.8;
+      if (km < 450) return 6.9;
+      return 6.2;
+    }
+
+    function playbackCameraTarget(state) {
+      if (!state || state.lat == null || state.lng == null) return null;
+      const pad = mapCameraPadding();
+      const padding = {
+        top: Math.max(56, Math.floor(pad.top * 0.4)),
+        bottom: Math.max(140, Math.floor(pad.bottom * 0.85)),
+        left: Math.max(32, Math.floor(pad.left * 0.2)),
+        right: 56,
+      };
+
+      if (state.phase === 'travel') {
+        const km = pathLengthKm(state.path);
+        const zoom = travelZoomForLegKm(km);
+        let center = [state.lng, state.lat];
+        if (state.path?.length >= 2) {
+          const ahead = pointOnPath(state.path, Math.min(1, (state.frac || 0) + 0.1));
+          if (ahead?.lng != null) {
+            // Bias center slightly ahead so motion reads as forward travel.
+            center = [
+              state.lng + (ahead.lng - state.lng) * 0.55,
+              state.lat + (ahead.lat - state.lat) * 0.55,
+            ];
+          }
+        }
+        return {
+          center,
+          zoom,
+          pitch: Math.min(MAX_PITCH, directorMode ? 50 : 38),
+          bearing: directorMode ? (state.bearing || lastTravelBearing || 0) : 0,
+          padding,
+          duration: 480,
+        };
+      }
+
+      if (state.phase === 'dwell') {
+        const photo = !!state.is_photo;
+        return {
+          center: [state.lng, state.lat],
+          zoom: photo ? 12.4 : (state.pois?.length ? 10.0 : 8.8),
+          pitch: Math.min(MAX_PITCH, photo ? 55 : 42),
+          bearing: directorMode ? camBearing : 0,
+          padding,
+          duration: photo ? 980 : 720,
+        };
+      }
+      return null;
+    }
+
+    function applyPlaybackCamera(state, force = false) {
+      if (!map || !state) return;
+      if (!force && !(isPlaying || isRecording)) return;
+      if (state.phase === 'intro' || state.phase === 'outro') return;
+      const target = playbackCameraTarget(state);
+      if (!target) return;
+
+      const camKey = `${state.phase}|${state.stopIndex}|${state.is_photo ? 'p' : 'r'}|${directorMode ? 'd' : 'n'}`;
+      const phaseChanged = camKey !== lastCamKey;
+      const now = performance.now();
+      const throttle = state.phase === 'travel' ? 100 : 380;
+      if (!force && !phaseChanged && now - lastDirectorMove < throttle) return;
+      lastCamKey = camKey;
+      lastDirectorMove = now;
+
+      if (directorMode && state.phase === 'travel') {
+        camBearing = smoothAngle(camBearing, target.bearing, phaseChanged ? 0.45 : 0.1);
+        target.bearing = camBearing;
+      } else if (!directorMode) {
+        camBearing = smoothAngle(camBearing, 0, 0.15);
+        target.bearing = camBearing;
+      } else if (state.phase === 'dwell') {
+        target.bearing = camBearing;
+      }
+
+      camZoom = target.zoom;
+      const cam = {
+        center: target.center,
+        zoom: target.zoom,
+        pitch: target.pitch,
+        bearing: target.bearing,
+        padding: target.padding,
+      };
+
+      // Cancel any overview ease (fitTrip) so follow/zoom actually sticks.
+      try { map.stop(); } catch (e) { /* ignore */ }
+
+      // Travel: hard-follow so the car visibly crawls. Dwell/photo: ease into the close-up.
+      if (isRecording || force || (state.phase === 'travel' && !phaseChanged)) {
+        map.jumpTo(cam);
+      } else if (state.phase === 'travel' && phaseChanged) {
+        map.easeTo({ ...cam, duration: 700, essential: true });
+      } else {
+        map.easeTo({ ...cam, duration: target.duration, essential: true });
+      }
+    }
+
     function updateTrailFromState(state) {
       const stops = activeStops();
       if (!state) return;
@@ -795,6 +975,7 @@
       if (state.phase === 'intro') {
         if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker = null; }
         clearPoiMarkers();
+        hideMemoryCard();
         ensureTrailLayers(color);
         map.getSource('active-trail').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
         updateStoryOverlay(state);
@@ -806,6 +987,7 @@
       if (state.phase === 'outro') {
         if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker = null; }
         clearPoiMarkers();
+        hideMemoryCard();
         updateStoryOverlay(state);
         updateLocationHud(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'outro', state);
@@ -842,84 +1024,39 @@
           vehicleMarker = new mapboxgl.Marker({ element: el, anchor: 'center', rotationAlignment: 'map' })
             .setLngLat([pos.lng, pos.lat]).addTo(map);
         }
-        if (directorMode) {
-          const now = performance.now();
-          // Throttle camera eases — easeTo every RAF was a major lag source.
-          if (now - lastDirectorMove > 180) {
-            lastDirectorMove = now;
-            const lookAhead = 0.04;
-            let lookPos = pos;
-            if (state.phase === 'travel' && state.path?.length >= 2) {
-              lookPos = pointOnPath(state.path, Math.min(state.frac + lookAhead, 1)) || pos;
-            }
-            camBearing = state.phase === 'travel'
-              ? smoothAngle(camBearing, bearing, 0.06)
-              : camBearing;
-            const zoom = state.phase === 'dwell' && state.pois?.length ? 7.2 : Math.min(6.8, Math.max(5.2, map.getZoom()));
-            const pad = mapCameraPadding();
-            const cam = {
-              center: [lookPos.lng, lookPos.lat],
-              zoom,
-              pitch: Math.min(MAX_PITCH, state.phase === 'dwell' ? 38 : 42),
-              bearing: camBearing,
-              padding: {
-                top: Math.max(40, Math.floor(pad.top * 0.5)),
-                bottom: Math.max(100, pad.bottom),
-                left: Math.max(24, Math.floor(pad.left * 0.35)),
-                right: 40,
-              },
-            };
-            if (isRecording) map.jumpTo(cam);
-            else map.easeTo({ ...cam, duration: 420, essential: true });
-          }
-        }
+        applyPlaybackCamera(state);
       }
 
-      updatePoiMarkers(state.pois, state.phase === 'dwell');
+      updatePoiMarkers(state.pois, state.phase === 'dwell' && !state.is_photo);
 
-      const lastIdx = stops.length - 1;
-      const sameHome = isSameHomeTrip(activeTrip());
-      stopMarkers.forEach(m => {
-        const reached = m._idx <= animStopIdx;
-        const isActive = m._idx === animStopIdx;
-        const isStart = m._idx === 0;
-        const isEnd = m._idx === lastIdx;
-        // While the car sits on a stacked home pin, hide that milestone so the car wins.
-        const carCovers = sameHome && isActive && (isStart || isEnd) && state.phase === 'dwell';
-        const wantVisible = (reached || m._isMilestone) && !carCovers;
-        const wantActive = isActive && !carCovers;
-        const showLbl = wantActive;
-        // Skip DOM writes when nothing changed (every RAF used to toggle all stops)
-        if (m._vis === wantVisible && m._act === wantActive && m._lblOn === showLbl) return;
-        m._vis = wantVisible; m._act = wantActive; m._lblOn = showLbl;
-        m._el.classList.toggle('visible', wantVisible);
-        m._el.classList.toggle('active', wantActive);
-        if (m._lbl) {
-          m._lbl.classList.toggle('visible', showLbl);
-          m._lbl.classList.toggle('active', showLbl);
-          if (showLbl) {
-            if (sameHome && isStart) setMilestoneLabel(m._lbl, 'Start', m._stop.location);
-            else if (sameHome && isEnd) setMilestoneLabel(m._lbl, 'Return', m._stop.location);
-            else if (isStart) setMilestoneLabel(m._lbl, 'Start', m._stop.location);
-            else if (isEnd) setMilestoneLabel(m._lbl, 'Finish', m._stop.location);
-            else m._lbl.textContent = shortLabel(m._stop.location);
-          }
-        }
-      });
+      if (state.phase === 'dwell' && state.is_photo && state.thumb) {
+        const stop = stops[state.stopIndex ?? 0];
+        showMemoryOnMap({
+          ...state,
+          lat: state.lat ?? stop?.lat,
+          lng: state.lng ?? stop?.lng,
+          datetime: stop?.datetime || state.datetime,
+          album: state.album || stop?.album || '',
+          label: state.label || shortLabel(stop?.location || ''),
+        });
+      } else {
+        hideMemoryOnMap();
+      }
 
       const cur = stops[animStopIdx];
       if (cur && state.phase === 'dwell') {
         const pct = Math.round((state.frac || 0) * 100);
+        const copy = dwellUiCopy(state, cur);
         setPlaybackChrome(
           animProg,
-          `Charging · ${shortLabel(cur.location)}`,
+          copy.dock,
           stops[0]?.datetime?.slice(0, 10) || '',
           null,
           `<span class="dwell-pct">${pct}%</span>`
         );
       } else {
         const label = cur
-          ? (state.phase === 'dwell' ? `Charging · ${shortLabel(cur.location)}` : `Driving · ${state.label || shortLabel(cur.location)}`)
+          ? `Driving · ${state.label || shortLabel(cur.location)}`
           : 'Ready to replay';
         if (cur) {
           setPlaybackChrome(
@@ -971,12 +1108,14 @@
       }
       const swatch = document.getElementById('legend-route-swatch');
       const routeLbl = document.getElementById('legend-route-label');
-      const endLbl = document.getElementById('legend-end-label');
-      swatch.style.background = trip.color;
-      swatch.style.color = trip.color;
-      const short = (trip.name || '').split('—').pop()?.trim() || 'Route';
-      routeLbl.textContent = short.replace(/\s*·.*$/, '').slice(0, 28);
-      endLbl.textContent = isSameHomeTrip(trip) ? 'Return' : 'Finish';
+      if (swatch) {
+        swatch.style.background = trip.color;
+        swatch.style.color = trip.color;
+      }
+      if (routeLbl) {
+        const short = (trip.name || '').split('—').pop()?.trim() || 'Route';
+        routeLbl.textContent = short.replace(/\s*·.*$/, '').slice(0, 28);
+      }
       legend.classList.add('visible');
       legend.setAttribute('aria-hidden', 'false');
     }
@@ -1083,7 +1222,15 @@
       syncLoopButton();
     });
     document.getElementById('btn-director').addEventListener('click', ()=>{
-      directorMode=!directorMode; document.getElementById('btn-director').classList.toggle('on', directorMode);
+      directorMode=!directorMode;
+      const btn = document.getElementById('btn-director');
+      btn.classList.toggle('on', directorMode);
+      btn.title = directorMode ? 'Chase camera · click for north-up' : 'North-up follow · click for chase';
+      lastCamKey = '';
+      if (isPlaying || isRecording) {
+        const state = positionAtTime(animTimeMs);
+        if (state) applyPlaybackCamera(state, true);
+      }
     });
     document.getElementById('btn-night').addEventListener('click', toggleNight);
     document.getElementById('speed').addEventListener('input', e=>{ speed=parseFloat(e.target.value); document.getElementById('speed-label').textContent=speed+'×'; });
@@ -1093,7 +1240,9 @@
       const pb = activePlayback();
       if (!pb) return;
       animTimeMs = (parseInt(e.target.value)/1000) * pb.total_video_ms;
-      updateTrailFromState(positionAtTime(animTimeMs));
+      const state = positionAtTime(animTimeMs);
+      updateTrailFromState(state);
+      if (state) applyPlaybackCamera(state, true);
     });
     document.getElementById('sidebar-toggle').addEventListener('click', ()=>{
       const sb=document.getElementById('sidebar');

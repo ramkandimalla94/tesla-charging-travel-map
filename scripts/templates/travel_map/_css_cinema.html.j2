@@ -14,7 +14,8 @@
       background: rgba(94,234,212,0.12); border: 1px solid rgba(94,234,212,0.25);
       font-size: 16px;
     }
-    .hud-icon.charging { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.3); }
+    .hud-icon.halt { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.3); }
+    .hud-icon.memory { background: rgba(125, 211, 252, 0.14); border-color: rgba(125, 211, 252, 0.35); }
     .hud-body { min-width: 0; }
     .hud-phase { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
     .hud-text {
@@ -22,121 +23,49 @@
       letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    /* ── Beacons & labels ── */
-    .beacon-wrap { display: flex; flex-direction: column; align-items: center; pointer-events: none; }
-    .beacon-wrap .beacon-core,
-    .beacon-wrap .stop-dot { pointer-events: auto; cursor: pointer; }
-    .beacon {
-      position: relative; width: 32px; height: 32px;
-      opacity: 0; transform: scale(0.4); transition: opacity 0.45s, transform 0.45s cubic-bezier(.34,1.4,.64,1);
-    }
-    .beacon.visible { opacity: 1; transform: scale(1); }
-    .beacon-ring {
-      position: absolute; inset: -6px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.35);
-      pointer-events: none;
-      animation: beacon-pulse 2.4s ease-in-out infinite;
-    }
-    .beacon.active .beacon-ring { inset: -10px; border-color: rgba(255,255,255,0.7); animation-duration: 1.2s; }
-    @keyframes beacon-pulse { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.08);opacity:0.2} }
-    .beacon-core {
-      position: absolute; inset: 0; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-display); font-size: 11px; font-weight: 800; color: #fff;
-      border: 2px solid rgba(255,255,255,0.95);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 24px var(--beacon-glow, rgba(94,234,212,0.5));
-    }
-    .beacon-label {
-      margin-top: 6px; padding: 5px 11px; border-radius: 12px;
-      font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: #fff;
-      background: rgba(6,8,14,0.9); border: 1px solid rgba(255,255,255,0.14);
-      backdrop-filter: blur(10px); white-space: nowrap; max-width: 128px;
-      display: flex; flex-direction: column; align-items: center; gap: 1px;
-      opacity: 0; transform: translateY(6px); transition: opacity 0.35s, transform 0.35s;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-    }
-    .beacon-label .role {
-      font-size: 8px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
-      color: rgba(255,255,255,0.55);
-    }
-    .beacon-label .place {
-      font-size: 11px; font-weight: 800; letter-spacing: -0.01em;
-      max-width: 110px; overflow: hidden; text-overflow: ellipsis;
-    }
-    .beacon-label.visible { opacity: 1; transform: translateY(0); }
-    .beacon-label.active { border-color: rgba(251,191,36,0.5); color: var(--gold); }
-    .beacon-wrap.split-start .beacon-label { border-color: rgba(52,211,153,0.45); }
-    .beacon-wrap.split-end .beacon-label { border-color: rgba(251,191,36,0.45); }
-    /* Keep beacon centered on the Mapbox anchor — only style the label chrome */
-    .beacon-wrap.split-start .beacon-label .role { color: #6ee7b7; }
-    .beacon-wrap.split-end .beacon-label .role { color: #fcd34d; }
-
-    .beacon.milestone .beacon-core { width: 36px; height: 36px; font-size: 12px; }
-    .beacon.milestone.start .beacon-core {
-      background: linear-gradient(145deg, #34d399, #059669) !important;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 28px rgba(52,211,153,0.55);
-    }
-    .beacon.milestone.end .beacon-core {
-      background: linear-gradient(145deg, #fbbf24, #d97706) !important;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.55), 0 0 28px rgba(251,191,36,0.5);
-    }
-    .beacon.waypoint { width: 14px; height: 14px; }
-    .beacon.waypoint .beacon-ring { display: none; }
-    .beacon.waypoint .beacon-core {
-      inset: 0; font-size: 0; border-width: 2px; border-color: rgba(255,255,255,0.95);
-      box-shadow: 0 0 0 2px rgba(0,0,0,0.45), 0 0 14px var(--beacon-glow, rgba(94,234,212,0.55));
-    }
-
-    .stop-dot {
-      width: 5px; height: 5px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.7);
-      box-shadow: 0 0 8px currentColor;
-    }
+    /* ── Beacons disabled — path stays clean ── */
+    .beacon-wrap, .beacon, .beacon-label, .stop-dot { display: none !important; }
 
     /* ── Vehicle marker ── */
-    .vehicle-wrap { position: relative; width: 56px; height: 56px; }
+    .vehicle-wrap { position: relative; width: 36px; height: 36px; }
     .vehicle-glow {
-      position: absolute; inset: -14px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(220,38,38,0.65) 0%, rgba(220,38,38,0.15) 45%, transparent 70%);
-      animation: vglow 2s ease-in-out infinite;
+      position: absolute; inset: -4px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(220,38,38,0.35) 0%, transparent 70%);
+      animation: none;
     }
-    @keyframes vglow { 0%,100%{transform:scale(1);opacity:0.95} 50%{transform:scale(1.28);opacity:0.4} }
     .vehicle-body {
-      position: absolute; inset: 4px; display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(155deg, #ef4444 0%, #dc2626 45%, #991b1b 100%);
+      position: absolute; inset: 2px; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(155deg, #ef4444 0%, #dc2626 55%, #b91c1c 100%);
       border-radius: 50%;
-      border: 2.5px solid rgba(255,255,255,0.92);
-      box-shadow: 0 0 28px rgba(220,38,38,0.55), 0 4px 18px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+      border: 2px solid rgba(255,255,255,0.92);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
     }
-    .vehicle-body svg { width: 30px; height: 30px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+    .vehicle-body svg { width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35)); }
     .vehicle-body .tesla-body { fill: #fff; }
     .vehicle-body .tesla-accent { fill: rgba(255,255,255,0.85); }
 
-    /* ── Nearby place pins ── */
+    /* ── Nearby place pins (text only, no heavy discs) ── */
     .poi-wrap {
       display: flex; flex-direction: column; align-items: center; pointer-events: none;
-      opacity: 0; transform: scale(0.5) translateY(8px);
-      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.34,1.4,.64,1);
+      opacity: 0; transform: translateY(6px);
+      transition: opacity 0.4s ease, transform 0.4s var(--ease);
     }
-    .poi-wrap.visible { opacity: 1; transform: scale(1) translateY(0); }
+    .poi-wrap.visible { opacity: 1; transform: translateY(0); }
     .poi-pin {
-      width: 34px; height: 34px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; background: rgba(8,10,16,0.88);
-      border: 2px solid rgba(251,191,36,0.75);
-      box-shadow: 0 0 20px rgba(251,191,36,0.35), 0 4px 14px rgba(0,0,0,0.5);
-      animation: poi-pulse 2.2s ease-in-out infinite;
+      width: auto; height: auto; border-radius: 0;
+      display: none;
+      font-size: 0; background: transparent;
+      border: none; box-shadow: none; animation: none;
     }
-    .poi-pin.visited { border-color: rgba(52,211,153,0.85); box-shadow: 0 0 20px rgba(52,211,153,0.4), 0 4px 14px rgba(0,0,0,0.5); }
-    @keyframes poi-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
     .poi-label {
-      margin-top: 5px; padding: 3px 9px; border-radius: 999px;
-      font-size: 9px; font-weight: 700; letter-spacing: 0.02em; color: #fff;
-      background: rgba(8,10,16,0.85); border: 1px solid rgba(251,191,36,0.35);
-      backdrop-filter: blur(8px); white-space: nowrap; max-width: 130px;
+      margin-top: 0; padding: 4px 9px; border-radius: 999px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.01em; color: #fff;
+      background: rgba(10,14,12,0.78); border: 1px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(8px); white-space: nowrap; max-width: 150px;
       overflow: hidden; text-overflow: ellipsis;
+      box-shadow: none;
     }
-    .poi-label.visited { border-color: rgba(52,211,153,0.45); color: #6ee7b7; }
+    .poi-label.visited { border-color: rgba(126,200,163,0.45); color: #c8ead9; }
 
     /* ── Story overlay (cinema captions) ── */
     .story-overlay {

@@ -224,8 +224,9 @@ def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]])
         city = label.split(",")[0]
         nearby = pois or []
         if stop.get("is_photo") or stop.get("kind") == "photo":
-            caption = f"Memory · {city}"
-            sub = stop.get("album") or "Photo stop"
+            album = (stop.get("album") or "memory").strip()
+            caption = f"Memory · {album.title() if album.islower() else album}"
+            sub = stop.get("source_name") or "Photo stop"
         elif i == 0:
             caption = f"Departing {city} — the adventure begins"
             sub = f"First of {n} places"
@@ -675,8 +676,19 @@ def build_playback_timeline(
                 "label": label,
                 "stop_index": i,
                 "pois": pois,
-                "caption": cap.get("caption", f"Charging in {label}"),
+                "caption": cap.get(
+                    "caption",
+                    (
+                        f"Memory · {(stop.get('album') or label)}"
+                        if (stop.get("is_photo") or stop.get("kind") == "photo")
+                        else f"Stopped in {label}"
+                    ),
+                ),
                 "subcaption": cap.get("sub", ""),
+                "is_photo": bool(stop.get("is_photo") or stop.get("kind") == "photo"),
+                "thumb": stop.get("thumb") or "",
+                "album": stop.get("album") or "",
+                "photo_id": stop.get("id") or "",
             })
             raw_segments.append({
                 "type": "travel",
@@ -698,6 +710,7 @@ def build_playback_timeline(
                     ),
                 )
             real_total_ms += final_ms
+            photo_label = stop.get("album") or label
             raw_segments.append({
                 "type": "dwell",
                 "real_duration_ms": final_ms,
@@ -706,8 +719,19 @@ def build_playback_timeline(
                 "label": label,
                 "stop_index": i,
                 "pois": pois,
-                "caption": cap.get("caption", f"Final stop · {label}"),
+                "caption": cap.get(
+                    "caption",
+                    (
+                        f"Memory · {photo_label}"
+                        if (stop.get("is_photo") or stop.get("kind") == "photo")
+                        else f"Final stop · {label}"
+                    ),
+                ),
                 "subcaption": cap.get("sub", "Journey complete"),
+                "is_photo": bool(stop.get("is_photo") or stop.get("kind") == "photo"),
+                "thumb": stop.get("thumb") or "",
+                "album": stop.get("album") or "",
+                "photo_id": stop.get("id") or "",
             })
 
     target_ms = min(120_000, max(25_000, len(stops) * 3_200))
@@ -716,9 +740,12 @@ def build_playback_timeline(
     for seg in raw_segments:
         dur = seg["real_duration_ms"] * scale
         if seg["type"] == "dwell":
-            # Keep dwells snappy — multi-second freezes read as a stalled UI.
-            poi_bonus = 1.15 if seg.get("pois") else 1.0
-            dur = max(800, min(2_000, dur * poi_bonus))
+            # Keep road dwells snappy; linger longer on photo memories.
+            if seg.get("is_photo") and seg.get("thumb"):
+                dur = max(2_400, min(4_200, dur * 1.35))
+            else:
+                poi_bonus = 1.15 if seg.get("pois") else 1.0
+                dur = max(800, min(2_000, dur * poi_bonus))
         else:
             dur = max(1_000, min(12_000, dur))
         video_segments.append({**seg, "duration_ms": int(dur)})
