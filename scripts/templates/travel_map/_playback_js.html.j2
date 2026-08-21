@@ -15,6 +15,7 @@
         if (isRecording) finishRecording();
         if (loopTrip) {
           animTimeMs = 0; animStopIdx = 0;
+          resetNavChase();
           applyIdleStopVisuals();
           lastTs = 0;
           if (!isRecording) { animFrame = requestAnimationFrame(animate); }
@@ -44,7 +45,7 @@
       if (!activePlayback()?.total_video_ms) return;
       if (animTimeMs >= activePlayback().total_video_ms) { animTimeMs = 0; resetVisuals(false); drawStops(); }
       isPlaying = true; lastTs = 0;
-      lastCamKey = '';
+      resetNavChase();
       setPanelCollapsed(true);
       if (!forRecording) setWatching(true);
       setPlaybackVisuals(true);
@@ -57,6 +58,11 @@
       updateQueueBadge();
       // Dive from overview into the first moving frame so the car is readable immediately.
       const warm = positionAtTime(Math.max(animTimeMs, 80));
+      if (warm?.bearing != null) {
+        navBearing = warm.bearing;
+        lastTravelBearing = warm.bearing;
+        camBearing = directorMode ? warm.bearing : 0;
+      }
       if (warm) applyPlaybackCamera(warm, true);
       animFrame = requestAnimationFrame(animate);
     }
@@ -74,9 +80,8 @@
     }
     function resetVisuals(clearHud=true) {
       stopPlayback(); animTimeMs=0; animProg=0; animStopIdx=0;
-      smoothBearing = 0; camBearing = 0; lastTravelBearing = 0;
-      lastCamKey = '';
-      camZoom = 6.5;
+      smoothBearing = 0; lastTravelBearing = 0;
+      resetNavChase();
       if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
       clearPoiMarkers();
       if (map?.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});

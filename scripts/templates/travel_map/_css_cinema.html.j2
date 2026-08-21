@@ -40,9 +40,16 @@
       border: 2px solid rgba(255,255,255,0.92);
       box-shadow: 0 2px 10px rgba(0,0,0,0.35);
     }
-    .vehicle-body svg { width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35)); }
-    .vehicle-body .tesla-body { fill: #fff; }
-    .vehicle-body .tesla-accent { fill: rgba(255,255,255,0.85); }
+    /* Face "up" (north) in marker local space so map rotation = travel heading */
+    .vehicle-body svg {
+      width: 20px; height: 20px;
+      transform: rotate(-90deg);
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35));
+    }
+    .vehicle-body .tesla-body,
+    .vehicle-body .car-body { fill: #fff; }
+    .vehicle-body .tesla-accent,
+    .vehicle-body .car-accent { fill: rgba(255,255,255,0.85); }
 
     /* ── Nearby place pins (text only, no heavy discs) ── */
     .poi-wrap {

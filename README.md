@@ -23,6 +23,7 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **3D satellite map** with Mapbox terrain and elevated route lines
 - **Watch mode** — Play hides chrome for a passenger-seat replay
 - **Steady corridor playback** — distance-paced travel between Superchargers; photo clusters become short memory holds without backtracking
+- **Navigation-style chase** — heading-up follow camera (Apple/Google Maps feel): look-ahead course, capped turn rate, car glued to the path; end-of-trip pulls back to a north-up route recap
 - **Location labels** — city/state names during replay
 - **Video export** — one-click 9:16 `.webm` that composites the map, title cards, car marker, captions, and memory frames (not a bare GL canvas)
 
