@@ -307,9 +307,9 @@
     let navRecapStarted = false;
     let lastNavTs = 0;
     const MAX_PITCH = 60;
-    const NAV_LOOKAHEAD_KM = 0.55;       // course from ~550m ahead — kills vertex zig-zag
-    const NAV_BEARING_SMOOTH = 0.14;     // bearing EMA after turn cap
-    const NAV_MAX_TURN_DEG_S = 55;       // max turn rate (°/sec) — frame-rate independent
+    const NAV_LOOKAHEAD_KM = 0.7;        // course window ahead — kills vertex zig-zag
+    const NAV_BEARING_SMOOTH = 0.12;     // bearing EMA after turn cap
+    const NAV_MAX_TURN_DEG_S = 48;       // max turn rate (°/sec) — frame-rate independent
     const NAV_ZOOM_SMOOTH = 0.08;
     const NAV_PITCH_TRAVEL = 58;
 
@@ -563,18 +563,29 @@
     }
     function courseAlongPath(path, prog, lookAheadKm) {
       if (!path || path.length < 2) return 0;
-      const a = pointOnPath(path, Math.max(0, Math.min(1, prog)));
-      if (!a) return 0;
-      // Prefer distance look-ahead; fall back to progress delta on tiny legs
       const totalKm = (typeof pathLengthKm === 'function' ? pathLengthKm(path) : 0) || 1;
-      const dProg = Math.max(0.004, Math.min(0.25, (lookAheadKm || NAV_LOOKAHEAD_KM) / Math.max(totalKm, 0.2)));
-      let b = pointOnPath(path, Math.min(1, prog + dProg));
-      if (!b) return 0;
-      if (prog > 0.97 && haversineKm(a.lat, a.lng, b.lat, b.lng) < 0.04) {
-        const back = pointOnPath(path, Math.max(0, prog - dProg));
-        if (back) return bearingBetween(back.lat, back.lng, a.lat, a.lng);
+      const aheadKm = lookAheadKm || NAV_LOOKAHEAD_KM;
+      const origin = pointOnPath(path, Math.max(0, Math.min(1, prog)));
+      if (!origin) return 0;
+      // Average unit vectors over several look-ahead distances (GPS-style course filter)
+      const spans = [0.25, 0.5, 0.85, 1.2].map((f) => aheadKm * f);
+      let x = 0, y = 0, hits = 0;
+      for (const km of spans) {
+        const dProg = Math.max(0.003, Math.min(0.3, km / Math.max(totalKm, 0.2)));
+        const b = pointOnPath(path, Math.min(1, prog + dProg));
+        if (!b) continue;
+        if (haversineKm(origin.lat, origin.lng, b.lat, b.lng) < 0.02) continue;
+        const br = bearingBetween(origin.lat, origin.lng, b.lat, b.lng) * Math.PI / 180;
+        x += Math.sin(br);
+        y += Math.cos(br);
+        hits += 1;
       }
-      return bearingBetween(a.lat, a.lng, b.lat, b.lng);
+      if (hits === 0) {
+        const b = pointOnPath(path, Math.min(1, prog + 0.01));
+        if (!b) return 0;
+        return bearingBetween(origin.lat, origin.lng, b.lat, b.lng);
+      }
+      return (Math.atan2(x / hits, y / hits) * 180 / Math.PI + 360) % 360;
     }
     function bearingBetween(lat1, lng1, lat2, lng2) {
       const dLng = (lng2 - lng1) * Math.PI / 180;
@@ -1149,9 +1160,9 @@
         if (state.phase === 'travel') {
           const now = performance.now();
           const dt = lastNavTs ? Math.min(0.05, (now - lastNavTs) / 1000) : 0.016;
-          // Snap when starting / after large discontinuity so we don't spin 180° slowly
+          // Snap only after reset / huge discontinuity (U-turn), not on noisy spikes
           let diff = ((rawBearing - navBearing + 540) % 360) - 180;
-          if (Math.abs(diff) > 90) {
+          if (Math.abs(diff) > 135) {
             navBearing = rawBearing || navBearing;
           } else {
             const turned = clampTurn(navBearing, rawBearing || navBearing, NAV_MAX_TURN_DEG_S * dt);
