@@ -65,42 +65,13 @@ Use **▶ Play** for preview; adjust speed with the slider. **🎬 Director** ke
 
 ## Screenshots
 
-| Overview | Colorado trip | Seattle trip |
+| Atlas overview (hubs + corridor spokes) | Colorado epic | Bellevue relocate |
 |----------|---------------|--------------|
-| ![Overview](docs/screenshots/01-overview.png) | ![Colorado](docs/screenshots/02-colorado-trip.png) | ![Seattle](docs/screenshots/03-seattle-trip.png) |
+| ![Overview](docs/screenshots/01-overview.png) | ![Colorado](docs/screenshots/04-colorado-fixed.png) | ![Seattle](docs/screenshots/05-seattle-fixed.png) |
 
-## Quick start (local)
-
-```bash
-git clone https://github.com/ramkandimalla94/tesla-charging-travel-map.git
-cd tesla-charging-travel-map
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-# Add your Mapbox token (free tier at mapbox.com)
-cp .env.example .env
-# Edit .env → MAPBOX_TOKEN=pk.eyJ...
-
-# Build map from committed trip data
-python scripts/build_map.py
-
-# Serve locally (Mapbox requires HTTP, not file://)
-python -m http.server 8765
-open http://127.0.0.1:8765/output/travel_map.html
-```
-
-### Full pipeline (with your own CSV exports)
-
-Place Tesla charging CSV exports in the project root, then:
-
-```bash
-python scripts/merge_csvs.py
-python scripts/geocode_locations.py   # first run only
-python scripts/segment_trips.py
-python scripts/build_map.py
-```
-
-CSV exports are **not committed** (personal data). Only processed `data/trips.json` is in the repo.
+| Watch mode | Memory reel | Mobile bottom sheet |
+|------------|-------------|---------------------|
+| ![Watch mode](docs/screenshots/06-watch-mode.png) | ![Memory reel](docs/screenshots/07-memory-reel.png) | ![Mobile sheet](docs/screenshots/08-mobile-sheet.png) |
 
 ## GitHub Pages setup
 
@@ -121,7 +92,7 @@ python -m http.server 8765 &
 python scripts/verify_map.py
 ```
 
-Playwright captures screenshots to `docs/screenshots/` and asserts Colorado stops render in bounds.
+Playwright captures screenshots to `docs/screenshots/` (including mobile `08-mobile-sheet.png`) and asserts hubs, era filter, spokes, watch mode, and epic-queue badge.
 
 ## Project structure
 
@@ -132,7 +103,9 @@ scripts/
   segment_trips.py    # Multi-signal trip segmentation
   build_map.py        # Generate HTML + GeoJSON + GPX
   verify_map.py       # Playwright browser tests
-  templates/travel_map.html.j2
+  templates/
+    travel_map.html.j2
+    travel_map/       # Jinja partials (_map_css, _atlas_js, _playback_js, _routes_js, _markers_js)
 data/
   trips.json          # Segmented trips (committed)
   locations_cache.json
@@ -145,6 +118,7 @@ output/               # Generated (gitignored except GPX/GeoJSON)
 |-----|--------|
 | Space | Play / pause |
 | ← → | Step stops |
+| Esc | Stop play → atlas · pause memory reel |
 | R | Reset |
 | D | Director camera |
 

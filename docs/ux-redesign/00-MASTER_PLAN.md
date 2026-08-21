@@ -28,7 +28,10 @@ Destination constellation, year era filter, snappier dwell + dock %, a11y 44px c
 14. **Playback JS partial** — `travel_map/_playback_js.html.j2`
 15. **Routes JS partial** — `travel_map/_routes_js.html.j2`
 16. **Mobile sheet regression** — 390×844 verify + denser grab handle / dock fit
+17. **Markers JS partial** — hubs / constellation / stop beacons
+18. **Denser corridor polish** — stronger bands + more filaments for multi-visit dests
+19. **README screenshot gallery** — watch / memory / mobile captions; removed duplicate Quick start
 
 ## Later
 
-Denser corridor polish, README screenshot gallery captions, Sprint 4 share/export cinema.
+Sprint 4 share/export cinema polish.

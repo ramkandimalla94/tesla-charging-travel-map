@@ -169,15 +169,17 @@
           });
           // Multi-visit destinations: fan parallel filaments so the corridor reads as a band
           if (visits >= 2) {
-            const spacing = Math.min(32000, 10000 + visits * 4000);
-            const sides = visits >= 4 ? [-1, 1, -0.55, 0.55] : [-1, 1];
+            const spacing = Math.min(38000, 12000 + visits * 4500);
+            const sides = visits >= 5 ? [-1.1, 1.1, -0.65, 0.65, -0.3, 0.3]
+              : visits >= 3 ? [-1, 1, -0.5, 0.5]
+              : [-1, 1];
             sides.forEach((s, i) => {
               feats.push({
                 type: 'Feature',
                 properties: { kind: 'spoke', color: group.color, dest: group.dest, visits, role: 'filament' },
                 geometry: {
                   type: 'LineString',
-                  coordinates: offsetSpokeCoords(a[0], a[1], b[0], b[1], s * spacing * (1 + (i % 2) * 0.18)),
+                  coordinates: offsetSpokeCoords(a[0], a[1], b[0], b[1], s * spacing * (1 + (i % 2) * 0.2)),
                 },
               });
             });
@@ -204,10 +206,10 @@
           'line-color': ['get', 'color'],
           'line-width': [
             'interpolate', ['linear'], ['get', 'visits'],
-            1, 7, 2, 12, 4, 18, 8, 26,
+            1, 8, 2, 14, 4, 22, 8, 32,
           ],
-          'line-opacity': 0.16,
-          'line-blur': 3,
+          'line-opacity': 0.2,
+          'line-blur': 3.5,
         },
       };
       const layer = {
@@ -220,13 +222,13 @@
           'line-color': ['get', 'color'],
           'line-width': [
             'match', ['get', 'role'],
-            'filament', 0.9,
-            1.4,
+            'filament', 1.05,
+            1.55,
           ],
           'line-opacity': [
             'match', ['get', 'role'],
-            'filament', 0.22,
-            0.36,
+            'filament', 0.28,
+            0.42,
           ],
           'line-dasharray': [1.2, 1.8],
         },
