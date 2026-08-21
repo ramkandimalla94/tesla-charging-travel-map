@@ -45,6 +45,8 @@ def main() -> int:
     SCREENSHOTS.mkdir(parents=True, exist_ok=True)
     trip_co = load_trip_id("2024-06-29_Addison")  # Colorado round trip
     trip_sea = load_trip_id("2024-11-17_Addison_to_Bellevue")
+    trip_photos = load_trip_id("2025-09-25_Addison_to_Addison")  # Colorado album memories
+    photo_clock: dict = {}
 
     console_errors: list[str] = []
     base_url = "http://127.0.0.1:8765/output/travel_map.html"
@@ -234,11 +236,26 @@ def main() -> int:
                   || '';
                 dwellPct = /\\d+%/.test(sub);
               }
-              // Night from overnight clock
+              // Night from overnight clock (local wall time at playhead lng)
               let nightOk = null;
+              let nightFactor = null;
               const nightSeg = (pb?.segments || []).find(s => {
-                const h = s.clock_start ? new Date(s.clock_start).getUTCHours() : -1;
-                return h >= 20 || h < 5;
+                if (!s.clock_start) return false;
+                const d = new Date(s.clock_start);
+                const lng = s.lng != null ? s.lng : (s.path?.[0]?.[1]);
+                const tz = (typeof tripTzFromLng === 'function')
+                  ? tripTzFromLng(lng)
+                  : 'America/Chicago';
+                try {
+                  const parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: tz, hour: 'numeric', hourCycle: 'h23',
+                  }).formatToParts(d);
+                  const h = parseInt(parts.find(p => p.type === 'hour')?.value || '12', 10);
+                  return h >= 21 || h < 5;
+                } catch (_) {
+                  const h = d.getUTCHours();
+                  return h >= 20 || h < 5;
+                }
               });
               if (nightSeg) {
                 let cursor = 0;
@@ -248,12 +265,15 @@ def main() -> int:
                 }
                 updateTrailFromState(positionAtTime(cursor + 10));
                 nightOk = document.body.classList.contains('night');
+                nightFactor = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--night') || '0');
               }
+              // Photo memory clock checked on the album trip separately
               return {
                 avgDwell,
                 maxDwell,
                 dwellPct,
                 nightOk,
+                nightFactor,
                 hasClockFields: !!(pb?.segments || []).some(s => s.clock_start),
                 introMs: (pb?.segments || []).find(s => s.type === 'intro')?.duration_ms || 0,
               };
@@ -313,7 +333,63 @@ def main() -> int:
         print(f"Playback: {play_state}")
         page.screenshot(path=str(SCREENSHOTS / "06-watch-mode.png"))
 
-        # Minimal transport dock (single play/pause toggle + scrub + speed)
+        # Photo trip: live clock + memory caption must share capture instant
+        print(f"Checking photo clock on {trip_photos} …")
+        page.evaluate(f"selectTrip({json.dumps(trip_photos)})")
+        page.wait_for_timeout(400)
+        page.evaluate("isPlaying = true; document.body.classList.add('watching')")
+        photo_clock = page.evaluate(
+            """() => {
+              const pb = activePlayback();
+              const memSeg = (pb?.segments || []).find(s => s.type === 'memory' && (s.datetime || s.clock_start));
+              if (!memSeg || typeof formatLocalClock !== 'function') {
+                return { ok: false, reason: 'no-memory' };
+              }
+              let cursor = 0;
+              for (const seg of pb.segments) {
+                if (seg === memSeg) break;
+                cursor += seg.duration_ms || 0;
+              }
+              updateTrailFromState(positionAtTime(cursor + Math.min(200, (memSeg.duration_ms || 400) * 0.2)));
+              const clockText = (document.getElementById('trip-clock')?.textContent || '').trim();
+              const metaText = (document.getElementById('memory-stage-meta')?.textContent || '').trim();
+              const dt = new Date(memSeg.datetime || memSeg.clock_start);
+              const lng = memSeg.photo_lng ?? memSeg.lng;
+              const expectHud = formatLocalClock(dt, lng, 'hud');
+              const expectMed = formatLocalClock(dt, lng, 'medium');
+              const hen = (pb?.segments || []).find(s =>
+                s.type === 'dwell' && /Henrietta/i.test(s.label || '') && s.clock_start);
+              let nightAtHenrietta = null;
+              if (hen) {
+                let c = 0;
+                for (const seg of pb.segments) {
+                  if (seg === hen) break;
+                  c += seg.duration_ms || 0;
+                }
+                updateTrailFromState(positionAtTime(c + 20));
+                nightAtHenrietta = {
+                  night: document.body.classList.contains('night'),
+                  factor: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--night') || '0'),
+                  clock: (document.getElementById('trip-clock')?.textContent || '').trim(),
+                };
+              }
+              return {
+                ok: true,
+                photoId: memSeg.photo_id || '',
+                clockText, metaText, expectHud, expectMed,
+                clockOk: clockText === expectHud,
+                metaOk: metaText === expectMed,
+                datetime: memSeg.datetime || memSeg.clock_start,
+                nightAtHenrietta,
+              };
+            }"""
+        )
+        print(f"Photo clock sync: {photo_clock}", flush=True)
+        page.evaluate("isPlaying = false; stopPlayback()")
+        page.evaluate(f"selectTrip({json.dumps(trip_co)})")
+        page.wait_for_timeout(300)
+
+        # Floating play control (no dock box); speed via hidden range + [ ] keys
         dock_state = page.evaluate(
             """() => ({
               play: !!document.getElementById('btn-play'),
@@ -321,6 +397,12 @@ def main() -> int:
               toggleWorks: typeof syncPlayToggle === 'function',
               speed: !!document.getElementById('speed'),
               scrubber: !!document.getElementById('scrubber'),
+              dockBoxGone: (() => {
+                const dock = document.getElementById('transport-dock');
+                if (!dock) return false;
+                const s = getComputedStyle(dock);
+                return s.backgroundColor === 'rgba(0, 0, 0, 0)' || s.backgroundColor === 'transparent';
+              })(),
               exportGone: !document.getElementById('btn-export'),
               shareGone: !document.getElementById('btn-share'),
               loopGone: !document.getElementById('btn-loop'),
@@ -332,7 +414,7 @@ def main() -> int:
               speedMin: parseFloat(document.getElementById('speed')?.min || '0'),
             })"""
         )
-        print(f"Minimal dock: {dock_state}")
+        print(f"Play control: {dock_state}")
         queue_state = dock_state  # keep name for older assertion block compatibility below
 
         # Mobile sheet regression (iPhone-ish)
@@ -566,8 +648,28 @@ def main() -> int:
     if cinema_ux.get("introMs", 9999) > 1000:
         print(f"FAIL: Intro should be short for faster start: {cinema_ux}")
         ok = False
+    pcm = photo_clock if isinstance(photo_clock, dict) else {}
+    if not pcm.get("ok"):
+        print(f"FAIL: Photo album trip needs memory segments for clock sync: {pcm}")
+        ok = False
+    elif not pcm.get("clockOk") or not pcm.get("metaOk"):
+        print(f"FAIL: Trip clock must match photo caption instant: {pcm}")
+        ok = False
+    hen = pcm.get("nightAtHenrietta") if isinstance(pcm, dict) else None
+    if hen is not None:
+        if not hen.get("night") or float(hen.get("factor") or 0) < 0.9:
+            print(f"FAIL: Henrietta overnight should be full night: {hen}")
+            ok = False
+    if cinema_ux.get("nightOk") is False and cinema_ux.get("nightFactor") is not None:
+        # Only fail when a local-overnight segment was found but styling stayed day
+        if float(cinema_ux.get("nightFactor") or 0) < 0.4:
+            print(f"FAIL: Overnight segment should engage night styling: {cinema_ux}")
+            ok = False
     if not dock_state.get("play") or not dock_state.get("pauseGone") or not dock_state.get("speed"):
-        print(f"FAIL: Minimal dock controls missing: {dock_state}")
+        print(f"FAIL: Play control missing: {dock_state}")
+        ok = False
+    if not dock_state.get("dockBoxGone"):
+        print(f"FAIL: Transport should be play-only (no dark dock box): {dock_state}")
         ok = False
     if not dock_state.get("locationHudGone") or not dock_state.get("tripClock"):
         print(f"FAIL: Location HUD removed / trip clock required: {dock_state}")

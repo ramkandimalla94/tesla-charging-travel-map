@@ -1116,6 +1116,8 @@ def build_playback_timeline(
         f1: float,
         leg: dict,
         stop_index: int,
+        clock_t0: datetime | None = None,
+        clock_t1: datetime | None = None,
     ) -> None:
         if f1 - f0 < 0.012:
             return
@@ -1124,7 +1126,9 @@ def build_playback_timeline(
             return
         sub_mi = path_miles(sub)
         dur = max(2_800, min(20_000, int(sub_mi * 65 + 1_800)))
-        t0, t1 = leg["t0"], leg["t1"]
+        # Prefer explicit photo/stop instants so the playhead never jumps at memories.
+        t_start = clock_t0 if clock_t0 is not None else _lerp_clock(leg["t0"], leg["t1"], f0)
+        t_end = clock_t1 if clock_t1 is not None else _lerp_clock(leg["t0"], leg["t1"], f1)
         body.append({
             "type": "travel",
             "duration_ms": dur,
@@ -1136,8 +1140,8 @@ def build_playback_timeline(
             "to_label": leg["to_label"],
             "stop_index": stop_index,
             "leg_miles": round(sub_mi, 1),
-            "clock_start": _clock_iso(_lerp_clock(t0, t1, f0)),
-            "clock_end": _clock_iso(_lerp_clock(t0, t1, f1)),
+            "clock_start": _clock_iso(t_start),
+            "clock_end": _clock_iso(t_end),
         })
 
     def append_memory_at(
@@ -1165,6 +1169,8 @@ def build_playback_timeline(
             "thumb": mem.get("thumb") or "",
             "album": album,
             "photo_id": mem.get("id") or "",
+            # Ground-truth capture instant (GPS UTC) — never fall back to charger stop time.
+            "datetime": mem.get("datetime") or _clock_iso(ts),
             "spur_miles": round(float(spur), 2),
             "on_corridor": float(spur) <= MEMORY_ROUTE_SNAP_MI,
             "pois": [],
@@ -1219,6 +1225,8 @@ def build_playback_timeline(
         leg = legs[i]
         mems = leg_memories[i]
         cursor_frac = 0.0
+        # Real-time cursor: photo EXIF/GPS times, not path-fraction guesses.
+        cursor_clock = parse_waypoint_ts(stop.get("datetime"))
         path = leg["path"] or [
             [stop["lat"], stop["lng"]],
             [journey[i + 1]["lat"], journey[i + 1]["lng"]],
@@ -1247,7 +1255,11 @@ def build_playback_timeline(
                 if path and len(path) >= 2 and float(mem.get("spur_miles") or 0) > 1.25:
                     slat, slng = point_at_arc_frac(path, frac)
 
-            append_travel(path, cursor_frac, frac, leg, max(0, road_i))
+            mem_ts = parse_waypoint_ts(mem.get("datetime"))
+            append_travel(
+                path, cursor_frac, frac, leg, max(0, road_i),
+                clock_t0=cursor_clock, clock_t1=mem_ts,
+            )
             if body and body[-1]["type"] == "travel":
                 body[-1]["path"][-1] = [slat, slng]
                 slat, slng = body[-1]["path"][-1][0], body[-1]["path"][-1][1]
@@ -1256,8 +1268,12 @@ def build_playback_timeline(
                 mem, slat, slng, float(mem.get("spur_miles") or 0), max(0, road_i), frac
             )
             cursor_frac = frac
+            cursor_clock = mem_ts
 
-        append_travel(path, cursor_frac, 1.0, leg, max(0, road_i))
+        append_travel(
+            path, cursor_frac, 1.0, leg, max(0, road_i),
+            clock_t0=cursor_clock, clock_t1=leg["t1"],
+        )
         if body and body[-1]["type"] == "travel":
             body[-1]["path"][-1] = [journey[i + 1]["lat"], journey[i + 1]["lng"]]
 

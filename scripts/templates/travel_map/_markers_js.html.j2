@@ -324,7 +324,9 @@
       document.getElementById('photo-hover-title').textContent =
         (photo.album ? photo.album : 'Memory');
       const when = photo.datetime
-        ? new Date(photo.datetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+        ? (typeof formatLocalClock === 'function'
+          ? formatLocalClock(new Date(photo.datetime), photo.lng, 'medium')
+          : new Date(photo.datetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }))
         : '';
       document.getElementById('photo-hover-meta').textContent = when;
       card.style.left = Math.min(window.innerWidth - 180, Math.max(8, x + 16)) + 'px';
@@ -362,8 +364,13 @@
       }
       const src = photoThumbUrl(state.thumb);
       const title = state.album || state.label || 'Memory';
-      const when = state.datetime
-        ? new Date(state.datetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+      const lng = state.photo_lng != null ? state.photo_lng
+        : (state.lng != null ? state.lng : state.seg?.photo_lng);
+      const raw = state.datetime || state.seg?.datetime || state.seg?.clock_start || '';
+      const when = raw
+        ? (typeof formatLocalClock === 'function'
+          ? formatLocalClock(new Date(raw), lng, 'medium')
+          : new Date(raw).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }))
         : (state.label || '');
       const cached = (typeof thumbCache !== 'undefined') ? thumbCache.get(src) : null;
       const resolvedSrc = (cached && cached.complete && cached.naturalWidth) ? cached.src : src;

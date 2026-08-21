@@ -177,23 +177,17 @@
     </div>
   </aside>
 
-  <!-- Transport dock — minimal: play/pause toggle + scrub + speed -->
+  <!-- Floating play only — no dock box (commentary stays readable). Speed: [ ] keys -->
   <div class="transport-dock" id="transport-dock">
-    <div class="dock-row">
-      <button class="icon-btn primary" id="btn-play" disabled title="Play" aria-label="Play">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
-      </button>
-      <div class="dock-info">
-        <div class="dock-location" id="prog-text">Select a trip to replay</div>
-      </div>
-      <div class="speed-wrap">
-        <span class="speed-val" id="speed-label">0.15×</span>
-        <input type="range" id="speed" min="0.05" max="2" step="0.05" value="0.15" aria-label="Playback speed">
-      </div>
-    </div>
-    <div class="scrub-track">
-      <div class="scrub-fill" id="scrub-fill"></div>
-      <input type="range" id="scrubber" min="0" max="1000" value="0" aria-label="Scrub timeline">
+    <button class="icon-btn primary" id="btn-play" disabled title="Play (Space) · Speed [ ]" aria-label="Play">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+    </button>
+    <div class="dock-sr" aria-hidden="true">
+      <div id="prog-text">Select a trip to replay</div>
+      <span id="speed-label">0.15×</span>
+      <input type="range" id="speed" min="0.05" max="2" step="0.05" value="0.15" tabindex="-1">
+      <div id="scrub-fill"></div>
+      <input type="range" id="scrubber" min="0" max="1000" value="0" tabindex="-1">
     </div>
   </div>
 
@@ -400,6 +394,7 @@
               bearing: lastTravelBearing, seg,
               is_photo: !!seg.is_photo, thumb: seg.thumb || '', album: seg.album || '',
               photo_id: seg.photo_id || '',
+              datetime: seg.datetime || seg.clock_start || '',
             };
           }
           if (seg.type === 'memory') {
@@ -410,6 +405,7 @@
               bearing: lastTravelBearing, seg,
               is_photo: true, thumb: seg.thumb || '', album: seg.album || '',
               photo_id: seg.photo_id || '',
+              datetime: seg.datetime || seg.clock_start || '',
               photo_lat: seg.photo_lat != null ? seg.photo_lat : seg.lat,
               photo_lng: seg.photo_lng != null ? seg.photo_lng : seg.lng,
               spur_miles: seg.spur_miles || 0,
@@ -838,6 +834,25 @@
       return 'America/New_York';
     }
 
+    /** Format an instant in the wall-clock TZ at lng (matches #trip-clock). */
+    function formatLocalClock(dt, lng, style) {
+      if (!dt || !(dt instanceof Date) || Number.isNaN(dt.getTime())) return '';
+      const tz = tripTzFromLng(lng);
+      if (style === 'medium') {
+        return dt.toLocaleString('en-US', {
+          timeZone: tz, dateStyle: 'medium', timeStyle: 'short',
+        });
+      }
+      return dt.toLocaleString('en-US', {
+        timeZone: tz,
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    }
+
     function clockFromState(state) {
       const seg = state?.seg;
       if (seg?.clock_start) {
@@ -849,6 +864,12 @@
           return new Date(t0 + (end - t0) * frac);
         }
       }
+      // Photo memories: never use charger stop time — prefer capture instant.
+      if (state?.is_photo || state?.phase === 'memory') {
+        const raw = state.datetime || state.seg?.datetime || state.seg?.clock_start;
+        const ms = raw ? Date.parse(raw) : NaN;
+        if (Number.isFinite(ms)) return new Date(ms);
+      }
       const trip = activeTrip();
       const stops = trip?.stops || [];
       const idx = Math.max(0, Math.min(stops.length - 1, state?.stopIndex ?? 0));
@@ -857,10 +878,32 @@
       return Number.isFinite(ms) ? new Date(ms) : null;
     }
 
-    function setNightMode(on) {
-      if (nightMode === !!on) return;
-      nightMode = !!on;
+    let nightFactor = 0;
+    function nightIntensityFromHour(hour) {
+      // Gradual twilight — not a hard 6 AM / 8 PM switch.
+      // Full night ~20:30–05:00, dawn 05→07, dusk 18→20:30.
+      const h = ((Number(hour) % 24) + 24) % 24;
+      const smoothstep = (a, b, x) => {
+        const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+        return t * t * (3 - 2 * t);
+      };
+      if (h >= 7 && h <= 18) return 0;
+      if (h >= 20.5 || h <= 5) return 1;
+      if (h < 7) return 1 - smoothstep(5, 7, h);
+      return smoothstep(18, 20.5, h);
+    }
+
+    function setNightIntensity(factor) {
+      const next = Math.max(0, Math.min(1, Number(factor) || 0));
+      if (Math.abs(next - nightFactor) < 0.01 && !!nightMode === next >= 0.45) return;
+      nightFactor = next;
+      document.documentElement.style.setProperty('--night', String(next.toFixed(3)));
+      nightMode = next >= 0.45;
       document.body.classList.toggle('night', nightMode);
+    }
+
+    function setNightMode(on) {
+      setNightIntensity(on ? 1 : 0);
     }
 
     function updateTripClock(state) {
@@ -868,7 +911,7 @@
       if (!el) return;
       if (!state || !isSingleTrip() || isRecording) {
         el.classList.remove('visible');
-        if (!isSingleTrip()) setNightMode(false);
+        if (!isSingleTrip()) setNightIntensity(0);
         return;
       }
       const dt = clockFromState(state);
@@ -877,26 +920,35 @@
         return;
       }
       const lng = state.lng != null ? state.lng : (activeTrip()?.stops?.[0]?.lng);
-      const tz = tripTzFromLng(lng);
-      el.textContent = dt.toLocaleString('en-US', {
-        timeZone: tz,
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      });
+      el.textContent = formatLocalClock(dt, lng, 'hud');
       el.classList.add('visible');
       let hour = 12;
+      let minute = 0;
       try {
+        const tz = tripTzFromLng(lng);
         const parts = new Intl.DateTimeFormat('en-US', {
-          timeZone: tz, hour: 'numeric', hourCycle: 'h23',
+          timeZone: tz, hour: 'numeric', minute: '2-digit', hourCycle: 'h23',
         }).formatToParts(dt);
         hour = parseInt(parts.find(p => p.type === 'hour')?.value || '12', 10);
+        minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
       } catch (_) {
         hour = dt.getUTCHours();
+        minute = dt.getUTCMinutes();
       }
-      setNightMode(hour < 6 || hour >= 20);
+      setNightIntensity(nightIntensityFromHour(hour + minute / 60));
+    }
+
+    function syncSpeedLabel() {
+      const label = Number.isInteger(speed) ? String(speed) : speed.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+      const el = document.getElementById('speed-label');
+      if (el) el.textContent = label + '×';
+      const input = document.getElementById('speed');
+      if (input && Math.abs(parseFloat(input.value) - speed) > 0.001) input.value = String(speed);
+    }
+
+    function nudgeSpeed(delta) {
+      speed = Math.max(0.05, Math.min(2, Math.round((speed + delta) * 100) / 100));
+      syncSpeedLabel();
     }
 
     function firstTravelOffsetMs(pb) {
@@ -1276,12 +1328,16 @@
       updatePoiMarkers(state.pois, state.phase === 'dwell' && !state.is_photo);
 
       if ((state.phase === 'memory' || (state.phase === 'dwell' && state.is_photo)) && state.thumb) {
-        const stop = stops[state.stopIndex ?? 0];
+        // Photo capture time only — never the nearest charger stop datetime.
+        const photoInstant = state.datetime
+          || state.seg?.datetime
+          || state.seg?.clock_start
+          || '';
         showMemoryStage({
           ...state,
-          datetime: state.datetime || stop?.datetime,
-          album: state.album || stop?.album || '',
-          label: state.label || shortLabel(stop?.location || ''),
+          datetime: photoInstant,
+          album: state.album || '',
+          label: state.label || '',
         });
         document.querySelectorAll('.photo-pin').forEach(el => el.classList.remove('hot'));
         const leaf = (state.thumb || '').split('/').pop();
@@ -1431,8 +1487,7 @@
     });
     document.getElementById('speed').addEventListener('input', e=>{
       speed = parseFloat(e.target.value);
-      const label = Number.isInteger(speed) ? String(speed) : speed.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-      document.getElementById('speed-label').textContent = label + '×';
+      syncSpeedLabel();
     });
     document.getElementById('scrubber').addEventListener('input', e=>{
       if (!isSingleTrip()) return;
@@ -1467,6 +1522,8 @@
         return;
       }
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
+      if (e.key === '[' || e.code === 'BracketLeft') { e.preventDefault(); nudgeSpeed(-0.05); }
+      if (e.key === ']' || e.code === 'BracketRight') { e.preventDefault(); nudgeSpeed(0.05); }
     });
 
     document.getElementById('onboard-featured').addEventListener('click', startWithFeatured);

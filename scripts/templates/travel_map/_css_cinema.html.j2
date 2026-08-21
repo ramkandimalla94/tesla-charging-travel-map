@@ -1,14 +1,15 @@
-    /* ── Live trip clock (quiet HUD) ── */
+    /* ── Live trip clock (readable HUD) ── */
     .trip-clock {
       position: absolute; top: 64px; left: 18px; z-index: 13;
       display: none; pointer-events: none;
-      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
-      color: rgba(243, 239, 230, 0.78);
-      text-shadow: 0 1px 8px rgba(0,0,0,0.85);
+      font-size: 22px; font-weight: 700; letter-spacing: 0.02em;
+      line-height: 1.15;
+      color: rgba(243, 239, 230, 0.92);
+      text-shadow: 0 2px 14px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.85);
       font-variant-numeric: tabular-nums;
     }
     .trip-clock.visible { display: block; }
-    body.watching .trip-clock { top: 18px; left: 16px; color: rgba(243, 239, 230, 0.88); }
+    body.watching .trip-clock { top: 16px; left: 16px; font-size: 26px; color: rgba(255, 252, 245, 0.95); }
 
     /* ── Beacons disabled — path stays clean ── */
     .beacon-wrap, .beacon, .beacon-label, .stop-dot { display: none !important; }
@@ -220,7 +221,6 @@
     @media (max-width: 900px) {
       :root { --panel-w: 280px; }
       .stat-rail { display: none; }
-      .transport-dock { width: min(640px, calc(100vw - 24px)); padding: 12px 14px 14px; }
       .atlas-cta { top: 64px; right: 12px; }
     }
     @media (max-width: 640px) {
@@ -235,16 +235,14 @@
       .trip-panel.collapsed { transform: translateY(110%); opacity: 0; pointer-events: none; }
       .panel-toggle { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 20px); left: 18px; width: 44px; height: 44px; }
       .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
-      .trip-clock { top: 52px; left: 12px; font-size: 10px; }
+      .trip-clock { top: 52px; left: 12px; font-size: 18px; }
       .onboard-card { margin-left: 0 !important; max-width: calc(100vw - 32px); }
       .atlas-cta { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 18px); right: 12px; left: 64px; max-width: none; }
       .era-rail { max-width: 58vw; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
       .era-chip { min-height: 34px; padding: 5px 12px; flex-shrink: 0; }
       .transport-dock {
-        width: calc(100vw - 16px); left: 50%; bottom: calc(var(--timeline-h) + 12px);
-        padding: 8px 10px 9px; border-radius: 14px;
+        bottom: calc(var(--timeline-h) + 14px);
       }
-      .speed-wrap { width: 72px; }
-      .timeline-bar { left: 10px; right: 10px; bottom: 10px; padding: 8px 10px 10px; }
-      body.watching .transport-dock { opacity: 0.88; }
+      body.watching .transport-dock { opacity: 0.95; }
+      body.watching .trip-clock { font-size: 20px; }
     }
