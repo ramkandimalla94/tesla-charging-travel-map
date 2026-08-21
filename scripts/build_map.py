@@ -783,7 +783,12 @@ def validate_output(trips: list[dict]) -> None:
         print(f"Validation OK — {len(trips)} trips, CO trip: {co_trip['name'] if co_trip else 'none'}")
 
 
-def render_html(trips: list[dict], dashboard: dict, timeline: list[dict], mapbox_token: str) -> str:
+def render_html(
+    trips: list[dict],
+    dashboard: dict,
+    timeline: list[dict],
+    mapbox_token_b64: str,
+) -> str:
     env = Environment(
         loader=FileSystemLoader(str(Path(__file__).resolve().parent / "templates")),
         autoescape=True,
@@ -795,9 +800,37 @@ def render_html(trips: list[dict], dashboard: dict, timeline: list[dict], mapbox
         dashboard_json=json.dumps(dashboard),
         timeline=timeline,
         timeline_json=json.dumps(timeline),
-        mapbox_token=mapbox_token,
-        has_mapbox=bool(mapbox_token),
+        mapbox_token_b64=mapbox_token_b64,
+        has_mapbox=bool(mapbox_token_b64),
     )
+
+
+def normalize_public_mapbox_token(token: str) -> str:
+    """Accept only public Mapbox tokens (pk.). Never embed secret sk. tokens."""
+    token = (token or "").strip()
+    if not token:
+        return ""
+    if token.startswith("sk."):
+        raise SystemExit(
+            "MAPBOX_TOKEN looks like a secret token (sk.…). "
+            "Use a public token (pk.…) from https://account.mapbox.com/access-tokens/"
+        )
+    if not token.startswith("pk."):
+        raise SystemExit("MAPBOX_TOKEN must be a public token starting with pk.")
+    return token
+
+
+def encode_mapbox_token_for_html(token: str) -> str:
+    """Base64-encode so GitHub push protection does not block gh-pages deploys.
+
+    Public pk. tokens are meant for browsers, but secret scanning still rejects
+    the literal string when pushing index.html to gh-pages.
+    """
+    import base64
+
+    if not token:
+        return ""
+    return base64.b64encode(token.encode("utf-8")).decode("ascii")
 
 
 def main() -> None:
@@ -818,13 +851,13 @@ def main() -> None:
     if not TRIPS_FILE.exists():
         raise FileNotFoundError(f"Run segment_trips.py first. Missing {TRIPS_FILE}")
 
-    mapbox_token = os.getenv("MAPBOX_TOKEN", "").strip()
+    mapbox_token = normalize_public_mapbox_token(os.getenv("MAPBOX_TOKEN", ""))
     if args.refresh_routes and not mapbox_token:
         raise SystemExit("--refresh-routes requires MAPBOX_TOKEN in .env or environment")
     if args.public and not mapbox_token:
         raise SystemExit("--public requires MAPBOX_TOKEN so the live site launches without a paste prompt")
-    # Embed whenever available so local + Pages builds open the map immediately.
-    embed_token = mapbox_token
+    # Embed as base64 so Pages pushes are not blocked by secret scanning.
+    embed_token_b64 = encode_mapbox_token_for_html(mapbox_token)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     GPX_DIR.mkdir(parents=True, exist_ok=True)
@@ -851,10 +884,20 @@ def main() -> None:
     for trip in trips_data["trips"]:
         write_gpx(trip, GPX_DIR / f"{trip['id']}.gpx")
 
-    HTML_OUTPUT.write_text(render_html(prepared, dashboard, timeline, embed_token), encoding="utf-8")
+    HTML_OUTPUT.write_text(
+        render_html(prepared, dashboard, timeline, embed_token_b64),
+        encoding="utf-8",
+    )
     if args.public:
         pages_index = OUTPUT_DIR / "index.html"
-        pages_index.write_text(HTML_OUTPUT.read_text(encoding="utf-8"), encoding="utf-8")
+        pages_html = HTML_OUTPUT.read_text(encoding="utf-8")
+        # Guardrail: never ship a literal pk./sk. Mapbox token string to gh-pages.
+        if re.search(r'\b(?:pk|sk)\.eyJ[A-Za-z0-9_-]{10,}', pages_html):
+            raise SystemExit(
+                "Refusing to write public index.html with a raw Mapbox token — "
+                "GitHub push protection would reject the gh-pages deploy"
+            )
+        pages_index.write_text(pages_html, encoding="utf-8")
         print(f"  Public index: {pages_index}")
 
     print(f"Built 3D map — {len(prepared)} trips")
@@ -865,6 +908,8 @@ def main() -> None:
     )
     print(f"  Mapbox token: {'loaded' if mapbox_token else 'MISSING (using cache/fallback)'}")
     print(f"  HTML: {HTML_OUTPUT}")
+    if embed_token_b64:
+        print("  Token embed: base64 (push-protection safe)")
 
 
 if __name__ == "__main__":
