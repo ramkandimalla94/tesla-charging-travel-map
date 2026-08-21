@@ -141,7 +141,7 @@
       transition: transform 0.45s cubic-bezier(.22,1,.36,1), opacity 0.35s;
     }
     .trip-panel.collapsed { transform: translateX(calc(-1 * var(--panel-w) - 28px)); opacity: 0.4; }
-
+    .panel-grab { display: none; }
     .panel-head { padding: 18px 18px 14px; border-bottom: 1px solid var(--border); }
     .panel-head .eyebrow {
       font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
@@ -289,23 +289,57 @@
     }
     body.watching .cinema-title.visible { display: block; bottom: 160px; }
 
-    @media (max-width: 900px) {
-      :root { --panel-w: 280px; }
-      .stat-rail { display: none; }
-      .transport-dock { width: min(640px, calc(100vw - 24px)); padding: 12px 14px 14px; }
+    /* Atlas featured CTA + memory reel */
+    .atlas-cta {
+      position: absolute; top: 72px; right: 22px; z-index: 12;
+      display: none; align-items: center; gap: 10px;
+      padding: 10px 14px 10px 12px; border-radius: 14px;
+      background: var(--surface); backdrop-filter: blur(20px) saturate(1.3);
+      border: 1px solid var(--border-bright);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+      color: var(--text); cursor: pointer; font-family: inherit;
+      max-width: min(320px, calc(100vw - 80px));
+      transition: opacity 0.35s, transform 0.35s;
     }
-    @media (max-width: 640px) {
-      .trip-panel {
-        top: auto; left: 10px; right: 10px; bottom: calc(var(--dock-h) + var(--timeline-h) + 16px);
-        width: auto; max-height: 42vh;
-      }
-      .trip-panel.collapsed { transform: translateY(110%); opacity: 0; pointer-events: none; }
-      .panel-toggle { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 20px); left: 18px; }
-      .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
-      .location-hud { top: 56px; left: 12px; right: 12px; max-width: none; }
-      .map-legend { top: 56px; right: 12px; }
-      .onboard-card { margin-left: 0 !important; max-width: calc(100vw - 32px); }
+    .atlas-cta.visible { display: flex; }
+    body.trip-focus .atlas-cta,
+    body.watching .atlas-cta,
+    body.cinema-mode .atlas-cta { opacity: 0 !important; pointer-events: none !important; }
+    .atlas-cta:hover { border-color: rgba(251,191,36,0.45); transform: translateY(-1px); }
+    .atlas-cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .atlas-cta-swatch {
+      width: 8px; height: 36px; border-radius: 99px; flex-shrink: 0;
+      box-shadow: 0 0 12px currentColor;
     }
+    .atlas-cta-body { min-width: 0; text-align: left; }
+    .atlas-cta-eyebrow {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 2px;
+    }
+    .atlas-cta-title {
+      font-family: var(--font-display); font-size: 13px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .atlas-cta-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .memory-badge {
+      position: absolute; top: 72px; left: 50%; transform: translateX(-50%); z-index: 12;
+      display: none; align-items: center; gap: 8px;
+      padding: 7px 12px; border-radius: 999px;
+      background: rgba(8,10,16,0.82); border: 1px solid var(--border);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--muted); backdrop-filter: blur(16px);
+    }
+    .memory-badge.visible { display: flex; }
+    .memory-badge strong { color: var(--text); font-weight: 700; letter-spacing: 0.02em; text-transform: none; }
+    .memory-badge button {
+      border: none; background: transparent; color: var(--accent); cursor: pointer;
+      font-size: 10px; font-weight: 700; font-family: inherit; padding: 2px 4px;
+    }
+    .memory-badge button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    body.trip-focus .memory-badge,
+    body.watching .memory-badge,
+    body.cinema-mode .memory-badge { display: none !important; }
+
 
     .panel-toggle {
       position: absolute; top: 78px; left: calc(var(--panel-w) + 30px); z-index: 11;
@@ -336,6 +370,14 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .dock-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .queue-badge {
+      display: none; margin-top: 6px; width: fit-content;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: #0f172a; background: var(--gold); border-radius: 999px;
+      padding: 3px 9px; box-shadow: 0 0 0 1px rgba(251,191,36,0.35);
+    }
+    .queue-badge.visible { display: inline-flex; align-items: center; }
+    .queue-badge[hidden] { display: none !important; }
     .dock-actions { display: flex; gap: 6px; align-items: center; }
     .icon-btn {
       width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 12px;
@@ -349,7 +391,9 @@
     .icon-btn:focus-visible {
       outline: 2px solid var(--accent); outline-offset: 2px;
     }
-    .icon-btn.on { background: rgba(94,234,212,0.12); border-color: rgba(94,234,212,0.35); color: var(--accent); }
+    .icon-btn.queue {
+      background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.4); color: var(--gold);
+    }
     .icon-btn.primary {
       width: 52px; height: 52px; min-width: 52px; min-height: 52px; border-radius: 14px;
       background: linear-gradient(145deg, #fff, #cbd5e1); border: none; color: #0f172a;
@@ -396,18 +440,28 @@
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
     .timeline-label { font-size: 9px; font-weight: 600; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
-    .era-rail { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-    .era-chip {
-      border: 1px solid var(--border); background: rgba(255,255,255,0.04);
-      color: var(--muted); font-size: 10px; font-weight: 700; font-family: inherit;
-      padding: 4px 9px; border-radius: 999px; cursor: pointer; min-height: 28px;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    .era-rail {
+      display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; align-items: center;
     }
-    .era-chip:hover { color: var(--text); border-color: var(--border-bright); }
+    .era-rail-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-right: 2px; user-select: none;
+    }
+    .era-chip {
+      border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.08);
+      color: var(--text); font-size: 11px; font-weight: 700; font-family: inherit;
+      padding: 5px 11px; border-radius: 999px; cursor: pointer; min-height: 32px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .era-chip:hover { color: #fff; border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.12); }
     .era-chip.active {
       color: #0f172a; background: #e8e4dc; border-color: transparent;
+      box-shadow: 0 0 0 1px rgba(232,228,220,0.35);
     }
     .era-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    body.trip-focus .era-rail { opacity: 0.55; }
+    body.watching .era-rail,
+    body.cinema-mode .era-rail { opacity: 0; pointer-events: none; }
     .timeline-track { position: relative; flex: 1; height: 22px; background: rgba(0,0,0,0.35); border-radius: 8px; overflow: hidden; cursor: pointer; }
     .tl-seg {
       position: absolute; top: 3px; bottom: 3px; border-radius: 5px;
@@ -595,10 +649,19 @@
       opacity: 0; transition: opacity 0.6s ease;
     }
     .story-overlay.visible { opacity: 1; }
+    .story-overlay.travel { opacity: 0.88; }
+    .story-overlay.approaching .story-caption {
+      border-color: rgba(94,234,212,0.28);
+    }
+    .story-overlay.dwell .story-caption {
+      background: rgba(8,10,16,0.72);
+    }
     .story-caption {
       font-family: var(--font-display); font-size: clamp(16px, 2.8vw, 22px); font-weight: 800;
       letter-spacing: -0.02em; line-height: 1.35;
       text-shadow: 0 2px 20px rgba(0,0,0,0.95), 0 0 40px rgba(0,0,0,0.8);
+      background: rgba(8,10,16,0.45); padding: 8px 14px; border-radius: 12px;
+      display: inline-block;
     }
     .story-sub {
       font-size: 12px; color: #cbd5e1; margin-top: 8px; letter-spacing: 0.04em;
@@ -612,7 +675,20 @@
       background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.35); color: var(--gold);
     }
     .story-poi-chip.visited { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.4); color: #6ee7b7; }
-    body.cinema-mode .story-overlay { bottom: 80px; }
+    body.cinema-mode .story-overlay { bottom: 14%; }
+    body.cinema-mode.portrait-export .story-overlay {
+      bottom: 18%; width: min(84%, 400px); left: 50%; transform: translateX(-50%);
+      padding: 0;
+    }
+    body.cinema-mode .story-caption {
+      background: rgba(8,10,16,0.62); padding: 10px 16px;
+    }
+    body.cinema-mode.portrait-export .story-caption {
+      background: rgba(8,10,16,0.78); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+      padding: 12px 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+    }
+    body.cinema-mode.portrait-export .story-sub { margin-top: 6px; }
 
     /* ── Cinema / export ── */
     body.cinema-mode .trip-panel,
@@ -622,6 +698,8 @@
     body.cinema-mode .timeline-bar,
     body.cinema-mode #onboarding,
     body.cinema-mode .map-legend,
+    body.cinema-mode .atlas-cta,
+    body.cinema-mode .memory-badge,
     body.cinema-mode .mapboxgl-ctrl-group,
     body.cinema-mode .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
     body.cinema-mode .location-hud { opacity: 0 !important; }
@@ -634,10 +712,20 @@
     }
     .cinema-title {
       position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); z-index: 15;
-      text-align: center; display: none; pointer-events: none;
+      text-align: center; display: none; pointer-events: none; width: min(90%, 520px);
+      transition: opacity 0.45s ease;
     }
     body.cinema-mode .cinema-title.visible { display: block; }
     body.watching .cinema-title.visible { display: block; }
+    body.cinema-mode.portrait-export .cinema-title {
+      bottom: auto; top: 11%; width: min(86%, 380px); padding: 0 3%;
+    }
+    body.cinema-mode.portrait-export .cinema-title h2 {
+      font-size: clamp(20px, 5vw, 28px); line-height: 1.15;
+    }
+    body.cinema-mode.portrait-export .cinema-title.outro {
+      top: auto; bottom: 22%;
+    }
     .cinema-title h2 {
       font-family: var(--font-display); font-size: clamp(22px, 4vw, 32px); font-weight: 800;
       text-shadow: 0 4px 24px rgba(0,0,0,0.95);
@@ -711,7 +799,45 @@
       background: rgba(255,255,255,0.06); border: 1px solid var(--border);
       border-radius: 4px; padding: 1px 5px; font-size: 10px;
     }
-  </style>
+
+    @media (max-width: 900px) {
+      :root { --panel-w: 280px; }
+      .stat-rail { display: none; }
+      .transport-dock { width: min(640px, calc(100vw - 24px)); padding: 12px 14px 14px; }
+      .atlas-cta { top: 64px; right: 12px; }
+      .map-legend { display: none; }
+    }
+    @media (max-width: 640px) {
+      .trip-panel {
+        top: auto; left: 10px; right: 10px; bottom: calc(var(--dock-h) + var(--timeline-h) + 16px);
+        width: auto; max-height: 38vh; border-radius: 18px 18px 14px 14px;
+      }
+      .panel-grab {
+        display: block; width: 44px; height: 5px; border-radius: 99px;
+        background: rgba(255,255,255,0.35); margin: 10px auto 4px; flex-shrink: 0;
+      }
+      .trip-panel.collapsed { transform: translateY(110%); opacity: 0; pointer-events: none; }
+      .panel-toggle { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 20px); left: 18px; width: 44px; height: 44px; }
+      .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
+      .location-hud { top: 56px; left: 12px; right: 12px; max-width: none; }
+      .map-legend { top: 56px; right: 12px; }
+      .onboard-card { margin-left: 0 !important; max-width: calc(100vw - 32px); }
+      .atlas-cta { top: auto; bottom: calc(var(--dock-h) + var(--timeline-h) + 18px); right: 12px; left: 64px; max-width: none; }
+      .memory-badge { top: 56px; max-width: calc(100vw - 24px); }
+      .era-rail { max-width: 58vw; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+      .era-chip { min-height: 34px; padding: 5px 12px; flex-shrink: 0; }
+      .transport-dock {
+        width: calc(100vw - 16px); left: 50%; bottom: calc(var(--timeline-h) + 14px);
+        padding: 12px 12px 12px; border-radius: 16px;
+      }
+      .dock-actions { gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 58%; }
+      .icon-btn.export { padding: 0 10px; font-size: 10px; }
+      .dock-sliders { gap: 8px; }
+      .queue-badge { font-size: 9px; padding: 3px 8px; }
+      .timeline-bar { left: 10px; right: 10px; bottom: 10px; padding: 8px 10px 10px; }
+      body.watching .transport-dock { opacity: 0.92; }
+    }
+</style>
 </head>
 <body>
 
@@ -756,6 +882,19 @@
     <div class="leg-row"><span class="pin end"></span><span id="legend-end-label">Return</span></div>
   </div>
 
+  <button type="button" class="atlas-cta" id="atlas-cta" aria-label="Replay featured epic trip">
+    <span class="atlas-cta-swatch" id="atlas-cta-swatch"></span>
+    <span class="atlas-cta-body">
+      <div class="atlas-cta-eyebrow">Featured epic</div>
+      <div class="atlas-cta-title" id="atlas-cta-title">Replay a road trip</div>
+      <div class="atlas-cta-meta" id="atlas-cta-meta">Tap to focus · then Play</div>
+    </span>
+  </button>
+  <div class="memory-badge" id="memory-badge" aria-live="polite">
+    <span>Memory reel · <strong id="memory-label">—</strong></span>
+    <button type="button" id="memory-pause" title="Pause memory reel">Pause</button>
+  </div>
+
   <!-- Top bar -->
   <header class="top-bar">
     <div class="brand">ROAD<span>REPLAY</span></div>
@@ -793,6 +932,7 @@
   </button>
 
   <aside class="trip-panel" id="sidebar">
+    <div class="panel-grab" aria-hidden="true"></div>
     <div class="panel-head">
       <div class="eyebrow">Your Journeys</div>
       <h2 id="panel-title">Select a Trip</h2>
@@ -1270,13 +1410,14 @@
       <div class="dock-info">
         <div class="dock-location" id="prog-text">Select a trip to replay</div>
         <div class="dock-sub"><span id="prog-start">—</span> → <span id="prog-end">—</span></div>
+        <div class="queue-badge" id="queue-badge" aria-live="polite" hidden></div>
       </div>
       <div class="dock-actions">
         <button class="icon-btn" id="btn-reset" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v5h5"/></svg></button>
         <button class="icon-btn" id="btn-step" title="Next stop"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l12 8-12 8V4z"/></svg></button>
         <button class="icon-btn primary" id="btn-play" disabled title="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg></button>
         <button class="icon-btn" id="btn-pause" disabled title="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg></button>
-        <button class="icon-btn" id="btn-loop" title="Loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+        <button class="icon-btn" id="btn-loop" title="Loop trip · click again for epic queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
         <button class="icon-btn on" id="btn-director" title="Director camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l6 3-6 3V9z"/></svg></button>
         <button class="icon-btn" id="btn-night" title="Night mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
         <button class="icon-btn export" id="btn-export" disabled title="Export video">
@@ -1294,7 +1435,7 @@
         <label>Playback speed · <span class="speed-val" id="speed-label">1×</span></label>
         <input type="range" id="speed" min="0.25" max="8" step="0.25" value="1">
       </div>
-      <div style="font-size:9px;color:var(--muted);text-align:right;padding-top:14px"><kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> step</div>
+      <div style="font-size:9px;color:var(--muted);text-align:right;padding-top:14px"><kbd>Space</kbd> play · <kbd>Esc</kbd> back · <kbd>←</kbd><kbd>→</kbd> step</div>
     </div>
   </div>
 
@@ -1302,8 +1443,9 @@
   <div class="timeline-bar">
     <div class="timeline-head">
       <div class="timeline-label" id="timeline-label">Journey Timeline</div>
-      <div class="era-rail" id="era-rail" role="group" aria-label="Filter by year">
-        <button type="button" class="era-chip active" data-year="all">All years</button>
+      <div class="era-rail" id="era-rail" role="group" aria-label="Filter journeys by year">
+        <span class="era-rail-label">Era</span>
+        <button type="button" class="era-chip active" data-year="all">All</button>
         
         <button type="button" class="era-chip" data-year="2023">2023</button>
         
@@ -1428,15 +1570,49 @@
 
     let map;
 
+    // Cache hot-path DOM nodes (playback RAF hits these every frame)
+    const uiCache = Object.create(null);
+    function ui(id) {
+      const cached = uiCache[id];
+      if (cached && cached.isConnected) return cached;
+      return (uiCache[id] = document.getElementById(id));
+    }
+    function setPlaybackChrome(prog, label, startText, endText, endHtml) {
+      const scrub = ui('scrubber');
+      const fill = ui('scrub-fill');
+      const tl = ui('timeline-scrub');
+      const pt = ui('prog-text');
+      if (scrub) scrub.value = Math.round(prog * 1000);
+      if (fill) fill.style.width = (prog * 100) + '%';
+      if (tl) tl.style.left = (prog * 100) + '%';
+      if (label != null && pt) pt.textContent = label;
+      if (startText != null) {
+        const ps = ui('prog-start');
+        if (ps) ps.textContent = startText;
+      }
+      if (endHtml != null) {
+        const pe = ui('prog-end');
+        if (pe) pe.innerHTML = endHtml;
+      } else if (endText != null) {
+        const pe = ui('prog-end');
+        if (pe) pe.textContent = endText;
+      }
+    }
+
     // ── State ──
     let selectedId = 'all', animTimeMs = 0, animProg = 0, animStopIdx = 0;
     let hoveredTripId = null;
     let yearFilter = 'all';
+    let eraApplying = false;
     let routeLabelMarkers = [];
     let hubMarkers = [];
     let destMarkers = [];
+    let memoryTimer = null;
+    let memoryIndex = 0;
+    let memoryPaused = false;
+    let memoryActiveId = null;
     let isPlaying = false, animFrame = null, lastTs = 0;
-    let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
+    let speed = 1, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
     let poiMarkerKey = '';
@@ -1463,6 +1639,7 @@
     function dismissOnboarding() {
       document.getElementById('onboarding').classList.remove('visible');
       localStorage.setItem('tesla-map-onboarded', '1');
+      if (selectedId === 'all' && !memoryPaused) startMemoryReel();
     }
     function startWithFeatured() {
       const epic = TRIPS.find(t => t.featured) || TRIPS.find(t => t.has_colorado) || TRIPS[0];
@@ -1605,13 +1782,269 @@
       setupTerrain();
       drawRoutes();
       drawStops();
+      drawAtlasSpokes();
       updateHero();
       updateDockIdle();
+      updateAtlasCta();
       setMapLabelsVisible(true);
       document.getElementById('btn-play').disabled = true;
       document.getElementById('prog-text').textContent = 'Select a trip to play';
       introFlyover();
+      setTimeout(() => {
+        if (selectedId === 'all' && !localStorage.getItem('tesla-map-onboarded')) return;
+        if (selectedId === 'all') startMemoryReel();
+      }, 2800);
     }
+
+    
+    function featuredTrip() {
+      return TRIPS.find(t => t.featured) || TRIPS.find(t => t.has_colorado) || TRIPS[0] || null;
+    }
+
+    function nextEpicTrip(currentId) {
+      const list = TRIPS.filter(t => t.featured && tripInEra(t));
+      if (!list.length) return null;
+      const idx = list.findIndex(t => t.id === currentId);
+      return list[(idx + 1) % list.length];
+    }
+
+    function epicQueueStatus() {
+      const list = TRIPS.filter(t => t.featured && tripInEra(t));
+      if (!list.length) return null;
+      const idx = list.findIndex(t => t.id === selectedId);
+      return { n: list.length, i: idx >= 0 ? idx + 1 : 0, list };
+    }
+
+    function updateQueueBadge() {
+      const badge = document.getElementById('queue-badge');
+      if (!badge) return;
+      if (!queueEpics) {
+        badge.classList.remove('visible');
+        badge.hidden = true;
+        badge.textContent = '';
+        return;
+      }
+      const st = epicQueueStatus();
+      if (!st) {
+        badge.classList.remove('visible');
+        badge.hidden = true;
+        return;
+      }
+      badge.hidden = false;
+      badge.classList.add('visible');
+      badge.textContent = st.i
+        ? `Epic queue · ${st.i}/${st.n}`
+        : `Epic queue · ${st.n} trips`;
+    }
+
+    function syncLoopButton() {
+      const btn = document.getElementById('btn-loop');
+      if (!btn) return;
+      btn.classList.toggle('on', loopTrip && !queueEpics);
+      btn.classList.toggle('queue', queueEpics);
+      btn.title = queueEpics
+        ? 'Epic queue on — plays featured trips in sequence'
+        : (loopTrip ? 'Loop this trip' : 'Loop off · click for loop · again for epic queue');
+      btn.setAttribute('aria-label', btn.title);
+      updateQueueBadge();
+    }
+
+    function updateAtlasCta() {
+      const btn = document.getElementById('atlas-cta');
+      if (!btn) return;
+      const epic = featuredTrip();
+      if (!epic || selectedId !== 'all') {
+        btn.classList.remove('visible');
+        return;
+      }
+      document.getElementById('atlas-cta-swatch').style.background = epic.color;
+      document.getElementById('atlas-cta-swatch').style.color = epic.color;
+      document.getElementById('atlas-cta-title').textContent =
+        (epic.name || '').split('—').pop()?.trim().replace(/\s*·.*$/, '') || epic.name;
+      document.getElementById('atlas-cta-meta').textContent =
+        `${epic.miles.toLocaleString()} mi · ${epic.stop_count} stops · Play after focus`;
+      btn.classList.add('visible');
+      btn.dataset.tripId = epic.id;
+    }
+
+    function memoryPlaylist() {
+      const featured = TRIPS.filter(t => t.featured && tripInEra(t));
+      return featured.length ? featured : TRIPS.filter(t => tripInEra(t)).slice(0, 6);
+    }
+
+    function stopMemoryReel() {
+      if (memoryTimer) { clearInterval(memoryTimer); memoryTimer = null; }
+      memoryActiveId = null;
+      document.getElementById('memory-badge')?.classList.remove('visible');
+      if (selectedId === 'all' && !hoveredTripId) applyEraFilter();
+    }
+
+    function showMemoryHighlight(trip) {
+      if (!trip || selectedId !== 'all') return;
+      memoryActiveId = trip.id;
+      const label = document.getElementById('memory-label');
+      if (label) label.textContent = shortTripLabel(trip);
+      document.getElementById('memory-badge')?.classList.add('visible');
+      TRIPS.forEach(t => {
+        if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
+        else if (t.id === trip.id) setRouteStyle(t.id, t.color, 'overviewHover');
+        else setRouteStyle(t.id, t.color, 'overviewDim');
+      });
+      destMarkers.forEach(m => {
+        const hit = (m._tripIds || []).includes(trip.id);
+        m.getElement().classList.toggle('hot', hit);
+        m.getElement().classList.toggle('dim', !hit);
+      });
+      hubMarkers.forEach(m => {
+        const hit = (m._tripIds || []).includes(trip.id);
+        m.getElement().classList.toggle('hot', hit);
+        m.getElement().classList.toggle('dim', !hit);
+      });
+    }
+
+    function startMemoryReel() {
+      stopMemoryReel();
+      if (selectedId !== 'all' || memoryPaused) return;
+      const list = memoryPlaylist();
+      if (list.length < 2) return;
+      memoryIndex = 0;
+      showMemoryHighlight(list[0]);
+      memoryTimer = setInterval(() => {
+        if (selectedId !== 'all' || memoryPaused || hoveredTripId) return;
+        const items = memoryPlaylist();
+        if (!items.length) return;
+        memoryIndex = (memoryIndex + 1) % items.length;
+        showMemoryHighlight(items[memoryIndex]);
+      }, 4200);
+    }
+
+    /** Perpendicular offset (meters) for parallel corridor filaments. */
+    function offsetSpokeCoords(lng1, lat1, lng2, lat2, meters) {
+      const dx = lng2 - lng1, dy = lat2 - lat1;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      const midLat = (lat1 + lat2) / 2;
+      const dLng = (meters / 111320) / Math.max(0.2, Math.cos(midLat * Math.PI / 180));
+      const dLat = meters / 110540;
+      return [
+        [lng1 + nx * dLng, lat1 + ny * dLat],
+        [lng2 + nx * dLng, lat2 + ny * dLat],
+      ];
+    }
+
+    function drawAtlasSpokes() {
+      if (!map) return;
+      const feats = [];
+      if (selectedId === 'all') {
+        DEST_GROUPS.forEach(group => {
+          const visibleIds = (group.trip_ids || []).filter(id => {
+            const t = TRIPS.find(x => x.id === id);
+            return t && tripInEra(t);
+          });
+          if (!visibleIds.length) return;
+          // Attach spoke to the hub that owns most of this destination's trips
+          const hubScore = {};
+          visibleIds.forEach(id => {
+            const t = TRIPS.find(x => x.id === id);
+            const hub = t?.start_hub || 'Home';
+            hubScore[hub] = (hubScore[hub] || 0) + 1;
+          });
+          const hubLabel = Object.entries(hubScore).sort((a, b) => b[1] - a[1])[0]?.[0];
+          const hub = HUBS.find(h => h.label === hubLabel) || HUBS[0];
+          if (!hub || group.lat == null || group.lng == null) return;
+          const visits = visibleIds.length;
+          const a = [hub.lng, hub.lat], b = [group.lng, group.lat];
+          // Soft corridor band + dashed spokes share one GeoJSON source (kind filter)
+          feats.push({
+            type: 'Feature',
+            properties: { kind: 'band', color: group.color, dest: group.dest, visits },
+            geometry: { type: 'LineString', coordinates: [a, b] },
+          });
+          feats.push({
+            type: 'Feature',
+            properties: { kind: 'spoke', color: group.color, dest: group.dest, visits, role: 'core' },
+            geometry: { type: 'LineString', coordinates: [a, b] },
+          });
+          // Multi-visit destinations: fan parallel filaments so the corridor reads as a band
+          if (visits >= 2) {
+            const spacing = Math.min(38000, 12000 + visits * 4500);
+            const sides = visits >= 5 ? [-1.1, 1.1, -0.65, 0.65, -0.3, 0.3]
+              : visits >= 3 ? [-1, 1, -0.5, 0.5]
+              : [-1, 1];
+            sides.forEach((s, i) => {
+              feats.push({
+                type: 'Feature',
+                properties: { kind: 'spoke', color: group.color, dest: group.dest, visits, role: 'filament' },
+                geometry: {
+                  type: 'LineString',
+                  coordinates: offsetSpokeCoords(a[0], a[1], b[0], b[1], s * spacing * (1 + (i % 2) * 0.2)),
+                },
+              });
+            });
+          }
+        });
+      }
+      const data = { type: 'FeatureCollection', features: feats };
+      const vis = selectedId === 'all' ? 'visible' : 'none';
+      if (map.getSource('atlas-spokes')) {
+        map.getSource('atlas-spokes').setData(data);
+        map.setLayoutProperty('atlas-spokes-line', 'visibility', vis);
+        if (map.getLayer('atlas-spokes-band')) map.setLayoutProperty('atlas-spokes-band', 'visibility', vis);
+        return;
+      }
+      map.addSource('atlas-spokes', { type: 'geojson', data });
+      const beforeId = (map.getStyle().layers || []).find(l => /^route-.*-casing$/.test(l.id))?.id;
+      const bandLayer = {
+        id: 'atlas-spokes-band',
+        type: 'line',
+        source: 'atlas-spokes',
+        filter: ['==', ['get', 'kind'], 'band'],
+        layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': [
+            'interpolate', ['linear'], ['get', 'visits'],
+            1, 8, 2, 14, 4, 22, 8, 32,
+          ],
+          'line-opacity': 0.2,
+          'line-blur': 3.5,
+        },
+      };
+      const layer = {
+        id: 'atlas-spokes-line',
+        type: 'line',
+        source: 'atlas-spokes',
+        filter: ['==', ['get', 'kind'], 'spoke'],
+        layout: { 'line-cap': 'round', 'line-join': 'round', visibility: vis },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': [
+            'match', ['get', 'role'],
+            'filament', 1.05,
+            1.55,
+          ],
+          'line-opacity': [
+            'match', ['get', 'role'],
+            'filament', 0.28,
+            0.42,
+          ],
+          'line-dasharray': [1.2, 1.8],
+        },
+      };
+      try {
+        if (beforeId) {
+          map.addLayer(bandLayer, beforeId);
+          map.addLayer(layer, beforeId);
+        } else {
+          map.addLayer(bandLayer);
+          map.addLayer(layer);
+        }
+      } catch (_) {
+        try { map.addLayer(bandLayer); } catch (__) {}
+        try { map.addLayer(layer); } catch (__) {}
+      }
+    }
+
 
     // ── Helpers ──
     function isSingleTrip() { return selectedId !== 'all'; }
@@ -1657,6 +2090,7 @@
       return [r,g,b];
     }
 
+    
     function routeLayerIds(tripId) {
       const base = `route-${tripId}`;
       return {
@@ -1905,19 +2339,31 @@
     }
 
     // ── Premium route rendering ──
+    let routesBooted = false;
     function drawRoutes() {
       TRIPS.forEach(trip => {
         const coords = (trip.route_path || []).map(p => [p[1], p[0]]);
         const isSelected = selectedId === trip.id;
         const isOverview = selectedId === 'all';
         const visible = isOverview || isSelected;
-        addRouteLayers(trip.id, coords, trip.color, visible, trip.overview_offset, trip.overview_dash);
+        const ids = routeLayerIds(trip.id);
+        if (!routesBooted || !map.getSource(ids.src)) {
+          addRouteLayers(trip.id, coords, trip.color, visible, trip.overview_offset, trip.overview_dash);
+        } else {
+          // Geometry is stable — only flip visibility on trip select (skip setData thrash)
+          const vis = visible ? 'visible' : 'none';
+          [ids.casing, ids.halo, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+            try { map.setLayoutProperty(id, 'visibility', vis); } catch (_) {}
+          });
+        }
         if (!visible) setRouteStyle(trip.id, trip.color, 'hidden');
         else if (isSelected) setRouteStyle(trip.id, trip.color, 'active');
-        else setRouteStyle(trip.id, trip.color, 'overview');
+        else setRouteStyle(trip.id, trip.color, tripInEra(trip) ? 'overview' : 'overviewDim');
       });
+      routesBooted = true;
       drawRouteLabels();
     }
+
 
     function tripInEra(trip) {
       if (yearFilter === 'all' || yearFilter == null) return true;
@@ -1926,26 +2372,33 @@
     }
 
     function applyEraFilter() {
-      document.querySelectorAll('.era-chip').forEach(el => {
-        el.classList.toggle('active', el.dataset.year === String(yearFilter));
-      });
-      document.querySelectorAll('.trip-item').forEach(el => {
-        if (el.dataset.id === 'all') { el.classList.remove('era-dim'); return; }
-        const trip = TRIPS.find(t => t.id === el.dataset.id);
-        el.classList.toggle('era-dim', !!(trip && !tripInEra(trip)));
-      });
-      document.querySelectorAll('.tl-seg').forEach(el => {
-        const y = el.dataset.year || '';
-        el.classList.toggle('era-dim', yearFilter !== 'all' && y !== String(yearFilter));
-      });
-      if (selectedId === 'all' && map) {
-        TRIPS.forEach(t => {
-          if (!map.getLayer(`route-core-${t.id}`)) return;
-          if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
-          else setRouteStyle(t.id, t.color, 'overview');
+      if (eraApplying) return;
+      eraApplying = true;
+      try {
+        document.querySelectorAll('.era-chip').forEach(el => {
+          el.classList.toggle('active', el.dataset.year === String(yearFilter));
         });
-        drawRouteLabels();
-        drawAtlasMarkers();
+        document.querySelectorAll('.trip-item').forEach(el => {
+          if (el.dataset.id === 'all') { el.classList.remove('era-dim'); return; }
+          const trip = TRIPS.find(t => t.id === el.dataset.id);
+          el.classList.toggle('era-dim', !!(trip && !tripInEra(trip)));
+        });
+        document.querySelectorAll('.tl-seg').forEach(el => {
+          const y = el.dataset.year || '';
+          el.classList.toggle('era-dim', yearFilter !== 'all' && y !== String(yearFilter));
+        });
+        if (selectedId === 'all' && map) {
+          TRIPS.forEach(t => {
+            if (!map.getLayer(`route-core-${t.id}`)) return;
+            if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
+            else setRouteStyle(t.id, t.color, 'overview');
+          });
+          drawRouteLabels();
+          drawAtlasMarkers();
+          if (!memoryPaused && !memoryTimer && !hoveredTripId) startMemoryReel();
+        }
+      } finally {
+        eraApplying = false;
       }
     }
 
@@ -1954,6 +2407,7 @@
       applyEraFilter();
     }
 
+    
     function clearDestMarkers() {
       destMarkers.forEach(m => m.remove());
       destMarkers = [];
@@ -2000,6 +2454,7 @@
           });
         });
         el.addEventListener('mouseleave', () => {
+          if (eraApplying) return;
           applyEraFilter();
         });
         const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
@@ -2013,6 +2468,7 @@
     function drawAtlasMarkers() {
       drawHomeHubs();
       drawDestinationConstellation();
+      drawAtlasSpokes();
     }
 
     function shortTripLabel(trip) {
@@ -2114,6 +2570,14 @@
         m.getElement().classList.toggle('hot', !!id && ids.includes(id));
       });
       if (selectedId !== 'all') return;
+      if (id) {
+        // User browsing — pause reel highlight takeover
+        document.getElementById('memory-badge')?.classList.remove('visible');
+      } else if (!memoryPaused && memoryTimer) {
+        const list = memoryPlaylist();
+        const trip = list[memoryIndex % Math.max(list.length, 1)];
+        if (trip) showMemoryHighlight(trip);
+      }
       if (hoverRaf) cancelAnimationFrame(hoverRaf);
       hoverRaf = requestAnimationFrame(() => {
         hoverRaf = null;
@@ -2188,6 +2652,7 @@
         const isStart = m._idx === 0;
         const isEnd = m._idx === lastIdx;
         // Show the whole journey at rest — not only the stacked home pin.
+        m._vis = true; m._act = false; m._lblOn = isStart || isEnd;
         m._el.classList.toggle('visible', true);
         m._el.classList.remove('active');
         if (m._lbl) {
@@ -2295,6 +2760,7 @@
       applyIdleStopVisuals();
     }
 
+
     // ── Hero card ──
     function updateHero() {
       const trips = activeTrips();
@@ -2392,55 +2858,79 @@
       document.getElementById('hud-text').textContent = state.label || '';
     }
 
+    let storyOverlayKey = '';
     function updateStoryOverlay(state) {
       const overlay = document.getElementById('story-overlay');
       const captionEl = document.getElementById('story-caption');
       const subEl = document.getElementById('story-sub');
       const poisEl = document.getElementById('story-pois');
-      if (!state || !isSingleTrip()) {
-        overlay.classList.remove('visible');
-        return;
-      }
-      const show = isPlaying || isRecording;
-      if (!show) { overlay.classList.remove('visible'); return; }
+      if (!overlay) return;
 
-      if (state.phase === 'intro') {
-        overlay.classList.add('visible');
-        captionEl.textContent = state.label || activeTrip()?.name || '';
-        subEl.textContent = state.caption || '';
-        poisEl.innerHTML = (state.highlights || []).map(h =>
-          `<span class="story-poi-chip">${h}</span>`
-        ).join('');
-        return;
+      let next = { visible: false, mode: '', caption: '', sub: '', pois: '' };
+
+      if (state && isSingleTrip() && (isPlaying || isRecording)) {
+        if (state.phase === 'intro') {
+          next = {
+            visible: true, mode: 'intro',
+            caption: state.label || activeTrip()?.name || '',
+            sub: state.caption || '',
+            pois: (state.highlights || []).map(h => `<span class="story-poi-chip">${h}</span>`).join(''),
+          };
+        } else if (state.phase === 'outro') {
+          const vc = state.visitedCount || 0;
+          const nc = state.nearbyCount || 0;
+          next = {
+            visible: true, mode: 'outro',
+            caption: 'Journey Complete',
+            sub: state.caption || '',
+            pois: nc
+              ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
+              : '',
+          };
+        } else if (state.phase === 'dwell' && (state.caption || state.pois?.length || state.label)) {
+          // Hold dwell captions; reveal POI chips after a short settle-in beat
+          const frac = state.frac || 0;
+          const poisHtml = frac >= 0.14
+            ? (state.pois || []).map(p =>
+                `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
+              ).join('')
+            : '';
+          next = {
+            visible: true, mode: 'dwell',
+            caption: state.caption || `Charging · ${state.label}`,
+            sub: state.subcaption || '',
+            pois: poisHtml,
+          };
+        } else if (state.phase === 'travel') {
+          // Pace travel captions: only at segment start / approach — avoid mid-drive spam
+          const frac = state.frac || 0;
+          if (frac <= 0.1) {
+            next = {
+              visible: true, mode: 'travel',
+              caption: `En route · ${state.label || 'next stop'}`,
+              sub: '', pois: '',
+            };
+          } else if (frac >= 0.78) {
+            next = {
+              visible: true, mode: 'travel approaching',
+              caption: `Approaching ${state.label || 'next stop'}`,
+              sub: '', pois: '',
+            };
+          }
+        }
       }
-      if (state.phase === 'outro') {
-        overlay.classList.add('visible');
-        captionEl.textContent = 'Journey Complete';
-        subEl.textContent = state.caption || '';
-        const vc = state.visitedCount || 0;
-        const nc = state.nearbyCount || 0;
-        poisEl.innerHTML = nc
-          ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
-          : '';
-        return;
-      }
-      if (state.phase === 'dwell' && (state.caption || state.pois?.length)) {
-        overlay.classList.add('visible');
-        captionEl.textContent = state.caption || `Charging · ${state.label}`;
-        subEl.textContent = state.subcaption || '';
-        poisEl.innerHTML = (state.pois || []).map(p =>
-          `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
-        ).join('');
-        return;
-      }
-      if (state.phase === 'travel') {
-        overlay.classList.add('visible');
-        captionEl.textContent = `Driving to ${state.label || 'next stop'}`;
-        subEl.textContent = '';
-        poisEl.innerHTML = '';
-        return;
-      }
-      overlay.classList.remove('visible');
+
+      const key = `${next.visible}|${next.mode}|${next.caption}|${next.sub}|${next.pois}`;
+      if (key === storyOverlayKey) return;
+      storyOverlayKey = key;
+
+      overlay.classList.toggle('visible', next.visible);
+      overlay.classList.toggle('dwell', next.mode === 'dwell');
+      overlay.classList.toggle('travel', next.mode.startsWith('travel'));
+      overlay.classList.toggle('approaching', next.mode.includes('approaching'));
+      if (captionEl) captionEl.textContent = next.caption;
+      if (subEl) subEl.textContent = next.sub;
+      if (poisEl) poisEl.innerHTML = next.pois;
     }
 
     function clearPoiMarkers() {
@@ -2504,10 +2994,7 @@
         updateStoryOverlay(state);
         updateLocationHud(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'intro', state);
-        document.getElementById('scrubber').value = Math.round(animProg * 1000);
-        document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
-        document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
-        document.getElementById('prog-text').textContent = state.label || 'Opening…';
+        setPlaybackChrome(animProg, state.label || 'Opening…');
         return;
       }
       if (state.phase === 'outro') {
@@ -2516,10 +3003,7 @@
         updateStoryOverlay(state);
         updateLocationHud(state);
         if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), 'outro', state);
-        document.getElementById('scrubber').value = Math.round(animProg * 1000);
-        document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
-        document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
-        document.getElementById('prog-text').textContent = 'Journey complete';
+        setPlaybackChrome(animProg, 'Journey complete');
         return;
       }
       if (isPlaying && !isRecording) showWatchTitleCard(activeTrip(), state.phase, state);
@@ -2566,11 +3050,18 @@
               ? smoothAngle(camBearing, bearing, 0.06)
               : camBearing;
             const zoom = state.phase === 'dwell' && state.pois?.length ? 7.2 : Math.min(6.8, Math.max(5.2, map.getZoom()));
+            const pad = mapCameraPadding();
             const cam = {
               center: [lookPos.lng, lookPos.lat],
               zoom,
               pitch: Math.min(MAX_PITCH, state.phase === 'dwell' ? 38 : 42),
               bearing: camBearing,
+              padding: {
+                top: Math.max(40, Math.floor(pad.top * 0.5)),
+                bottom: Math.max(100, pad.bottom),
+                left: Math.max(24, Math.floor(pad.left * 0.35)),
+                right: 40,
+              },
             };
             if (isRecording) map.jumpTo(cam);
             else map.easeTo({ ...cam, duration: 420, essential: true });
@@ -2589,10 +3080,15 @@
         const isEnd = m._idx === lastIdx;
         // While the car sits on a stacked home pin, hide that milestone so the car wins.
         const carCovers = sameHome && isActive && (isStart || isEnd) && state.phase === 'dwell';
-        m._el.classList.toggle('visible', (reached || m._isMilestone) && !carCovers);
-        m._el.classList.toggle('active', isActive && !carCovers);
+        const wantVisible = (reached || m._isMilestone) && !carCovers;
+        const wantActive = isActive && !carCovers;
+        const showLbl = wantActive;
+        // Skip DOM writes when nothing changed (every RAF used to toggle all stops)
+        if (m._vis === wantVisible && m._act === wantActive && m._lblOn === showLbl) return;
+        m._vis = wantVisible; m._act = wantActive; m._lblOn = showLbl;
+        m._el.classList.toggle('visible', wantVisible);
+        m._el.classList.toggle('active', wantActive);
         if (m._lbl) {
-          const showLbl = isActive && !carCovers;
           m._lbl.classList.toggle('visible', showLbl);
           m._lbl.classList.toggle('active', showLbl);
           if (showLbl) {
@@ -2605,22 +3101,29 @@
         }
       });
 
-      document.getElementById('scrubber').value = Math.round(animProg * 1000);
-      document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
-      document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
       const cur = stops[animStopIdx];
       if (cur && state.phase === 'dwell') {
         const pct = Math.round((state.frac || 0) * 100);
-        document.getElementById('prog-text').textContent = `Charging · ${shortLabel(cur.location)}`;
-        document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0, 10) || '';
-        document.getElementById('prog-end').innerHTML = `<span class="dwell-pct">${pct}%</span>`;
+        setPlaybackChrome(
+          animProg,
+          `Charging · ${shortLabel(cur.location)}`,
+          stops[0]?.datetime?.slice(0, 10) || '',
+          null,
+          `<span class="dwell-pct">${pct}%</span>`
+        );
       } else {
-        document.getElementById('prog-text').textContent = cur
+        const label = cur
           ? (state.phase === 'dwell' ? `Charging · ${shortLabel(cur.location)}` : `Driving · ${state.label || shortLabel(cur.location)}`)
           : 'Ready to replay';
         if (cur) {
-          document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0, 10) || '';
-          document.getElementById('prog-end').textContent = cur.datetime?.slice(0, 10) || '';
+          setPlaybackChrome(
+            animProg,
+            label,
+            stops[0]?.datetime?.slice(0, 10) || '',
+            cur.datetime?.slice(0, 10) || ''
+          );
+        } else {
+          setPlaybackChrome(animProg, label);
         }
       }
       updateLocationHud(state);
@@ -2632,6 +3135,7 @@
       updateTrailFromState(positionAtTime(animTimeMs));
     }
 
+    
     // ── Playback ──
     function animate(ts) {
       if (!isPlaying) return;
@@ -2651,6 +3155,15 @@
           applyIdleStopVisuals();
           lastTs = 0;
           if (!isRecording) { animFrame = requestAnimationFrame(animate); }
+          return;
+        }
+        if (queueEpics && !isRecording) {
+          const next = nextEpicTrip(selectedId);
+          stopPlayback();
+          if (next) {
+            selectTrip(next.id);
+            setTimeout(() => startPlayback(false), 900);
+          }
           return;
         }
         stopPlayback();
@@ -2674,6 +3187,7 @@
       document.getElementById('btn-pause').disabled = false;
       document.getElementById('location-hud').classList.remove('visible');
       document.getElementById('transport-dock')?.classList.remove('idle');
+      updateQueueBadge();
       animFrame = requestAnimationFrame(animate);
     }
     function stopPlayback() {
@@ -2693,40 +3207,68 @@
       clearPoiMarkers();
       if (map?.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
       applyIdleStopVisuals();
-      document.getElementById('scrubber').value=0;
-      document.getElementById('scrub-fill').style.width='0%';
-      document.getElementById('timeline-scrub').style.left='0%';
-      document.getElementById('prog-text').textContent = isSingleTrip() ? 'Ready to replay' : 'Select a trip to replay';
+      setPlaybackChrome(0, isSingleTrip() ? 'Ready to replay' : 'Select a trip to replay');
       if (clearHud) {
-        document.getElementById('location-hud').classList.remove('visible');
-        document.getElementById('story-overlay').classList.remove('visible');
+        ui('location-hud')?.classList.remove('visible');
+        ui('story-overlay')?.classList.remove('visible');
       }
+      storyOverlayKey = '';
       setPlaybackVisuals(false);
       setWatching(false);
     }
 
+
+    
+    function showExportTitleCard(trip, phase) {
+      const title = document.getElementById('cinema-title');
+      if (!title || !trip) return;
+      const story = trip.story || {};
+      if (phase === 'outro') {
+        document.getElementById('cinema-title-text').textContent = 'Journey Complete';
+        document.getElementById('cinema-subtitle').textContent =
+          `${trip.miles.toLocaleString()} mi · ${trip.stop_count} stops · ${trip.duration_days} days`;
+        document.getElementById('cinema-highlights').innerHTML = '';
+        title.classList.add('outro');
+      } else {
+        document.getElementById('cinema-title-text').textContent = trip.name;
+        document.getElementById('cinema-subtitle').textContent =
+          `${trip.miles.toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days} days`;
+        const hlEl = document.getElementById('cinema-highlights');
+        hlEl.innerHTML = (story.highlights || []).slice(0, 4).map(h => `<span>${h}</span>`).join('');
+        title.classList.remove('outro');
+      }
+      title.classList.add('visible');
+    }
+
+    function hideExportTitleCard() {
+      const title = document.getElementById('cinema-title');
+      if (!title) return;
+      title.classList.remove('visible', 'outro');
+      document.getElementById('cinema-highlights').innerHTML = '';
+    }
+
     async function exportTripVideo() {
       if (!isSingleTrip() || !map) return;
+      if (typeof MediaRecorder === 'undefined') {
+        const status = document.getElementById('export-status');
+        status.textContent = 'Recording not supported in this browser';
+        status.classList.add('visible');
+        setTimeout(() => status.classList.remove('visible'), 2800);
+        return;
+      }
       const trip = activeTrip();
-      const story = trip.story || {};
       const status = document.getElementById('export-status');
       status.textContent = 'Preparing cinematic recording…';
       status.classList.add('visible');
       resetVisuals();
       drawStops();
       fitTrip(false);
-      await new Promise(r => setTimeout(r, 1600));
+      await new Promise(r => setTimeout(r, 1200));
 
       document.body.classList.add('cinema-mode', 'portrait-export');
-      const title = document.getElementById('cinema-title');
-      document.getElementById('cinema-title-text').textContent = trip.name;
-      document.getElementById('cinema-subtitle').textContent =
-        `${trip.miles.toLocaleString()} mi · ${trip.stop_count} Supercharger stops · ${trip.duration_days} days`;
-      const hlEl = document.getElementById('cinema-highlights');
-      hlEl.innerHTML = (story.highlights || []).slice(0, 4).map(h => `<span>${h}</span>`).join('');
-      title.classList.add('visible');
+      showExportTitleCard(trip, 'intro');
       map.resize();
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 400));
 
       const canvas = map.getCanvas();
       const stream = canvas.captureStream(30);
@@ -2745,27 +3287,39 @@
         URL.revokeObjectURL(url);
         isRecording = false;
         document.body.classList.remove('cinema-mode', 'portrait-export');
-        title.classList.remove('visible');
-        hlEl.innerHTML = '';
+        hideExportTitleCard();
         status.classList.remove('visible');
-        document.getElementById('story-overlay').classList.remove('visible');
+        document.getElementById('story-overlay')?.classList.remove('visible');
         map.resize();
         fitTrip(false);
       };
 
       isRecording = true;
-      status.textContent = 'Recording road trip story…';
+      status.textContent = 'Recording title card…';
       mediaRecorder.start(250);
+      // Hold intro title on-canvas so Instagram export opens with branding
+      await new Promise(r => setTimeout(r, 2400));
+      hideExportTitleCard();
+      status.textContent = 'Recording road trip story…';
       startPlayback(true);
     }
 
     function finishRecording() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        document.getElementById('export-status').textContent = 'Saving video…';
-        mediaRecorder.stop();
-      }
-      stopPlayback();
+      if (!isRecording) { stopPlayback(); return; }
+      const trip = activeTrip();
+      showExportTitleCard(trip, 'outro');
+      const status = document.getElementById('export-status');
+      if (status) status.textContent = 'Recording outro…';
+      // Brief outro hold on the canvas before stopping the recorder
+      setTimeout(() => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          if (status) status.textContent = 'Saving video…';
+          mediaRecorder.stop();
+        }
+        stopPlayback();
+      }, 2200);
     }
+
 
     function setBasemapTripFocus(on) {
       if (!map || !map.isStyleLoaded()) return;
@@ -2829,7 +3383,15 @@
       document.getElementById('btn-play').disabled = !isSingleTrip();
       document.getElementById('btn-export').disabled = !isSingleTrip();
       updateDockIdle();
-      if (id === 'all') applyEraFilter();
+      updateAtlasCta();
+      updateQueueBadge();
+      if (id === 'all') {
+        applyEraFilter();
+        if (!memoryPaused) startMemoryReel();
+      } else {
+        stopMemoryReel();
+        drawAtlasSpokes();
+      }
     }
 
     function updateDockIdle() {
@@ -2887,7 +3449,15 @@
     });
     document.getElementById('btn-reset').addEventListener('click', ()=>{ resetVisuals(); drawStops(); fitTrip(); });
     document.getElementById('btn-loop').addEventListener('click', ()=>{
-      loopTrip=!loopTrip; document.getElementById('btn-loop').classList.toggle('on', loopTrip);
+      // off → loop one → epic queue → off
+      if (!loopTrip && !queueEpics) {
+        loopTrip = true; queueEpics = false;
+      } else if (loopTrip && !queueEpics) {
+        loopTrip = false; queueEpics = true;
+      } else {
+        loopTrip = false; queueEpics = false;
+      }
+      syncLoopButton();
     });
     document.getElementById('btn-director').addEventListener('click', ()=>{
       directorMode=!directorMode; document.getElementById('btn-director').classList.toggle('on', directorMode);
@@ -2913,8 +3483,35 @@
       if (!chip) return;
       setYearFilter(chip.dataset.year || 'all');
     });
+    document.getElementById('atlas-cta')?.addEventListener('click', () => {
+      const id = document.getElementById('atlas-cta')?.dataset.tripId;
+      if (id) selectTrip(id);
+    });
+    document.getElementById('memory-pause')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      memoryPaused = !memoryPaused;
+      const btn = document.getElementById('memory-pause');
+      if (memoryPaused) {
+        if (btn) btn.textContent = 'Resume';
+        if (memoryTimer) { clearInterval(memoryTimer); memoryTimer = null; }
+      } else {
+        if (btn) btn.textContent = 'Pause';
+        startMemoryReel();
+      }
+    });
     document.addEventListener('keydown', e=>{
       if (e.target.tagName==='INPUT') return;
+      if (e.code==='Escape') {
+        if (isPlaying) { stopPlayback(); return; }
+        if (selectedId !== 'all') { selectTrip('all'); return; }
+        if (!memoryPaused) {
+          memoryPaused = true;
+          const btn = document.getElementById('memory-pause');
+          if (btn) btn.textContent = 'Resume';
+          stopMemoryReel();
+        }
+        return;
+      }
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
       if (e.code==='ArrowRight') { stopPlayback(); document.getElementById('btn-step').click(); }
       if (e.code==='ArrowLeft') { stopPlayback(); if(isSingleTrip()&&animStopIdx>0){
