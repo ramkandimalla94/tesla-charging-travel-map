@@ -360,9 +360,9 @@
     function photoThumbUrl(thumb) {
       if (!thumb) return '';
       if (thumb.startsWith('http') || thumb.startsWith('data:')) return thumb;
-      // travel_map.html is under /output/; Pages serves index.html at root with photos/ beside it
-      const base = location.pathname.includes('/output/') ? '../' : '';
-      return base + thumb.replace(/^\//, '');
+      // Relative to the HTML file: /output/travel_map.html → /output/photos/...
+      // and Pages index.html → /photos/...
+      return thumb.replace(/^\//, '');
     }
 
     function showPhotoHover(photo, x, y) {
