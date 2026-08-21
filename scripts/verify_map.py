@@ -79,13 +79,29 @@ def main() -> int:
         declutter = page.evaluate(
             """() => ({
               hubs: document.querySelectorAll('.home-hub').length,
+              destStars: document.querySelectorAll('.dest-star').length,
               chips: document.querySelectorAll('.route-chip').length,
               stopDots: document.querySelectorAll('.stop-dot').length,
+              eraChips: document.querySelectorAll('.era-chip').length,
               hubTripCounts: (DASHBOARD.hubs || []).map(h => h.trip_count),
               destGroups: (DASHBOARD.destination_groups || []).length,
             })"""
         )
         print(f"Overview declutter: {declutter}")
+
+        # Year filter smoke
+        page.evaluate("setYearFilter('2025')")
+        page.wait_for_timeout(600)
+        era_state = page.evaluate(
+            """() => ({
+              yearFilter,
+              dimmedTrips: document.querySelectorAll('.trip-item.era-dim').length,
+              destStars: document.querySelectorAll('.dest-star').length,
+            })"""
+        )
+        print(f"Era filter 2025: {era_state}")
+        page.evaluate("setYearFilter('all')")
+        page.wait_for_timeout(400)
 
         # Colorado trip
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
@@ -189,11 +205,20 @@ def main() -> int:
     if declutter.get("hubs", 0) < 1:
         print(f"FAIL: Expected home hubs on overview, got {declutter}")
         ok = False
+    if declutter.get("destStars", 0) < 3:
+        print(f"FAIL: Expected destination constellation stars, got {declutter}")
+        ok = False
+    if declutter.get("eraChips", 0) < 2:
+        print(f"FAIL: Expected year era chips, got {declutter}")
+        ok = False
     if declutter.get("stopDots", 0) > 0:
         print(f"FAIL: Overview still has per-trip stop dots: {declutter}")
         ok = False
-    if declutter.get("hubs", 0) + declutter.get("chips", 0) >= 23:
-        print(f"FAIL: Overview still looks fully labeled ({declutter})")
+    if era_state.get("yearFilter") != "2025":
+        print(f"FAIL: Year filter not applied: {era_state}")
+        ok = False
+    if era_state.get("dimmedTrips", 0) < 1:
+        print(f"FAIL: Era filter did not dim trips: {era_state}")
         ok = False
     if not play_state.get("playing"):
         print(f"FAIL: Playback did not start: {play_state}")

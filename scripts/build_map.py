@@ -536,25 +536,24 @@ def build_playback_timeline(
     for seg in raw_segments:
         dur = seg["real_duration_ms"] * scale
         if seg["type"] == "dwell":
-            # Cap dwells tightly — multi-second "Charging…" freezes read as a stalled UI.
-            # POI stops get a short extra beat to read the caption, not a long hold.
-            poi_bonus = 1.2 if seg.get("pois") else 1.0
-            dur = max(1_200, min(3_600, dur * poi_bonus))
+            # Keep dwells snappy — multi-second freezes read as a stalled UI.
+            poi_bonus = 1.15 if seg.get("pois") else 1.0
+            dur = max(800, min(2_000, dur * poi_bonus))
         else:
-            dur = max(1_200, min(14_000, dur))
+            dur = max(1_000, min(12_000, dur))
         video_segments.append({**seg, "duration_ms": int(dur)})
 
-    # Cinematic intro/outro title cards for video export (keep snappy for in-app play)
+    # Cinematic intro/outro title cards (short enough for in-app play)
     intro_seg = {
         "type": "intro",
-        "duration_ms": 2_800,
+        "duration_ms": 2_000,
         "title": story.get("intro_title", ""),
         "caption": story.get("intro", "Road trip replay"),
         "highlights": story.get("highlights", [])[:4],
     }
     outro_seg = {
         "type": "outro",
-        "duration_ms": 3_200,
+        "duration_ms": 2_400,
         "caption": story.get("outro", "Journey complete"),
         "visited_count": story.get("visited_count", 0),
         "nearby_count": story.get("nearby_count", 0),
@@ -680,7 +679,7 @@ def build_hubs(trips_data: dict, prepared: list[dict]) -> list[dict]:
 
 
 def build_destination_groups(prepared: list[dict]) -> list[dict]:
-    """Sidebar atlas groups keyed by story destination."""
+    """Sidebar + map constellation groups keyed by story destination."""
     buckets: dict[str, list[dict]] = {}
     for trip in prepared:
         key = trip.get("story_dest") or "Journey"
@@ -688,7 +687,28 @@ def build_destination_groups(prepared: list[dict]) -> list[dict]:
     groups: list[dict] = []
     for dest, trips in buckets.items():
         trips_sorted = sorted(trips, key=lambda t: t["start"], reverse=True)
+        dest_lats: list[float] = []
+        dest_lngs: list[float] = []
+        dest_key = dest.lower().split("(")[0].strip()
+        for t in trips_sorted:
+            matched = False
+            for s in reversed(t.get("stops") or []):
+                loc = (s.get("location") or "").lower()
+                if dest_key and dest_key in loc and s.get("lat") is not None:
+                    dest_lats.append(float(s["lat"]))
+                    dest_lngs.append(float(s["lng"]))
+                    matched = True
+                    break
+            if not matched and t.get("label_lat") is not None:
+                dest_lats.append(float(t["label_lat"]))
+                dest_lngs.append(float(t["label_lng"]))
+        years = sorted({
+            int(str(t["start"])[:4])
+            for t in trips_sorted
+            if str(t.get("start", ""))[:4].isdigit()
+        })
         groups.append({
+            "id": f"dest_{re.sub(r'[^a-z0-9]+', '_', dest.lower()).strip('_')}",
             "dest": dest,
             "trip_count": len(trips_sorted),
             "total_miles": sum(t["miles"] for t in trips_sorted),
@@ -698,6 +718,9 @@ def build_destination_groups(prepared: list[dict]) -> list[dict]:
                 (t["color"] for t in trips_sorted if t.get("featured")),
                 trips_sorted[0]["color"],
             ),
+            "lat": sum(dest_lats) / len(dest_lats) if dest_lats else float(trips_sorted[0]["stops"][0]["lat"]),
+            "lng": sum(dest_lngs) / len(dest_lngs) if dest_lngs else float(trips_sorted[0]["stops"][0]["lng"]),
+            "years": years,
         })
     groups.sort(key=lambda g: (-int(g["featured"]), -g["total_miles"], g["dest"]))
     return groups
@@ -811,6 +834,11 @@ def build_dashboard(trips: list[dict], hubs: list[dict] | None = None,
         elif t.get("owner"):
             owners.add(t["owner"].split()[0])
     longest = max(trips, key=lambda t: t["miles"]) if trips else None
+    years = sorted({
+        int(str(t["start"])[:4])
+        for t in trips
+        if str(t.get("start", ""))[:4].isdigit()
+    })
     return {
         "total_kwh": round(sum(t["total_kwh"] for t in trips), 0),
         "trip_count": len(trips),
@@ -826,6 +854,7 @@ def build_dashboard(trips: list[dict], hubs: list[dict] | None = None,
         "us_bounds": US_BOUNDS,
         "hubs": hubs or [],
         "destination_groups": destination_groups or [],
+        "years": years,
     }
 
 
