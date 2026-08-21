@@ -10,6 +10,35 @@
       return list[(idx + 1) % list.length];
     }
 
+    function epicQueueStatus() {
+      const list = TRIPS.filter(t => t.featured && tripInEra(t));
+      if (!list.length) return null;
+      const idx = list.findIndex(t => t.id === selectedId);
+      return { n: list.length, i: idx >= 0 ? idx + 1 : 0, list };
+    }
+
+    function updateQueueBadge() {
+      const badge = document.getElementById('queue-badge');
+      if (!badge) return;
+      if (!queueEpics) {
+        badge.classList.remove('visible');
+        badge.hidden = true;
+        badge.textContent = '';
+        return;
+      }
+      const st = epicQueueStatus();
+      if (!st) {
+        badge.classList.remove('visible');
+        badge.hidden = true;
+        return;
+      }
+      badge.hidden = false;
+      badge.classList.add('visible');
+      badge.textContent = st.i
+        ? `Epic queue · ${st.i}/${st.n}`
+        : `Epic queue · ${st.n} trips`;
+    }
+
     function syncLoopButton() {
       const btn = document.getElementById('btn-loop');
       if (!btn) return;
@@ -18,6 +47,8 @@
       btn.title = queueEpics
         ? 'Epic queue on — plays featured trips in sequence'
         : (loopTrip ? 'Loop this trip' : 'Loop off · click for loop · again for epic queue');
+      btn.setAttribute('aria-label', btn.title);
+      updateQueueBadge();
     }
 
     function updateAtlasCta() {

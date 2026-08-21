@@ -24,7 +24,9 @@ Destination constellation, year era filter, snappier dwell + dock %, a11y 44px c
 10. **Atlas JS partial** — `travel_map/_atlas_js.html.j2` (CTA / reel / spokes)
 11. **Shared spokes GeoJSON** — band + filaments from one `atlas-spokes` source with `kind` filters
 12. **Era rail discoverability** — labeled Era chips, larger hit targets
+13. **Epic-queue dock badge** — `Epic queue · i/n` when Loop is in queue mode
+14. **Playback JS partial** — `travel_map/_playback_js.html.j2`
 
 ## Later
 
-Fuller Jinja JS split (playback/routes), denser corridor polish, README screenshot refresh.
+Route/layer JS partial, denser corridor polish, mobile sheet regression pass.

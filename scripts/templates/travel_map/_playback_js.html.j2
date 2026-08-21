@@ -1,0 +1,81 @@
+{# Playback loop, start/stop, reset visuals #}
+    // ── Playback ──
+    function animate(ts) {
+      if (!isPlaying) return;
+      if (!lastTs) lastTs=ts;
+      const pb = activePlayback();
+      if (!pb?.total_video_ms) { stopPlayback(); return; }
+      const rawDelta = ts - lastTs;
+      const delta = Math.min(rawDelta, 250);
+      animTimeMs += delta * speed;
+      lastTs = ts;
+      if (animTimeMs >= pb.total_video_ms) {
+        animTimeMs = pb.total_video_ms;
+        updateTrailFromState(positionAtTime(animTimeMs));
+        if (isRecording) finishRecording();
+        if (loopTrip) {
+          animTimeMs = 0; animStopIdx = 0;
+          applyIdleStopVisuals();
+          lastTs = 0;
+          if (!isRecording) { animFrame = requestAnimationFrame(animate); }
+          return;
+        }
+        if (queueEpics && !isRecording) {
+          const next = nextEpicTrip(selectedId);
+          stopPlayback();
+          if (next) {
+            selectTrip(next.id);
+            setTimeout(() => startPlayback(false), 900);
+          }
+          return;
+        }
+        stopPlayback();
+        return;
+      }
+      updateTrailFromState(positionAtTime(animTimeMs));
+      animFrame = requestAnimationFrame(animate);
+    }
+    function startPlayback(forRecording=false) {
+      if (!isSingleTrip()) {
+        document.getElementById('prog-text').textContent = 'Select a trip first';
+        return;
+      }
+      if (!activePlayback()?.total_video_ms) return;
+      if (animTimeMs >= activePlayback().total_video_ms) { animTimeMs = 0; resetVisuals(false); drawStops(); }
+      isPlaying = true; lastTs = 0;
+      setPanelCollapsed(true);
+      if (!forRecording) setWatching(true);
+      setPlaybackVisuals(true);
+      document.getElementById('btn-play').disabled = true;
+      document.getElementById('btn-pause').disabled = false;
+      document.getElementById('location-hud').classList.remove('visible');
+      document.getElementById('transport-dock')?.classList.remove('idle');
+      updateQueueBadge();
+      animFrame = requestAnimationFrame(animate);
+    }
+    function stopPlayback() {
+      isPlaying=false;
+      if (animFrame) cancelAnimationFrame(animFrame);
+      document.getElementById('btn-play').disabled = !isSingleTrip();
+      document.getElementById('btn-pause').disabled = true;
+      if (!isRecording) {
+        setPlaybackVisuals(false);
+        setWatching(false);
+      }
+    }
+    function resetVisuals(clearHud=true) {
+      stopPlayback(); animTimeMs=0; animProg=0; animStopIdx=0;
+      smoothBearing = 0; camBearing = 0; lastTravelBearing = 0;
+      if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
+      clearPoiMarkers();
+      if (map?.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
+      applyIdleStopVisuals();
+      setPlaybackChrome(0, isSingleTrip() ? 'Ready to replay' : 'Select a trip to replay');
+      if (clearHud) {
+        ui('location-hud')?.classList.remove('visible');
+        ui('story-overlay')?.classList.remove('visible');
+      }
+      setPlaybackVisuals(false);
+      setWatching(false);
+    }
+

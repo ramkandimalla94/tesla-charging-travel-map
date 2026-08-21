@@ -196,6 +196,30 @@ def main() -> int:
         print(f"Playback: {play_state}")
         page.screenshot(path=str(SCREENSHOTS / "06-watch-mode.png"))
 
+        # Epic queue dock badge (loop → queue)
+        page.evaluate(
+            """() => {
+              loopTrip = false; queueEpics = false;
+              document.getElementById('btn-loop')?.click(); // loop
+              document.getElementById('btn-loop')?.click(); // queue
+            }"""
+        )
+        page.wait_for_timeout(200)
+        queue_state = page.evaluate(
+            """() => {
+              const badge = document.getElementById('queue-badge');
+              return {
+                queueEpics,
+                loopTrip,
+                badgeVisible: !!(badge && !badge.hidden && badge.classList.contains('visible')),
+                badgeText: badge?.textContent || '',
+                btnQueue: document.getElementById('btn-loop')?.classList.contains('queue'),
+              };
+            }"""
+        )
+        print(f"Epic queue badge: {queue_state}")
+        page.evaluate("loopTrip = false; queueEpics = false; syncLoopButton()")
+
         browser.close()
 
     critical_errors = [
@@ -269,6 +293,12 @@ def main() -> int:
         ok = False
     if play_state.get("t1", 0) <= play_state.get("t0", 0):
         print(f"FAIL: animTimeMs not advancing: {play_state}")
+        ok = False
+    if not queue_state.get("queueEpics") or not queue_state.get("btnQueue"):
+        print(f"FAIL: Epic queue mode not armed: {queue_state}")
+        ok = False
+    if not queue_state.get("badgeVisible") or "Epic queue" not in queue_state.get("badgeText", ""):
+        print(f"FAIL: Epic queue dock badge missing: {queue_state}")
         ok = False
     if critical_errors:
         print("WARN: Console errors detected")
