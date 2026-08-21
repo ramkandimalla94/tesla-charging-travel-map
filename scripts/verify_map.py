@@ -192,6 +192,55 @@ def main() -> int:
         )
         page.wait_for_timeout(800)
         play_state["t1"] = page.evaluate("animTimeMs")
+        story_state = page.evaluate(
+            """() => {
+              const ov = document.getElementById('story-overlay');
+              return {
+                visible: ov?.classList.contains('visible'),
+                dwell: ov?.classList.contains('dwell'),
+                travel: ov?.classList.contains('travel'),
+                caption: document.getElementById('story-caption')?.textContent || '',
+                modeOk: !!(ov && (ov.classList.contains('dwell') || ov.classList.contains('travel')
+                  || ov.classList.contains('visible') === false || true)),
+              };
+            }"""
+        )
+        # Force a mid-travel + dwell sample via positionAtTime helpers if available
+        story_pacing = page.evaluate(
+            """() => {
+              const pb = activePlayback();
+              if (!pb?.segments?.length) return { ok: false };
+              let cursor = 0;
+              let travelAt = null, dwellAt = null;
+              for (const seg of pb.segments) {
+                if (seg.type === 'travel' && travelAt == null) {
+                  travelAt = { start: cursor, dur: seg.duration_ms || 0 };
+                }
+                if (seg.type === 'dwell' && dwellAt == null) {
+                  dwellAt = { start: cursor, dur: seg.duration_ms || 0 };
+                }
+                cursor += seg.duration_ms || 0;
+              }
+              const samples = {};
+              if (travelAt && travelAt.dur > 0) {
+                updateTrailFromState(positionAtTime(travelAt.start + travelAt.dur * 0.45));
+                samples.midTravelVisible = document.getElementById('story-overlay')?.classList.contains('visible');
+                updateTrailFromState(positionAtTime(travelAt.start + travelAt.dur * 0.04));
+                samples.earlyTravelVisible = document.getElementById('story-overlay')?.classList.contains('visible');
+                samples.earlyTravelMode = document.getElementById('story-overlay')?.classList.contains('travel');
+              }
+              if (dwellAt && dwellAt.dur > 0) {
+                updateTrailFromState(positionAtTime(dwellAt.start + dwellAt.dur * 0.05));
+                samples.earlyDwellPois = (document.getElementById('story-pois')?.children.length || 0);
+                updateTrailFromState(positionAtTime(dwellAt.start + dwellAt.dur * 0.45));
+                samples.lateDwellPois = (document.getElementById('story-pois')?.children.length || 0);
+                samples.lateDwellMode = document.getElementById('story-overlay')?.classList.contains('dwell');
+              }
+              return { ok: true, ...samples };
+            }"""
+        )
+        print(f"Story overlay: {story_state}")
+        print(f"Caption pacing: {story_pacing}")
         page.evaluate("stopPlayback()")
         print(f"Playback: {play_state}")
         page.screenshot(path=str(SCREENSHOTS / "06-watch-mode.png"))
@@ -414,6 +463,18 @@ def main() -> int:
     if not cinema.get("portraitish"):
         print(f"FAIL: Map frame not portrait-ish for export: {cinema}")
         ok = False
+    if story_pacing.get("ok"):
+        if story_pacing.get("midTravelVisible"):
+            print(f"FAIL: Mid-travel caption should be hidden: {story_pacing}")
+            ok = False
+        if story_pacing.get("earlyTravelVisible") is False:
+            print(f"FAIL: Early-travel caption should show: {story_pacing}")
+            ok = False
+        if story_pacing.get("lateDwellMode") is False:
+            print(f"FAIL: Late dwell should use dwell caption mode: {story_pacing}")
+            ok = False
+    else:
+        print(f"WARN: Caption pacing samples skipped: {story_pacing}")
     if critical_errors:
         print("WARN: Console errors detected")
 

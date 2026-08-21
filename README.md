@@ -73,6 +73,10 @@ Use **▶ Play** for preview; adjust speed with the slider. **🎬 Director** ke
 |------------|-------------|---------------------|
 | ![Watch mode](docs/screenshots/06-watch-mode.png) | ![Memory reel](docs/screenshots/07-memory-reel.png) | ![Mobile sheet](docs/screenshots/08-mobile-sheet.png) |
 
+| Export cinema (9:16 title card) |
+|---------------------------------|
+| ![Export cinema](docs/screenshots/09-export-cinema.png) |
+
 ## GitHub Pages setup
 
 **Already live** at https://ramkandimalla94.github.io/tesla-charging-travel-map/ (Mapbox token embedded at build time — no in-browser paste).
