@@ -979,17 +979,28 @@
     }
 
     // ── Premium route rendering ──
+    let routesBooted = false;
     function drawRoutes() {
       TRIPS.forEach(trip => {
         const coords = (trip.route_path || []).map(p => [p[1], p[0]]);
         const isSelected = selectedId === trip.id;
         const isOverview = selectedId === 'all';
         const visible = isOverview || isSelected;
-        addRouteLayers(trip.id, coords, trip.color, visible, trip.overview_offset, trip.overview_dash);
+        const ids = routeLayerIds(trip.id);
+        if (!routesBooted || !map.getSource(ids.src)) {
+          addRouteLayers(trip.id, coords, trip.color, visible, trip.overview_offset, trip.overview_dash);
+        } else {
+          // Geometry is stable — only flip visibility on trip select (skip setData thrash)
+          const vis = visible ? 'visible' : 'none';
+          [ids.casing, ids.halo, ids.glowOuter, ids.glowMid, ids.core, ids.highlight].forEach(id => {
+            try { map.setLayoutProperty(id, 'visibility', vis); } catch (_) {}
+          });
+        }
         if (!visible) setRouteStyle(trip.id, trip.color, 'hidden');
         else if (isSelected) setRouteStyle(trip.id, trip.color, 'active');
-        else setRouteStyle(trip.id, trip.color, 'overview');
+        else setRouteStyle(trip.id, trip.color, tripInEra(trip) ? 'overview' : 'overviewDim');
       });
+      routesBooted = true;
       drawRouteLabels();
     }
 
@@ -1279,6 +1290,7 @@
         const isStart = m._idx === 0;
         const isEnd = m._idx === lastIdx;
         // Show the whole journey at rest — not only the stacked home pin.
+        m._vis = true; m._act = false; m._lblOn = isStart || isEnd;
         m._el.classList.toggle('visible', true);
         m._el.classList.remove('active');
         if (m._lbl) {
@@ -1681,10 +1693,15 @@
         const isEnd = m._idx === lastIdx;
         // While the car sits on a stacked home pin, hide that milestone so the car wins.
         const carCovers = sameHome && isActive && (isStart || isEnd) && state.phase === 'dwell';
-        m._el.classList.toggle('visible', (reached || m._isMilestone) && !carCovers);
-        m._el.classList.toggle('active', isActive && !carCovers);
+        const wantVisible = (reached || m._isMilestone) && !carCovers;
+        const wantActive = isActive && !carCovers;
+        const showLbl = wantActive;
+        // Skip DOM writes when nothing changed (every RAF used to toggle all stops)
+        if (m._vis === wantVisible && m._act === wantActive && m._lblOn === showLbl) return;
+        m._vis = wantVisible; m._act = wantActive; m._lblOn = showLbl;
+        m._el.classList.toggle('visible', wantVisible);
+        m._el.classList.toggle('active', wantActive);
         if (m._lbl) {
-          const showLbl = isActive && !carCovers;
           m._lbl.classList.toggle('visible', showLbl);
           m._lbl.classList.toggle('active', showLbl);
           if (showLbl) {

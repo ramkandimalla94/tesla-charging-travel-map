@@ -40,10 +40,10 @@ Jinja `{% include %}` partials under `scripts/templates/travel_map/` still bake 
 
 ## Playback reliability
 
-- Cache DOM refs; diff stop-marker class updates (don’t toggle all every frame)
-- Don’t full `drawRoutes()` rebuild all 23×6 layers on every `selectTrip` — style only changed trips
+- Cache DOM refs; diff stop-marker class updates (don’t toggle all every frame) ✅
+- Don’t full `drawRoutes()` rebuild all 23×6 layers on every `selectTrip` — style only changed trips ✅ (visibility + paint; skip setData after boot)
 - Optional later: `PlaybackQueue` for “watch every trip”
-- Clamp large `rAF` deltas after tab backgrounding
+- Clamp large `rAF` deltas after tab backgrounding ✅ (already)
 
 ---
 
