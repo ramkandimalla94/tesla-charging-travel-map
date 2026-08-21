@@ -27,8 +27,17 @@ jobs:
 
       - name: Build map
         env:
+          # Public Mapbox token — embedded in index.html so the live demo
+          # launches without a paste prompt (single-owner project).
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
-        run: python scripts/build_map.py --public
+        run: |
+          if [ -z "${MAPBOX_TOKEN}" ]; then
+            echo "MAPBOX_TOKEN secret is empty — set it in repo Settings → Secrets"
+            exit 1
+          fi
+          python scripts/build_map.py --public
+          # Fail deploy if the built page would still show the token gate
+          grep -q 'MAPBOX_TOKEN = "pk\.' output/index.html
 
       - name: Deploy to gh-pages
         env:

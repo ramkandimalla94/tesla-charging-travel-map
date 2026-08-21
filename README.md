@@ -8,7 +8,7 @@ Turn your Tesla Supercharger history into **Instagram-ready trip videos** — ci
 
 **https://ramkandimalla94.github.io/tesla-charging-travel-map/**
 
-On first visit, paste your [Mapbox public token](https://account.mapbox.com/access-tokens/) — it's stored in your browser only.
+Opens the map immediately — the Mapbox token is baked in at deploy time from the repo `MAPBOX_TOKEN` secret (no paste prompt).
 
 Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/pages.yml`) and publishes to the `gh-pages` branch. The URL above stays the same; the map content updates after a successful deploy.
 
@@ -100,13 +100,13 @@ CSV exports are **not committed** (personal data). Only processed `data/trips.js
 
 ## GitHub Pages setup
 
-**Already live** at https://ramkandimalla94.github.io/tesla-charging-travel-map/ (public build — enter Mapbox token once in browser).
+**Already live** at https://ramkandimalla94.github.io/tesla-charging-travel-map/ (Mapbox token embedded at build time — no in-browser paste).
 
 **Auto-deploy:** any push/merge to `main` runs **Deploy GitHub Pages**, builds the map, and updates that same URL. No README link change is needed when the site content changes.
 
 Pages settings should use **Deploy from a branch** → `gh-pages` / `(root)`.
 
-Optional: set repository secret `MAPBOX_TOKEN` if you want CI to refresh driving routes during build (the public site still prompts for a token in-browser).
+**Required:** repository secret `MAPBOX_TOKEN` (public `pk.` token). CI embeds it into `index.html` so the live demo launches immediately. Without the secret, the Pages workflow fails rather than shipping a token gate.
 
 Manual re-deploy: Actions → **Deploy GitHub Pages** → **Run workflow**.
 

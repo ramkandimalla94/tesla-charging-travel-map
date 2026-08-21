@@ -536,24 +536,25 @@ def build_playback_timeline(
     for seg in raw_segments:
         dur = seg["real_duration_ms"] * scale
         if seg["type"] == "dwell":
-            # Longer dwell when POIs are present — time to showcase nearby places
-            poi_bonus = 1.35 if seg.get("pois") else 1.0
-            dur = max(1_800, min(12_000, dur * poi_bonus))
+            # Cap dwells tightly — multi-second "Charging…" freezes read as a stalled UI.
+            # POI stops get a short extra beat to read the caption, not a long hold.
+            poi_bonus = 1.2 if seg.get("pois") else 1.0
+            dur = max(1_200, min(3_600, dur * poi_bonus))
         else:
-            dur = max(1_400, min(20_000, dur))
+            dur = max(1_200, min(14_000, dur))
         video_segments.append({**seg, "duration_ms": int(dur)})
 
-    # Cinematic intro/outro title cards for video export
+    # Cinematic intro/outro title cards for video export (keep snappy for in-app play)
     intro_seg = {
         "type": "intro",
-        "duration_ms": 4_500,
+        "duration_ms": 2_800,
         "title": story.get("intro_title", ""),
         "caption": story.get("intro", "Road trip replay"),
         "highlights": story.get("highlights", [])[:4],
     }
     outro_seg = {
         "type": "outro",
-        "duration_ms": 5_000,
+        "duration_ms": 3_200,
         "caption": story.get("outro", "Journey complete"),
         "visited_count": story.get("visited_count", 0),
         "nearby_count": story.get("nearby_count", 0),
@@ -801,7 +802,11 @@ def render_html(trips: list[dict], dashboard: dict, timeline: list[dict], mapbox
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build 3D Tesla travel map")
-    parser.add_argument("--public", action="store_true", help="Build without embedded Mapbox token (for GitHub Pages)")
+    parser.add_argument(
+        "--public",
+        action="store_true",
+        help="Also write output/index.html for GitHub Pages (token still embedded when MAPBOX_TOKEN is set)",
+    )
     parser.add_argument(
         "--refresh-routes",
         action="store_true",
@@ -816,7 +821,10 @@ def main() -> None:
     mapbox_token = os.getenv("MAPBOX_TOKEN", "").strip()
     if args.refresh_routes and not mapbox_token:
         raise SystemExit("--refresh-routes requires MAPBOX_TOKEN in .env or environment")
-    embed_token = "" if args.public else mapbox_token
+    if args.public and not mapbox_token:
+        raise SystemExit("--public requires MAPBOX_TOKEN so the live site launches without a paste prompt")
+    # Embed whenever available so local + Pages builds open the map immediately.
+    embed_token = mapbox_token
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     GPX_DIR.mkdir(parents=True, exist_ok=True)
