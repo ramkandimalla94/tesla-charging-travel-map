@@ -20,8 +20,8 @@
       --accent-2: #38bdf8;
       --gold: #fbbf24;
       --panel-w: 320px;
-      --dock-h: 132px;
-      --timeline-h: 56px;
+      --dock-h: 140px;
+      --timeline-h: 72px;
       --font-display: 'Syne', system-ui, sans-serif;
       --font-body: 'DM Sans', system-ui, sans-serif;
     }
@@ -338,7 +338,7 @@
     .dock-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
     .dock-actions { display: flex; gap: 6px; align-items: center; }
     .icon-btn {
-      width: 38px; height: 38px; border-radius: 12px;
+      width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 12px;
       border: 1px solid var(--border); background: rgba(255,255,255,0.04);
       color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, border-color 0.15s, transform 0.12s;
@@ -346,15 +346,18 @@
     .icon-btn:hover { background: rgba(255,255,255,0.08); border-color: var(--border-bright); }
     .icon-btn:active { transform: scale(0.94); }
     .icon-btn:disabled { opacity: 0.28; cursor: default; }
+    .icon-btn:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 2px;
+    }
     .icon-btn.on { background: rgba(94,234,212,0.12); border-color: rgba(94,234,212,0.35); color: var(--accent); }
     .icon-btn.primary {
-      width: 46px; height: 46px; border-radius: 14px;
+      width: 52px; height: 52px; min-width: 52px; min-height: 52px; border-radius: 14px;
       background: linear-gradient(145deg, #fff, #cbd5e1); border: none; color: #0f172a;
       box-shadow: 0 4px 24px rgba(255,255,255,0.15);
     }
     .icon-btn.primary:hover { background: #fff; }
     .icon-btn.export {
-      width: auto; padding: 0 14px; gap: 7px; font-size: 11px; font-weight: 700;
+      width: auto; min-width: 44px; min-height: 44px; padding: 0 14px; gap: 7px; font-size: 11px; font-weight: 700;
       letter-spacing: 0.04em; text-transform: uppercase;
       background: linear-gradient(135deg, rgba(94,234,212,0.18), rgba(56,189,248,0.12));
       border-color: rgba(94,234,212,0.35); color: var(--accent);
@@ -382,13 +385,29 @@
 
     /* ── Timeline ── */
     .timeline-bar {
-      position: absolute; bottom: 14px; left: 18px; right: 18px; height: var(--timeline-h);
+      position: absolute; bottom: 14px; left: 18px; right: 18px; height: auto; min-height: var(--timeline-h);
       background: var(--surface); backdrop-filter: blur(24px);
       border: 1px solid var(--border); border-radius: 14px;
       z-index: 10; padding: 8px 14px 10px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      display: flex; flex-direction: column; gap: 6px;
     }
-    .timeline-label { font-size: 9px; font-weight: 600; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+    .timeline-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .timeline-label { font-size: 9px; font-weight: 600; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+    .era-rail { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+    .era-chip {
+      border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+      color: var(--muted); font-size: 10px; font-weight: 700; font-family: inherit;
+      padding: 4px 9px; border-radius: 999px; cursor: pointer; min-height: 28px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .era-chip:hover { color: var(--text); border-color: var(--border-bright); }
+    .era-chip.active {
+      color: #0f172a; background: #e8e4dc; border-color: transparent;
+    }
+    .era-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .timeline-track { position: relative; flex: 1; height: 22px; background: rgba(0,0,0,0.35); border-radius: 8px; overflow: hidden; cursor: pointer; }
     .tl-seg {
       position: absolute; top: 3px; bottom: 3px; border-radius: 5px;
@@ -396,11 +415,38 @@
     }
     .tl-seg:hover, .tl-seg.active { opacity: 1; filter: brightness(1.15); }
     .tl-seg.featured { box-shadow: 0 0 10px rgba(251,191,36,0.4); }
+    .tl-seg.era-dim { opacity: 0.12; pointer-events: none; }
     .timeline-scrub {
       position: absolute; top: 0; bottom: 0; width: 2px;
       background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.8);
       pointer-events: none; transition: left 0.08s;
     }
+    .trip-item.era-dim { opacity: 0.28; }
+    .dest-star {
+      display: flex; flex-direction: column; align-items: center;
+      pointer-events: auto; cursor: pointer; transform: translateY(-2px);
+    }
+    .dest-star-core {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.92);
+      box-shadow: 0 0 14px color-mix(in srgb, currentColor 70%, transparent), 0 4px 14px rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 9px; font-weight: 800; color: #fff;
+      background: color-mix(in srgb, currentColor 82%, #111 18%);
+    }
+    .dest-star-core span { color: #fff; }
+    .dest-star-label {
+      margin-top: 4px; padding: 3px 8px; border-radius: 8px;
+      background: rgba(8,10,16,0.9); border: 1px solid rgba(255,255,255,0.18);
+      font-size: 9px; font-weight: 700; color: #fff; white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      max-width: 120px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .dest-star.dim { opacity: 0.22; }
+    .dest-star.hot .dest-star-core {
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.35), 0 0 18px currentColor;
+    }
+    .dock-sub .dwell-pct { color: var(--gold); font-weight: 700; }
 
     /* ── Location HUD (cinema) ── */
     .location-hud {
@@ -855,11 +901,19 @@
 
   <!-- Master timeline -->
   <div class="timeline-bar">
-    <div class="timeline-label" id="timeline-label">Journey Timeline</div>
+    <div class="timeline-head">
+      <div class="timeline-label" id="timeline-label">Journey Timeline</div>
+      <div class="era-rail" id="era-rail" role="group" aria-label="Filter by year">
+        <button type="button" class="era-chip active" data-year="all">All years</button>
+        {% for year in dashboard.years or [] %}
+        <button type="button" class="era-chip" data-year="{{ year }}">{{ year }}</button>
+        {% endfor %}
+      </div>
+    </div>
     <div class="timeline-track" id="timeline-track">
       {% for seg in timeline %}
       <div class="tl-seg{% if seg.has_colorado %} featured{% endif %}"
-           data-id="{{ seg.id }}" title="{{ seg.name }}"
+           data-id="{{ seg.id }}" data-year="{{ seg.start[:4] if seg.start else '' }}" title="{{ seg.name }}"
            style="left:{{ seg.left_pct }}%;width:{{ seg.width_pct }}%;background:{{ seg.color }}"></div>
       {% endfor %}
       <div class="timeline-scrub" id="timeline-scrub" style="left:0%"></div>
@@ -871,6 +925,7 @@
     const TRIPS = {{ trips_json | safe }};
     const DASHBOARD = {{ dashboard_json | safe }};
     const HUBS = DASHBOARD.hubs || [];
+    const DEST_GROUPS = DASHBOARD.destination_groups || [];
     // Public pk. token is stored base64-encoded so GitHub push protection does not
     // block gh-pages deploys (literal Mapbox tokens in commits are rejected).
     const MAPBOX_TOKEN_B64 = {{ mapbox_token_b64 | tojson }};
@@ -883,8 +938,10 @@
     // ── State ──
     let selectedId = 'all', animTimeMs = 0, animProg = 0, animStopIdx = 0;
     let hoveredTripId = null;
+    let yearFilter = 'all';
     let routeLabelMarkers = [];
     let hubMarkers = [];
+    let destMarkers = [];
     let isPlaying = false, animFrame = null, lastTs = 0;
     let speed = 1, loopTrip = false, directorMode = true, nightMode = false;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
@@ -1369,6 +1426,102 @@
       drawRouteLabels();
     }
 
+    function tripInEra(trip) {
+      if (yearFilter === 'all' || yearFilter == null) return true;
+      const y = String(trip.start || '').slice(0, 4);
+      return y === String(yearFilter);
+    }
+
+    function applyEraFilter() {
+      document.querySelectorAll('.era-chip').forEach(el => {
+        el.classList.toggle('active', el.dataset.year === String(yearFilter));
+      });
+      document.querySelectorAll('.trip-item').forEach(el => {
+        if (el.dataset.id === 'all') { el.classList.remove('era-dim'); return; }
+        const trip = TRIPS.find(t => t.id === el.dataset.id);
+        el.classList.toggle('era-dim', !!(trip && !tripInEra(trip)));
+      });
+      document.querySelectorAll('.tl-seg').forEach(el => {
+        const y = el.dataset.year || '';
+        el.classList.toggle('era-dim', yearFilter !== 'all' && y !== String(yearFilter));
+      });
+      if (selectedId === 'all' && map) {
+        TRIPS.forEach(t => {
+          if (!map.getLayer(`route-core-${t.id}`)) return;
+          if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
+          else setRouteStyle(t.id, t.color, 'overview');
+        });
+        drawRouteLabels();
+        drawAtlasMarkers();
+      }
+    }
+
+    function setYearFilter(year) {
+      yearFilter = year === 'all' ? 'all' : String(year);
+      applyEraFilter();
+    }
+
+    function clearDestMarkers() {
+      destMarkers.forEach(m => m.remove());
+      destMarkers = [];
+    }
+
+    function drawDestinationConstellation() {
+      clearDestMarkers();
+      if (selectedId !== 'all' || !DEST_GROUPS.length) return;
+      DEST_GROUPS.forEach(group => {
+        const visibleIds = (group.trip_ids || []).filter(id => {
+          const t = TRIPS.find(x => x.id === id);
+          return t && tripInEra(t);
+        });
+        if (!visibleIds.length) return;
+        // Skip pure home-name destinations that sit on hubs (rare); keep relocate Bellevue.
+        const el = document.createElement('div');
+        el.className = 'dest-star';
+        el.style.color = group.color;
+        const count = visibleIds.length;
+        el.innerHTML = `<div class="dest-star-core"><span>${count > 1 ? count : ''}</span></div>`
+          + `<div class="dest-star-label">${group.dest}</div>`;
+        el.title = `${group.dest} · ${count} trip${count === 1 ? '' : 's'} · ${group.total_miles} mi`;
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const preferred = visibleIds
+            .map(id => TRIPS.find(t => t.id === id))
+            .find(t => t?.featured) || TRIPS.find(t => t.id === visibleIds[0]);
+          if (preferred) selectTrip(preferred.id);
+        });
+        el.addEventListener('mouseenter', () => {
+          hoveredTripId = null;
+          visibleIds.forEach(id => {
+            const t = TRIPS.find(x => x.id === id);
+            if (t) setRouteStyle(t.id, t.color, 'overviewHover');
+          });
+          TRIPS.forEach(t => {
+            if (!visibleIds.includes(t.id) && tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
+          });
+          destMarkers.forEach(m => {
+            const ids = m._tripIds || [];
+            const hit = ids.some(id => visibleIds.includes(id));
+            m.getElement().classList.toggle('hot', hit);
+            m.getElement().classList.toggle('dim', !hit);
+          });
+        });
+        el.addEventListener('mouseleave', () => {
+          applyEraFilter();
+        });
+        const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([group.lng, group.lat])
+          .addTo(map);
+        m._tripIds = visibleIds;
+        destMarkers.push(m);
+      });
+    }
+
+    function drawAtlasMarkers() {
+      drawHomeHubs();
+      drawDestinationConstellation();
+    }
+
     function shortTripLabel(trip) {
       if (trip.story_dest) return String(trip.story_dest).slice(0, 36);
       const raw = (trip.name || '').split('—').pop()?.trim() || trip.name || '';
@@ -1435,22 +1588,20 @@
       routeLabelMarkers.forEach(m => m.remove());
       routeLabelMarkers = [];
       if (selectedId !== 'all') return;
-      // Only show a destination chip while hovering — never stack all 23 at home.
-      const trips = hoveredTripId
-        ? TRIPS.filter(t => t.id === hoveredTripId)
-        : TRIPS.filter(t => t.featured).slice(0, 4);
-      trips.forEach(trip => {
-        const lat = trip.label_lat ?? trip.stops?.[Math.floor((trip.stops?.length || 1) / 2)]?.lat;
-        const lng = trip.label_lng ?? trip.stops?.[Math.floor((trip.stops?.length || 1) / 2)]?.lng;
-        if (lat == null || lng == null) return;
-        const el = document.createElement('div');
-        el.className = 'route-chip visible';
-        el.innerHTML = `<span class="dot" style="background:${trip.color}"></span>${shortTripLabel(trip)}`;
-        const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-          .setLngLat([lng, lat])
-          .addTo(map);
-        routeLabelMarkers.push(m);
-      });
+      // Constellation owns idle labeling; chips only appear on trip hover.
+      if (!hoveredTripId) return;
+      const trip = TRIPS.find(t => t.id === hoveredTripId);
+      if (!trip || !tripInEra(trip)) return;
+      const lat = trip.label_lat ?? trip.stops?.[Math.floor((trip.stops?.length || 1) / 2)]?.lat;
+      const lng = trip.label_lng ?? trip.stops?.[Math.floor((trip.stops?.length || 1) / 2)]?.lng;
+      if (lat == null || lng == null) return;
+      const el = document.createElement('div');
+      el.className = 'route-chip visible';
+      el.innerHTML = `<span class="dot" style="background:${trip.color}"></span>${shortTripLabel(trip)}`;
+      const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([lng, lat])
+        .addTo(map);
+      routeLabelMarkers.push(m);
     }
 
     function setHoveredTrip(id) {
@@ -1464,11 +1615,19 @@
         m.getElement().classList.toggle('dim', !!id && !ids.includes(id));
         m.getElement().classList.toggle('hot', !!id && ids.includes(id));
       });
+      destMarkers.forEach(m => {
+        const ids = m._tripIds || [];
+        m.getElement().classList.toggle('dim', !!id && !ids.includes(id));
+        m.getElement().classList.toggle('hot', !!id && ids.includes(id));
+      });
       if (selectedId !== 'all') return;
       if (hoverRaf) cancelAnimationFrame(hoverRaf);
       hoverRaf = requestAnimationFrame(() => {
         hoverRaf = null;
-        TRIPS.forEach(t => setRouteStyle(t.id, t.color, 'overview'));
+        TRIPS.forEach(t => {
+          if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
+          else setRouteStyle(t.id, t.color, 'overview');
+        });
         drawRouteLabels();
       });
     }
@@ -1554,27 +1713,29 @@
       clearHubMarkers();
       if (selectedId !== 'all' || !HUBS.length) return;
       HUBS.forEach(hub => {
+        const visibleIds = (hub.trip_ids || []).filter(id => {
+          const t = TRIPS.find(x => x.id === id);
+          return t && tripInEra(t);
+        });
+        if (!visibleIds.length) return;
         const el = document.createElement('div');
         el.className = 'home-hub';
-        el.innerHTML = `<div class="home-hub-core">${hub.trip_count}</div>`
+        el.innerHTML = `<div class="home-hub-core">${visibleIds.length}</div>`
           + `<div class="home-hub-label">${hub.label}<span>· home</span></div>`;
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          const first = hub.trip_ids?.[0];
-          if (first) {
-            // Prefer an epic from this hub if available
-            const epic = hub.trip_ids.map(id => TRIPS.find(t => t.id === id)).find(t => t?.featured);
-            selectTrip((epic || TRIPS.find(t => t.id === first)).id);
-          }
+          const epic = visibleIds.map(id => TRIPS.find(t => t.id === id)).find(t => t?.featured);
+          const pick = epic || TRIPS.find(t => t.id === visibleIds[0]);
+          if (pick) selectTrip(pick.id);
         });
         el.addEventListener('mouseenter', () => {
-          if (hub.trip_ids?.length === 1) setHoveredTrip(hub.trip_ids[0]);
+          if (visibleIds.length === 1) setHoveredTrip(visibleIds[0]);
         });
         el.addEventListener('mouseleave', () => setHoveredTrip(null));
         const m = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
           .setLngLat([hub.lng, hub.lat])
           .addTo(map);
-        m._tripIds = hub.trip_ids || [];
+        m._tripIds = visibleIds;
         hubMarkers.push(m);
       });
     }
@@ -1582,9 +1743,10 @@
     function drawStops() {
       stopMarkers.forEach(m => m.remove()); stopMarkers = [];
       clearHubMarkers();
+      clearDestMarkers();
       const single = isSingleTrip();
       if (!single) {
-        drawHomeHubs();
+        drawAtlasMarkers();
         applyIdleStopVisuals();
         return;
       }
@@ -1954,12 +2116,19 @@
       document.getElementById('scrub-fill').style.width = (animProg * 100) + '%';
       document.getElementById('timeline-scrub').style.left = (animProg * 100) + '%';
       const cur = stops[animStopIdx];
-      document.getElementById('prog-text').textContent = cur
-        ? (state.phase === 'dwell' ? `Charging · ${shortLabel(cur.location)}` : `Driving · ${state.label || shortLabel(cur.location)}`)
-        : 'Ready to replay';
-      if (cur) {
+      if (cur && state.phase === 'dwell') {
+        const pct = Math.round((state.frac || 0) * 100);
+        document.getElementById('prog-text').textContent = `Charging · ${shortLabel(cur.location)}`;
         document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0, 10) || '';
-        document.getElementById('prog-end').textContent = cur.datetime?.slice(0, 10) || '';
+        document.getElementById('prog-end').innerHTML = `<span class="dwell-pct">${pct}%</span>`;
+      } else {
+        document.getElementById('prog-text').textContent = cur
+          ? (state.phase === 'dwell' ? `Charging · ${shortLabel(cur.location)}` : `Driving · ${state.label || shortLabel(cur.location)}`)
+          : 'Ready to replay';
+        if (cur) {
+          document.getElementById('prog-start').textContent = stops[0]?.datetime?.slice(0, 10) || '';
+          document.getElementById('prog-end').textContent = cur.datetime?.slice(0, 10) || '';
+        }
       }
       updateLocationHud(state);
       updateStoryOverlay(state);
@@ -2167,6 +2336,7 @@
       document.getElementById('btn-play').disabled = !isSingleTrip();
       document.getElementById('btn-export').disabled = !isSingleTrip();
       updateDockIdle();
+      if (id === 'all') applyEraFilter();
     }
 
     function updateDockIdle() {
@@ -2244,6 +2414,11 @@
       sb.classList.toggle('collapsed');
       // Reframe so the route isn't under chrome after toggle.
       if (map) fitTrip(true);
+    });
+    document.getElementById('era-rail')?.addEventListener('click', e => {
+      const chip = e.target.closest('.era-chip');
+      if (!chip) return;
+      setYearFilter(chip.dataset.year || 'all');
     });
     document.addEventListener('keydown', e=>{
       if (e.target.tagName==='INPUT') return;

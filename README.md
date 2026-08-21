@@ -14,10 +14,11 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 
 ## Features
 
-- **Atlas overview** — home hubs (Addison / Bellevue) instead of stacked start labels; destination-grouped trip list
+- **Atlas overview** — home hubs (Addison / Bellevue) + destination constellation stars; destination-grouped trip list
+- **Year era filter** — scrub the journey timeline by year to isolate chapters of the atlas
 - **3D satellite map** with Mapbox terrain and elevated route lines
 - **Cinematic watch mode** — Play hides chrome for a passenger-seat replay (Export still uses 9:16 cinema)
-- **Time-accurate playback** — long overnight halts show as slower pacing between Supercharger stops
+- **Time-accurate playback** — overnight halts pace charging beats without long freezes; dwell progress in the dock
 - **Location labels on map** — city/state names appear at each stop during replay
 - **Instagram video export** — one-click `.webm` download per trip (9:16 cinema mode)
 - **Works for any Tesla owner** — drop in your CSV exports; home base auto-detected (or override via config)
