@@ -14,7 +14,8 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 
 ## Features
 
-- **Atlas overview** — home hubs (Addison / Bellevue) + destination constellation stars; destination-grouped trip list
+- **Atlas overview** — home hubs + destination constellation + hub→destination spokes; destination-grouped trip list
+- **Memory reel** — atlas quietly cycles featured journeys until you pick one (Pause anytime)
 - **Year era filter** — scrub the journey timeline by year to isolate chapters of the atlas
 - **3D satellite map** with Mapbox terrain and elevated route lines
 - **Cinematic watch mode** — Play hides chrome for a passenger-seat replay (Export still uses 9:16 cinema)

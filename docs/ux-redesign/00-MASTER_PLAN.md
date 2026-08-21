@@ -6,13 +6,18 @@
 
 Home hubs, destination-forward labels, destination-grouped sidebar, watch mode, panel auto-collapse, popup fix, responsive basics.
 
-## Sprint 2 (this branch)
+## Sprint 2 (shipped — #14)
 
-1. **Destination constellation** — glowing destination stars on overview (Colorado, Leavenworth, Olympic…) with trip counts; click opens best trip
-2. **Year era scrub** — All years / 2023–2026 chips on the timeline; dims off-year routes + sidebar
-3. **Dwell pacing** — shorter charging holds (≤2s) + live dwell % in dock so playback doesn’t feel stuck
-4. **A11y** — dock controls ≥44×44 with focus-visible rings
+Destination constellation, year era filter, snappier dwell + dock %, a11y 44px controls.
+
+## Sprint 3 (this branch)
+
+1. **Memory reel** — auto-cycles featured routes on atlas with Pause/Resume
+2. **Hub→destination spokes** — dashed atlas lines from home hubs to constellation stars
+3. **Featured epic CTA** — one-click focus on the headline trip
+4. **Cinema caption safe margins** — caption plate + higher portrait placement
+5. **Mobile sheet polish** — grab handle, larger toggle, CTA reposition
 
 ## Later
 
-Corridor ribbons, memory reel autoplay, Jinja partial split, overview shared GeoJSON layer consolidation.
+Shared GeoJSON overview layer consolidation, Jinja template partial split, denser corridor banding.

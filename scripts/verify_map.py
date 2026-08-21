@@ -103,6 +103,31 @@ def main() -> int:
         page.evaluate("setYearFilter('all')")
         page.wait_for_timeout(400)
 
+        # Memory reel + featured CTA
+        page.evaluate("localStorage.setItem('tesla-map-onboarded','1'); startMemoryReel()")
+        page.wait_for_timeout(500)
+        reel = page.evaluate(
+            """() => {
+              let spokeCount = 0;
+              try {
+                spokeCount = map.querySourceFeatures('atlas-spokes')?.length || 0;
+              } catch (e) {
+                try {
+                  const raw = map.getSource('atlas-spokes')?._data;
+                  spokeCount = raw?.features?.length || 0;
+                } catch (e2) {}
+              }
+              return {
+                badge: document.getElementById('memory-badge')?.classList.contains('visible'),
+                cta: document.getElementById('atlas-cta')?.classList.contains('visible'),
+                spokes: !!map.getLayer('atlas-spokes-line'),
+                spokeCount,
+              };
+            }"""
+        )
+        print(f"Memory/CTA/spokes: {reel}")
+        page.screenshot(path=str(SCREENSHOTS / "07-memory-reel.png"))
+
         # Colorado trip
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
         page.wait_for_timeout(3500)
@@ -220,6 +245,15 @@ def main() -> int:
     if era_state.get("dimmedTrips", 0) < 1:
         print(f"FAIL: Era filter did not dim trips: {era_state}")
         ok = False
+    if not reel.get("cta"):
+        print(f"FAIL: Featured atlas CTA missing: {reel}")
+        ok = False
+    if not reel.get("spokes"):
+        print(f"FAIL: Atlas spokes source missing: {reel}")
+        ok = False
+    # querySourceFeatures can be empty at low zoom; layer presence is enough
+    if reel.get("spokes") and reel.get("spokeCount", 0) == 0:
+        print(f"WARN: Spokes layer present but no features queried at this zoom: {reel}")
     if not play_state.get("playing"):
         print(f"FAIL: Playback did not start: {play_state}")
         ok = False
