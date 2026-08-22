@@ -531,6 +531,18 @@
     }
     .transport-dock.idle { opacity: 0.78; transform: translateX(-50%) translateY(2px); }
     body.watching .transport-dock { bottom: 22px; }
+    .dock-transport {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .icon-btn.skip {
+      width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 50%;
+      background: rgba(18, 22, 28, 0.62); border: 1px solid rgba(255,255,255,0.22);
+      color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      backdrop-filter: blur(12px);
+    }
+    .icon-btn.skip svg { width: 18px; height: 18px; }
+    .icon-btn.skip:hover { background: rgba(18, 22, 28, 0.82); border-color: rgba(255,255,255,0.38); }
+    .icon-btn.skip:disabled { opacity: 0.28; }
     .speed-rail {
       position: absolute; z-index: 17;
       right: 18px; bottom: calc(var(--timeline-h) + 18px);
@@ -1568,11 +1580,19 @@
     </div>
   </aside>
 
-  <!-- Play (bottom-center) — continuous speed lives in #speed-rail (bottom-right) -->
+  <!-- Play (bottom-center) — skip ±8s of viewing; speed lives in #speed-rail -->
   <div class="transport-dock" id="transport-dock">
-    <button class="icon-btn primary" id="btn-play" disabled title="Play (Space)" aria-label="Play">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
-    </button>
+    <div class="dock-transport" role="group" aria-label="Playback">
+      <button class="icon-btn skip" id="btn-rewind" disabled title="Rewind 8 seconds (←)" aria-label="Rewind 8 seconds">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.5 18V6l-8.5 6 8.5 6zm.5-6 8.5 6V6L12 12z"/></svg>
+      </button>
+      <button class="icon-btn primary" id="btn-play" disabled title="Play (Space)" aria-label="Play">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+      </button>
+      <button class="icon-btn skip" id="btn-forward" disabled title="Skip ahead 8 seconds (→)" aria-label="Skip ahead 8 seconds">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 18V6l8.5 6L4 18zm9 0V6l8.5 6-8.5 6z"/></svg>
+      </button>
+    </div>
     <div class="dock-sr" aria-hidden="true">
       <div id="prog-text">Select a trip to replay</div>
       <div id="scrub-fill"></div>
@@ -2011,6 +2031,8 @@
       updateAtlasCta();
       setMapLabelsVisible(true);
       document.getElementById('btn-play').disabled = true;
+      document.getElementById('btn-rewind') && (document.getElementById('btn-rewind').disabled = true);
+      document.getElementById('btn-forward') && (document.getElementById('btn-forward').disabled = true);
       document.getElementById('prog-text').textContent = 'Select a trip to play';
       introFlyover();
       setTimeout(() => {
@@ -4121,6 +4143,22 @@
         setWatching(false);
       }
     }
+    // ~8s of watching at 1× (timeline ms = wall × SPEED_REF).
+    const SEEK_WALL_MS = 8000;
+    const PLAYBACK_SPEED_REF = 0.5;
+    function seekPlayback(dir) {
+      if (isRecording) return;
+      if (!isSingleTrip()) return;
+      const pb = activePlayback();
+      if (!pb?.total_video_ms) return;
+      const step = SEEK_WALL_MS * PLAYBACK_SPEED_REF;
+      animTimeMs = Math.max(0, Math.min(pb.total_video_ms - 16, animTimeMs + dir * step));
+      lastTs = 0;
+      resetNavChase();
+      const state = positionAtTime(animTimeMs);
+      updateTrailFromState(state);
+      if (state) applyPlaybackCamera(state, true);
+    }
     function resetVisuals(clearHud=true) {
       stopPlayback(); animTimeMs=0; animProg=0; animStopIdx=0;
       smoothBearing = 0; lastTravelBearing = 0;
@@ -4689,6 +4727,11 @@
       setMapLabelsVisible(!isSingleTrip());
       updateMapLegend(activeTrip());
       document.getElementById('btn-play').disabled = !isSingleTrip();
+      const skipOff = !isSingleTrip();
+      const rw = document.getElementById('btn-rewind');
+      const fw = document.getElementById('btn-forward');
+      if (rw) rw.disabled = skipOff;
+      if (fw) fw.disabled = skipOff;
       syncPlayToggle(false);
       updateDockIdle();
       updateAtlasCta();
@@ -4735,6 +4778,8 @@
       if (isPlaying) stopPlayback();
       else startPlayback();
     });
+    document.getElementById('btn-rewind')?.addEventListener('click', () => seekPlayback(-1));
+    document.getElementById('btn-forward')?.addEventListener('click', () => seekPlayback(1));
     document.getElementById('speed')?.addEventListener('input', e=>{
       setPlaybackSpeed(parseFloat(e.target.value));
     });
@@ -4773,6 +4818,8 @@
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
       if (e.key === '[' || e.code === 'BracketLeft') { e.preventDefault(); nudgeSpeed(-1); }
       if (e.key === ']' || e.code === 'BracketRight') { e.preventDefault(); nudgeSpeed(1); }
+      if (e.code === 'ArrowLeft') { e.preventDefault(); seekPlayback(-1); }
+      if (e.code === 'ArrowRight') { e.preventDefault(); seekPlayback(1); }
     });
 
     document.getElementById('onboard-featured').addEventListener('click', startWithFeatured);
