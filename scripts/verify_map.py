@@ -762,6 +762,47 @@ def main() -> int:
               };
             }"""
         )
+        dest_browse_accordion = page.evaluate(
+            """() => {
+              selectTrip('all');
+              setSheetState('peek');
+              const colorado = Array.from(document.querySelectorAll('.mobile-dest-chip'))
+                .find(c => c.dataset.dest === 'Colorado');
+              if (!colorado) return { hasColorado: false };
+              colorado.click();
+              const visibleNested = Array.from(document.querySelectorAll('#trip-list .trip-item.nested'))
+                .filter(el => getComputedStyle(el).display !== 'none');
+              const visibleDestHeaders = Array.from(document.querySelectorAll('.dest-group-label'))
+                .filter(el => getComputedStyle(el).display !== 'none');
+              const groups = visibleNested.map(el => el.dataset.destGroup);
+              const coloradoTrips = visibleNested.filter(el => el.dataset.destGroup === 'Colorado').length;
+              const leavenworthTrips = visibleNested.filter(el => el.dataset.destGroup === 'Leavenworth').length;
+              const toggleBack = (() => {
+                const chip2 = Array.from(document.querySelectorAll('.mobile-dest-chip'))
+                  .find(c => c.dataset.dest === 'Colorado');
+                const header = document.querySelector('.dest-group-label[data-dest="Colorado"]');
+                (chip2 || header)?.click();
+                return {
+                  browseDest,
+                  sheetPeek: document.getElementById('sidebar')?.classList.contains('sheet-peek'),
+                  destBrowseBody: document.body.classList.contains('dest-browse'),
+                  chipsBack: !!document.querySelector('.mobile-dest-chip'),
+                };
+              })();
+              return {
+                hasColorado: true,
+                browseDest,
+                destBrowseBody: document.body.classList.contains('dest-browse'),
+                coloradoTrips,
+                leavenworthTrips,
+                onlyColoradoVisible: coloradoTrips > 0 && leavenworthTrips === 0,
+                onlyColoradoHeader: visibleDestHeaders.length === 1
+                  && visibleDestHeaders[0].dataset.dest === 'Colorado',
+                groups,
+                toggleBack,
+              };
+            }"""
+        )
         page.evaluate("selectTrip('all'); setSheetState('full');")
         page.wait_for_timeout(350)
         mobile = page.evaluate(
@@ -829,6 +870,7 @@ def main() -> int:
         )
         print(f"Mobile default: {mobile_default}")
         print(f"Mobile dest chip: {dest_chip_pick}")
+        print(f"Mobile dest accordion: {dest_browse_accordion}")
         print(f"Mobile 390x844: {mobile}")
         page.screenshot(path=str(SCREENSHOTS / "08-mobile-sheet.png"))
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
@@ -1190,6 +1232,15 @@ def main() -> int:
         ok = False
     if dest_chip_pick.get("hasChip") and not dest_chip_pick.get("sheetFull"):
         print(f"FAIL: Mobile destination chip should expand sheet to browse trips: {dest_chip_pick}")
+        ok = False
+    if dest_browse_accordion.get("hasColorado") and not dest_browse_accordion.get("onlyColoradoVisible"):
+        print(f"FAIL: Colorado browse should show only Colorado trips (not Leavenworth): {dest_browse_accordion}")
+        ok = False
+    if dest_browse_accordion.get("hasColorado") and not dest_browse_accordion.get("onlyColoradoHeader"):
+        print(f"FAIL: Colorado browse should hide other destination headers: {dest_browse_accordion}")
+        ok = False
+    if dest_browse_accordion.get("hasColorado") and not dest_browse_accordion.get("toggleBack", {}).get("sheetPeek"):
+        print(f"FAIL: Second Colorado tap should collapse back to peek sheet: {dest_browse_accordion}")
         ok = False
     if not mobile.get("panelFull"):
         print(f"FAIL: Mobile panel should expand to full sheet for list scroll tests: {mobile}")

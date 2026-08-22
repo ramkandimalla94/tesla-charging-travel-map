@@ -347,6 +347,22 @@
       }
       body:not(.trip-focus) .group-label.featured { display: none; }
       body:not(.trip-focus) .trip-item.featured { display: none; }
+      /* Accordion browse: one destination header + its trips (incl. featured). */
+      body:not(.trip-focus).dest-browse .group-label,
+      body:not(.trip-focus).dest-browse .trip-item:not(.nested) {
+        display: none !important;
+      }
+      body:not(.trip-focus).dest-browse .dest-group-label,
+      body:not(.trip-focus).dest-browse .dest-group-label.dest-browse-hidden {
+        display: none !important;
+      }
+      body:not(.trip-focus).dest-browse .dest-group-label.active {
+        display: flex !important;
+      }
+      body:not(.trip-focus).dest-browse .trip-item.nested { display: none !important; }
+      body:not(.trip-focus).dest-browse .trip-item.nested.dest-browse-visible {
+        display: flex !important;
+      }
       body:not(.trip-focus) .trip-hero,
       body:not(.trip-focus) .filmstrip {
         display: none;

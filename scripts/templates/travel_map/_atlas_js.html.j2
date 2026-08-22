@@ -81,6 +81,28 @@
     let browseDest = null;
     let preserveDestBrowse = false;
 
+    function updateDestBrowseListVisibility() {
+      const accordion = !!browseDest && isMobileLayout() && selectedId === 'all';
+      document.body.classList.toggle('dest-browse', accordion);
+      document.querySelectorAll('.dest-group-label').forEach(el => {
+        el.classList.toggle('dest-browse-hidden', accordion && el.dataset.dest !== browseDest);
+      });
+      document.querySelectorAll('.trip-item.nested').forEach(el => {
+        el.classList.toggle('dest-browse-visible', accordion && el.dataset.destGroup === browseDest);
+      });
+    }
+
+    function collapseDestBrowse() {
+      if (!browseDest) return;
+      clearDestBrowse();
+      applyEraFilter();
+      drawAtlasSpokes();
+      setPanelCollapsed(false);
+      setSheetState('peek');
+      if (map) fitTrip(true);
+      renderMobileDestRail();
+    }
+
     function highlightDestBrowse(group) {
       if (!group) return;
       const visibleIds = visibleDestTripIds(group);
@@ -98,18 +120,29 @@
       document.querySelectorAll('.dest-group-label').forEach(el => {
         el.classList.toggle('active', el.dataset.dest === group.dest);
       });
+      updateDestBrowseListVisibility();
       drawAtlasSpokes();
     }
 
     function clearDestBrowse() {
       browseDest = null;
-      document.querySelectorAll('.dest-group-label').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.dest-group-label').forEach(el => {
+        el.classList.remove('active', 'dest-browse-hidden');
+      });
       document.querySelectorAll('.mobile-dest-chip').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.trip-item.nested').forEach(el => el.classList.remove('dest-browse-visible'));
+      updateDestBrowseListVisibility();
     }
 
     function scrollToDestGroup(destName) {
+      const list = document.getElementById('trip-list');
       const btn = document.querySelector(`.dest-group-label[data-dest="${CSS.escape(destName)}"]`);
-      if (btn) btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      const firstTrip = document.querySelector(
+        `.trip-item.nested.dest-browse-visible[data-dest-group="${CSS.escape(destName)}"]`
+      );
+      const target = btn || firstTrip;
+      if (!target || !list) return;
+      list.scrollTop = Math.max(0, target.offsetTop - list.offsetTop - 8);
     }
 
     function fitDestGroup(group, animate = true) {
@@ -138,6 +171,10 @@
     function browseDestGroup(destName) {
       const group = DEST_GROUPS.find(g => g.dest === destName);
       if (!group || !visibleDestTripIds(group).length) return;
+      if (browseDest === destName && isMobileLayout() && selectedId === 'all') {
+        collapseDestBrowse();
+        return;
+      }
       preserveDestBrowse = true;
       if (selectedId !== 'all') selectTrip('all');
       preserveDestBrowse = false;
@@ -147,7 +184,14 @@
         setSheetState('full');
       }
       highlightDestBrowse(group);
-      scrollToDestGroup(destName);
+      if (isMobileLayout()) {
+        // Wait for peek → full sheet layout before scrolling the trip list.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => scrollToDestGroup(destName));
+        });
+      } else {
+        scrollToDestGroup(destName);
+      }
       fitDestGroup(group);
       renderMobileDestRail();
     }
