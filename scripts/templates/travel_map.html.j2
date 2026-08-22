@@ -577,6 +577,7 @@
         });
       });
       bindMapExploreDuringPlayback();
+      bindWatchControlsToggle();
       map.on('load', onMapLoad);
     }
 
@@ -1321,6 +1322,31 @@
       return null;
     }
 
+    function bindWatchControlsToggle() {
+      const container = map.getCanvasContainer?.() || map.getContainer?.();
+      if (!container) return;
+      let tapX = 0, tapY = 0, tapTs = 0;
+      container.addEventListener('touchstart', (e) => {
+        if (!isPlaying || isRecording || userCameraControl) return;
+        tapX = e.touches[0]?.clientX || 0;
+        tapY = e.touches[0]?.clientY || 0;
+        tapTs = performance.now();
+      }, { passive: true });
+      container.addEventListener('touchend', (e) => {
+        if (!isPlaying || isRecording) return;
+        const t = e.changedTouches[0];
+        if (!t) return;
+        const dx = Math.abs(t.clientX - tapX);
+        const dy = Math.abs(t.clientY - tapY);
+        if (dx < 14 && dy < 14 && performance.now() - tapTs < 450) toggleWatchControls();
+      }, { passive: true });
+      container.addEventListener('click', (e) => {
+        if (!isPlaying || isRecording || (window.innerWidth || 0) <= 640) return;
+        if (e.detail !== 1) return;
+        toggleWatchControls();
+      });
+    }
+
     function syncNavFromMapView() {
       if (!map) return;
       navZoom = map.getZoom();
@@ -1364,12 +1390,22 @@
     function bindMapExploreDuringPlayback() {
       const container = map.getCanvasContainer?.() || map.getContainer?.();
       if (!container) return;
+      let exploreX = 0, exploreY = 0;
       const armExplore = (e) => {
         if (!isPlaying || isRecording) return;
         if (e.type === 'wheel' && Math.abs(e.deltaY) < 0.5) return;
         noteUserCameraInteraction();
       };
-      container.addEventListener('touchstart', armExplore, { passive: true });
+      container.addEventListener('touchstart', (e) => {
+        exploreX = e.touches[0]?.clientX || 0;
+        exploreY = e.touches[0]?.clientY || 0;
+      }, { passive: true });
+      container.addEventListener('touchmove', (e) => {
+        if (!isPlaying || isRecording || userCameraControl) return;
+        const t = e.touches[0];
+        if (!t) return;
+        if (Math.hypot(t.clientX - exploreX, t.clientY - exploreY) > 8) armExplore(e);
+      }, { passive: true });
       container.addEventListener('mousedown', armExplore);
       container.addEventListener('wheel', armExplore, { passive: true });
       ['moveend', 'zoomend', 'rotateend', 'pitchend'].forEach((ev) => {
@@ -1632,6 +1668,10 @@
 
     function selectTrip(id) {
       if (selectedId === id && id !== 'all') {
+        if (isMobileLayout()) {
+          mobileAutoPlayTrip();
+          return;
+        }
         // Re-clicking the same trip should feel instant — just refit, don't rebuild layers.
         resetVisuals(); drawStops(); updateHero(); fitTrip();
         updateDockIdle();
@@ -1643,10 +1683,15 @@
       dismissOnboarding();
       document.body.classList.toggle('trip-focus', id !== 'all');
       setBasemapTripFocus(id !== 'all');
-      // Map-first on trip focus; restore panel when returning to atlas.
+      // Mobile: atlas stays peek; picking a trip collapses sheet and auto-plays.
       if (isMobileLayout()) {
-        setPanelCollapsed(false);
-        setSheetState(id === 'all' ? 'peek' : 'half');
+        if (id === 'all') {
+          stopPlayback();
+          setPanelCollapsed(false);
+          setSheetState('peek');
+        } else {
+          setPanelCollapsed(true);
+        }
       } else {
         setPanelCollapsed(id !== 'all');
       }
@@ -1678,6 +1723,7 @@
         ui('trip-clock')?.classList.remove('visible');
       } else {
         drawAtlasSpokes();
+        if (isMobileLayout()) mobileAutoPlayTrip();
       }
     }
 

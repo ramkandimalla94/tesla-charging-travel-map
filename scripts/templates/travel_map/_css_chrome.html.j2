@@ -259,24 +259,44 @@
     body.watching .trip-panel,
     body.watching .panel-toggle,
     body.watching .top-bar,
-    body.watching .timeline-bar,
     body.watching #onboarding,
     body.watching .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
-    /* Keep zoom/compass usable while the journey plays — map gestures stay free too */
-    body.watching .mapboxgl-ctrl-group {
-      opacity: 0.72;
+    /* Immersive by default — tap map to reveal transport / timeline / speed */
+    body.watching:not(.watch-controls-visible) .timeline-bar,
+    body.watching:not(.watch-controls-visible) .transport-dock,
+    body.watching:not(.watch-controls-visible) .speed-rail,
+    body.watching:not(.watch-controls-visible) .trip-clock,
+    body.watching:not(.watch-controls-visible) .story-overlay,
+    body.watching:not(.watch-controls-visible) .mapboxgl-ctrl-group {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      visibility: hidden;
+    }
+    body.watching.watch-controls-visible .timeline-bar,
+    body.watching.watch-controls-visible .transport-dock,
+    body.watching.watch-controls-visible .speed-rail,
+    body.watching.watch-controls-visible .trip-clock,
+    body.watching.watch-controls-visible .story-overlay {
+      opacity: 0.94 !important;
       pointer-events: auto !important;
+      visibility: visible;
+    }
+    body.watching.watch-controls-visible .mapboxgl-ctrl-group {
+      opacity: 0.72 !important;
+      pointer-events: auto !important;
+      visibility: visible;
       transition: opacity 0.25s ease;
     }
-    body.watching .mapboxgl-ctrl-group:hover,
-    body.watching .mapboxgl-ctrl-group:focus-within { opacity: 1; }
-    body.watching .transport-dock {
-      opacity: 0.94; transition: opacity 0.35s ease;
+    body.watching.watch-controls-visible .mapboxgl-ctrl-group:hover,
+    body.watching.watch-controls-visible .mapboxgl-ctrl-group:focus-within { opacity: 1 !important; }
+    body.watching.watch-controls-visible .transport-dock {
+      opacity: 0.94 !important;
+      transition: opacity 0.35s ease;
       bottom: 22px;
     }
-    body.watching .transport-dock:hover,
-    body.watching .transport-dock:focus-within { opacity: 1; }
-    body.watching .trip-clock { opacity: 0.95; }
+    body.watching.watch-controls-visible .transport-dock:hover,
+    body.watching.watch-controls-visible .transport-dock:focus-within { opacity: 1 !important; }
+    body.watching.watch-controls-visible .trip-clock { opacity: 0.95 !important; }
     body.watching .story-overlay {
       /* Center status — clear of play (bottom-center) and speed rail (bottom-right) */
       bottom: calc(var(--dock-h) + 64px); left: 50%; transform: translateX(-50%);
