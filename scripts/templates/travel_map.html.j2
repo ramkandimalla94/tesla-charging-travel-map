@@ -102,7 +102,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
 
-  <aside class="trip-panel sheet-peek" id="sidebar">
+  <aside class="trip-panel sheet-half" id="sidebar">
     <button type="button" class="panel-grab" id="panel-grab" aria-label="Resize journey list">
       <span class="panel-grab-bar" aria-hidden="true"></span>
       <span class="panel-grab-hint" id="panel-grab-hint">Swipe up for all journeys</span>
@@ -1604,7 +1604,7 @@
       // Map-first on trip focus; restore panel when returning to atlas.
       if (isMobileLayout()) {
         setPanelCollapsed(false);
-        setSheetState(selectedId === 'all' ? 'peek' : 'half');
+        setSheetState('half');
       } else {
         setPanelCollapsed(id !== 'all');
       }
@@ -1688,7 +1688,7 @@
       if (isMobileLayout()) {
         if (sb.classList.contains('collapsed')) {
           sb.classList.remove('collapsed');
-          setSheetState('peek');
+          setSheetState('half');
         } else {
           sb.classList.add('collapsed');
         }
@@ -1708,6 +1708,37 @@
       setSheetState(next);
       if (map) fitTrip(true);
     });
+    (function bindMobileSheetGestures() {
+      const sidebar = document.getElementById('sidebar');
+      const tripList = document.getElementById('trip-list');
+      const grab = document.getElementById('panel-grab');
+      if (sidebar) {
+        sidebar.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+        sidebar.addEventListener('touchmove', e => e.stopPropagation(), { passive: true });
+      }
+      if (tripList) {
+        tripList.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+        tripList.addEventListener('touchmove', e => e.stopPropagation(), { passive: true });
+      }
+      let grabY0 = 0;
+      grab?.addEventListener('touchstart', e => {
+        grabY0 = e.touches[0]?.clientY || 0;
+      }, { passive: true });
+      grab?.addEventListener('touchend', e => {
+        if (!isMobileLayout()) return;
+        const y1 = e.changedTouches[0]?.clientY || 0;
+        const dy = grabY0 - y1;
+        if (Math.abs(dy) < 28) return;
+        const sb = document.getElementById('sidebar');
+        const order = ['peek', 'half', 'full'];
+        const current = order.find(s => sb.classList.contains('sheet-' + s)) || 'half';
+        const idx = order.indexOf(current);
+        const next = dy > 0 ? order[Math.min(idx + 1, order.length - 1)] : order[Math.max(idx - 1, 0)];
+        sb.classList.remove('collapsed');
+        setSheetState(next);
+        if (map) fitTrip(true);
+      }, { passive: true });
+    })();
     window.addEventListener('resize', () => {
       syncMobileChrome();
       if (map && isMobileLayout()) fitTrip(true);
