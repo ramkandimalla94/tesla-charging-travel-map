@@ -333,7 +333,9 @@
     // When the viewer pans/zooms/rotates during play, pause chase-cam until idle.
     let userCameraControl = false;
     let userCameraIdleTimer = null;
+    let chaseResumeBlend = null;
     const USER_CAMERA_RESUME_MS = 4500;
+    const CHASE_RESUME_BLEND_MS = 1200;
     const MAX_PITCH = 60;
     const NAV_LOOKAHEAD_KM = 0.7;        // course window ahead — kills vertex zig-zag
     const NAV_BEARING_SMOOTH = 0.12;     // bearing EMA after turn cap
@@ -1363,8 +1365,73 @@
         userCameraControl = false;
         lastNavTs = 0;
         userCameraIdleTimer = null;
-        syncNavFromMapView();
+        beginChaseResumeBlend();
       }, USER_CAMERA_RESUME_MS);
+    }
+
+    function beginChaseResumeBlend() {
+      if (!map) return;
+      chaseResumeBlend = {
+        start: performance.now(),
+        duration: CHASE_RESUME_BLEND_MS,
+        from: {
+          center: map.getCenter(),
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          bearing: map.getBearing(),
+        },
+      };
+    }
+
+    function keepVehicleInViewDuringExplore(state) {
+      if (!map || !state || state.lat == null || state.lng == null) return;
+      if (state.phase !== 'travel' && state.phase !== 'dwell') return;
+      const canvas = map.getCanvas();
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (!w || !h) return;
+      const marginX = Math.max(36, w * 0.1);
+      const marginTop = Math.max(48, h * 0.12);
+      const marginBottom = Math.max(120, h * 0.32);
+      for (let i = 0; i < 4; i++) {
+        const pt = map.project([state.lng, state.lat]);
+        let dx = 0;
+        let dy = 0;
+        if (pt.x < marginX) dx = pt.x - marginX;
+        else if (pt.x > w - marginX) dx = pt.x - (w - marginX);
+        if (pt.y < marginTop) dy = pt.y - marginTop;
+        else if (pt.y > h - marginBottom) dy = pt.y - (h - marginBottom);
+        if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) break;
+        const dist = Math.hypot(dx, dy);
+        const ease = dist > 140 ? 0.72 : dist > 56 ? 0.42 : 0.24;
+        map.panBy([dx * ease, dy * ease], { animate: false, duration: 0 });
+      }
+    }
+
+    function applyChaseResumeBlend(target, now) {
+      if (!chaseResumeBlend || !map) return false;
+      const t = Math.min(1, (now - chaseResumeBlend.start) / chaseResumeBlend.duration);
+      if (t >= 1) {
+        chaseResumeBlend = null;
+        return false;
+      }
+      const ease = t * t * (3 - 2 * t);
+      const from = chaseResumeBlend.from;
+      const fc = from.center;
+      const tc = target.center;
+      const center = [
+        fc.lng + (tc[0] - fc.lng) * ease,
+        fc.lat + (tc[1] - fc.lat) * ease,
+      ];
+      let bearingDiff = ((target.bearing - from.bearing + 540) % 360) - 180;
+      map.jumpTo({
+        center,
+        zoom: from.zoom + (target.zoom - from.zoom) * ease,
+        pitch: from.pitch + (target.pitch - from.pitch) * ease,
+        bearing: from.bearing + bearingDiff * ease,
+        padding: target.padding,
+      });
+      return true;
     }
 
     function noteUserCameraInteraction() {
@@ -1372,6 +1439,7 @@
       if (!(isPlaying || document.body.classList.contains('watching'))) return;
       const wasUser = userCameraControl;
       userCameraControl = true;
+      chaseResumeBlend = null;
       // Stop chase animations once — don't interrupt an active pan/pinch gesture.
       if (!wasUser) {
         try { map.stop(); } catch (_) { /* ignore */ }
@@ -1381,6 +1449,7 @@
 
     function clearUserCameraControl() {
       userCameraControl = false;
+      chaseResumeBlend = null;
       if (userCameraIdleTimer) {
         clearTimeout(userCameraIdleTimer);
         userCameraIdleTimer = null;
@@ -1418,13 +1487,17 @@
     function applyPlaybackCamera(state, force = false) {
       if (!map || !state) return;
       if (!force && !(isPlaying || isRecording)) return;
-      // Viewer is exploring — keep the car/trail moving, but don't yank the camera.
-      if (userCameraControl && !isRecording && !force) return;
+      // Viewer is exploring — keep the car on screen with gentle pans, not full chase.
+      if (userCameraControl && !isRecording && !force) {
+        keepVehicleInViewDuringExplore(state);
+        return;
+      }
       if (state.phase === 'intro') return;
       if (state.phase === 'outro') {
         // Trip recap overview — like Apple/Google end-of-route summary
         if (!navRecapStarted) {
           navRecapStarted = true;
+          chaseResumeBlend = null;
           try { map.stop(); } catch (e) { /* ignore */ }
           fitTrip(true, true);
         }
@@ -1463,6 +1536,7 @@
       };
 
       if (phaseChanged || force) {
+        chaseResumeBlend = null;
         try { map.stop(); } catch (e) { /* ignore */ }
         map.easeTo({ ...cam, duration: force ? 500 : 420, essential: true });
         return;
@@ -1470,6 +1544,9 @@
 
       // Hold steady on memory frames — repeated easeTo caused heartbeat shake on the photo.
       if (target.lock || state.phase === 'memory') return;
+
+      // Smooth blend back to chase after the viewer finishes exploring.
+      if (chaseResumeBlend && applyChaseResumeBlend(cam, now)) return;
 
       // Continuous follow: jumpTo smoothed values every frame (nav SDK style)
       if (state.phase === 'travel') {
@@ -1680,6 +1757,11 @@
       }
       selectedId=id;
       hoveredTripId=null;
+      if (id === 'all') {
+        if (!preserveDestBrowse && typeof clearDestBrowse === 'function') clearDestBrowse();
+      } else if (typeof clearDestBrowse === 'function') {
+        clearDestBrowse();
+      }
       dismissOnboarding();
       document.body.classList.toggle('trip-focus', id !== 'all');
       setBasemapTripFocus(id !== 'all');
@@ -1688,7 +1770,7 @@
         if (id === 'all') {
           stopPlayback();
           setPanelCollapsed(false);
-          setSheetState('peek');
+          setSheetState(typeof browseDest !== 'undefined' && browseDest ? 'full' : 'peek');
         } else {
           setPanelCollapsed(true);
         }
@@ -1721,6 +1803,10 @@
         applyEraFilter();
         setNightMode(false);
         ui('trip-clock')?.classList.remove('visible');
+        if (typeof browseDest !== 'undefined' && browseDest) {
+          const group = DEST_GROUPS.find(g => g.dest === browseDest);
+          if (group && typeof highlightDestBrowse === 'function') highlightDestBrowse(group);
+        }
       } else {
         drawAtlasSpokes();
         if (isMobileLayout()) mobileAutoPlayTrip();

@@ -78,18 +78,82 @@
       });
     }
 
-    function pickDestTrip(visibleIds) {
-      return visibleIds
-        .map(id => TRIPS.find(t => t.id === id))
-        .find(t => t?.featured) || TRIPS.find(t => visibleIds.includes(t.id));
+    let browseDest = null;
+    let preserveDestBrowse = false;
+
+    function highlightDestBrowse(group) {
+      if (!group) return;
+      const visibleIds = visibleDestTripIds(group);
+      TRIPS.forEach(t => {
+        if (!tripInEra(t)) setRouteStyle(t.id, t.color, 'overviewDim');
+        else if (visibleIds.includes(t.id)) setRouteStyle(t.id, t.color, 'overviewHover');
+        else setRouteStyle(t.id, t.color, 'overviewDim');
+      });
+      destMarkers.forEach(m => {
+        const ids = m._tripIds || [];
+        const hit = ids.some(id => visibleIds.includes(id));
+        m.getElement().classList.toggle('hot', hit);
+        m.getElement().classList.toggle('dim', !hit);
+      });
+      document.querySelectorAll('.dest-group-label').forEach(el => {
+        el.classList.toggle('active', el.dataset.dest === group.dest);
+      });
+      drawAtlasSpokes();
+    }
+
+    function clearDestBrowse() {
+      browseDest = null;
+      document.querySelectorAll('.dest-group-label').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.mobile-dest-chip').forEach(el => el.classList.remove('active'));
+    }
+
+    function scrollToDestGroup(destName) {
+      const btn = document.querySelector(`.dest-group-label[data-dest="${CSS.escape(destName)}"]`);
+      if (btn) btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function fitDestGroup(group, animate = true) {
+      if (!map || !group) return;
+      const bounds = new mapboxgl.LngLatBounds();
+      visibleDestTripIds(group).forEach(id => {
+        const t = TRIPS.find(x => x.id === id);
+        if (!t) return;
+        const path = t.route_path || [];
+        if (path.length >= 2) path.forEach(p => bounds.extend([p[1], p[0]]));
+        else (t.stops || []).forEach(s => bounds.extend([s.lng, s.lat]));
+      });
+      if (group.lng != null && group.lat != null) bounds.extend([group.lng, group.lat]);
+      if (bounds.isEmpty()) return;
+      map.fitBounds(bounds, {
+        padding: mapCameraPadding(),
+        pitch: 0,
+        bearing: 0,
+        duration: animate ? 900 : 0,
+        maxZoom: 7.2,
+        minZoom: 3,
+      });
+    }
+
+    /** Browse a destination's trips — stay on atlas until user picks one. */
+    function browseDestGroup(destName) {
+      const group = DEST_GROUPS.find(g => g.dest === destName);
+      if (!group || !visibleDestTripIds(group).length) return;
+      preserveDestBrowse = true;
+      if (selectedId !== 'all') selectTrip('all');
+      preserveDestBrowse = false;
+      browseDest = destName;
+      if (isMobileLayout()) {
+        setPanelCollapsed(false);
+        setSheetState('full');
+      }
+      highlightDestBrowse(group);
+      scrollToDestGroup(destName);
+      fitDestGroup(group);
+      renderMobileDestRail();
     }
 
     function selectDestGroup(destName) {
-      const group = DEST_GROUPS.find(g => g.dest === destName);
-      if (!group) return;
-      const visibleIds = visibleDestTripIds(group);
-      const preferred = pickDestTrip(visibleIds);
-      if (preferred) selectTrip(preferred.id);
+      browseDestGroup(destName);
     }
 
     function renderMobileDestRail() {
@@ -109,14 +173,15 @@
       rail.hidden = false;
       rail.innerHTML = groups.map(g => {
         const count = visibleDestTripIds(g).length;
-        return `<button type="button" class="mobile-dest-chip" data-dest="${g.dest}" style="--chip-color:${g.color}">
+        const active = browseDest === g.dest ? ' active' : '';
+        return `<button type="button" class="mobile-dest-chip${active}" data-dest="${g.dest}" style="--chip-color:${g.color}">
           <span class="chip-dot" aria-hidden="true"></span>
           <span class="chip-name">${g.dest}</span>
           <span class="chip-count">${count}</span>
         </button>`;
       }).join('');
       rail.querySelectorAll('.mobile-dest-chip').forEach(btn => {
-        btn.addEventListener('click', () => selectDestGroup(btn.dataset.dest));
+        btn.addEventListener('click', () => browseDestGroup(btn.dataset.dest));
       });
     }
 
