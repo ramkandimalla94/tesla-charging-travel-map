@@ -700,19 +700,26 @@ def main() -> int:
               const dock = document.getElementById('transport-dock');
               const toggle = document.getElementById('sidebar-toggle');
               const era = document.getElementById('era-rail');
+              const timeline = document.querySelector('.timeline-bar');
+              const speed = document.getElementById('speed-rail');
               const pr = panel?.getBoundingClientRect();
               const dr = dock?.getBoundingClientRect();
               const tr = toggle?.getBoundingClientRect();
-              const styles = getComputedStyle(panel);
+              const tlr = timeline?.getBoundingClientRect();
+              const sr = speed?.getBoundingClientRect();
+              const overlaps = (a, b) => !!(a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top);
               return {
                 panelBottomSheet: pr.top > window.innerHeight * 0.35,
                 panelGrab: !!document.querySelector('.panel-grab') && getComputedStyle(document.querySelector('.panel-grab')).display !== 'none',
                 panelMaxH: pr.height,
+                panelHeightOk: pr.height <= window.innerHeight * 0.38 + 2,
                 dockWidth: dr.width,
                 dockInView: dr.bottom <= window.innerHeight + 2 && dr.top >= 0,
                 toggleSize: Math.min(tr.width, tr.height),
                 eraScrollable: era ? era.scrollWidth >= era.clientWidth - 1 : false,
                 eraChips: document.querySelectorAll('.era-chip').length,
+                timelineInView: tlr ? (tlr.left >= -1 && tlr.right <= window.innerWidth + 1 && tlr.bottom <= window.innerHeight + 2) : false,
+                chromeOverlap: overlaps(pr, dr) || overlaps(pr, tlr) || overlaps(dr, sr) || overlaps(tr, sr),
                 hubs: document.querySelectorAll('.home-hub').length,
                 vw: window.innerWidth,
                 vh: window.innerHeight,
@@ -1033,6 +1040,18 @@ def main() -> int:
         ok = False
     if mobile.get("vw") != 390:
         print(f"FAIL: Mobile viewport not applied: {mobile}")
+        ok = False
+    if not mobile.get("panelBottomSheet"):
+        print(f"FAIL: Mobile panel should be a bottom sheet: {mobile}")
+        ok = False
+    if not mobile.get("panelHeightOk"):
+        print(f"FAIL: Mobile panel too tall for map: {mobile}")
+        ok = False
+    if mobile.get("chromeOverlap"):
+        print(f"FAIL: Mobile chrome overlaps (panel/dock/speed/timeline): {mobile}")
+        ok = False
+    if not mobile.get("timelineInView"):
+        print(f"FAIL: Mobile timeline clipped off-screen: {mobile}")
         ok = False
     if mobile.get("toggleSize", 0) < 40:
         print(f"FAIL: Mobile panel toggle too small: {mobile}")

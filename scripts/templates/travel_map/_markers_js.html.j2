@@ -80,17 +80,25 @@
     function mapCameraPadding() {
       const w = map?.getContainer()?.clientWidth || window.innerWidth || 1200;
       const h = map?.getContainer()?.clientHeight || window.innerHeight || 800;
-      const leftNeed = (!isPanelCollapsed() && w > 640)
+      const mobile = w <= 640;
+      const leftNeed = (!isPanelCollapsed() && !mobile)
         ? Math.min(360, Math.floor(w * 0.34))
-        : (w <= 640 ? 24 : 48);
-      const bottomNeed = document.body.classList.contains('watching')
-        ? Math.min(120, Math.floor(h * 0.16))
-        : Math.min(200, Math.floor(h * 0.28));
+        : (mobile ? 16 : 48);
+      const watching = document.body.classList.contains('watching');
+      let bottomNeed;
+      if (watching) {
+        bottomNeed = Math.min(mobile ? 100 : 120, Math.floor(h * (mobile ? 0.14 : 0.16)));
+      } else if (mobile) {
+        // Sheet + dock + timeline claim the lower third on phones
+        bottomNeed = Math.min(300, Math.floor(h * 0.44));
+      } else {
+        bottomNeed = Math.min(200, Math.floor(h * 0.28));
+      }
       return {
-        top: Math.min(88, Math.floor(h * 0.1)),
+        top: Math.min(mobile ? 64 : 88, Math.floor(h * (mobile ? 0.08 : 0.1))),
         bottom: bottomNeed,
         left: leftNeed,
-        right: Math.min(48, Math.floor(w * 0.06)),
+        right: Math.min(mobile ? 16 : 48, Math.floor(w * (mobile ? 0.04 : 0.06))),
       };
     }
 
