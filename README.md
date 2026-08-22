@@ -18,16 +18,16 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 
 - **Atlas overview** — home hubs + destination constellation + corridor spokes; destination-grouped trip list
 - **Featured journey CTA** — one clear “open a journey” action on the atlas (no mystery auto-reel)
-- **Photo memories** — dump albums into `data/photos/<album>/`; EXIF GPS is snapped onto the drive corridor so thumbnails sit on the glowing path (not miles out on a hike), with cinematic memory beats during replay
+- **Photo memories** — dump albums into `data/photos/<album>/`; EXIF GPS clusters become real path waypoints (hike spurs to exact shot locations) plus cinematic memory beats during replay
 - **Year era filter** — isolate diary chapters by year
 - **3D satellite map** with Mapbox terrain and elevated route lines
 - **Watch mode** — Play hides chrome for a passenger-seat replay
-- **Steady journey playback** — distance-paced travel along the charge corridor; smart zoom when you linger in a small area; memory holds are brief (default **0.75×**; continuous **0.25×–4×** speed slider; `[` / `]` nudge by 0.25×)
+- **Steady journey playback** — distance-paced travel along chargers and photo GPS; smart zoom when you linger in a small area; memory holds are brief (default **0.75×**; continuous **0.25×–4×** speed slider; `[` / `]` nudge by 0.25×)
 - **Separated play + speed** — play/pause stays bottom-center; continuous speed rail sits bottom-right so captions and Journey Complete never cover controls
 - **Live trip clock** — large HUD date/time tracks the playhead in the trip’s local timezone; memory captions use the same photo capture instant (not charger stop times). Day and night play at the same rate (no night skip / morning linger).
 - **Gradual day↔night** — map lighting ramps through twilight from the live clock (visual only; does not change playback speed)
-- **Navigation-style chase** — heading-up follow camera (Apple/Google Maps feel): look-ahead course, capped turn rate, car glued to the path; tight stretches zoom in, then pull back on the highway; end-of-trip pulls back to a north-up route recap
-- **Large memory stage** — replay photos appear as a large, stable mid-viewport overlay (no map-marker shake); clustered pins stay on the corridor next to the car
+- **Navigation-style chase** — heading-up follow camera (Apple/Google Maps feel): look-ahead course, capped turn rate, car glued to the path; confined/slow stretches (Maroon Bells) zoom in, then pull back on the highway; end-of-trip pulls back to a north-up route recap
+- **Large memory stage** — replay photos appear as a large, stable mid-viewport overlay (no map-marker shake); clustered pins stay at exact EXIF GPS — the path routes to those shots
 - **Clean watch chrome** — one status line (en route / stop); polished Journey Complete card; no nearby-place labels or duplicate POI pills
 
 ## Quick start (local)
