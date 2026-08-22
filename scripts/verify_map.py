@@ -461,10 +461,26 @@ def main() -> int:
               });
               // Prefer server-side spur when present (exact snap distance)
               const spurMax = Math.max(0, ...photos.map(p => Number(p.spur_miles) || 0));
-              // Marker root must not fight Mapbox transform
-              const pin = document.querySelector('.photo-pin');
+              // Marker root must stay position:absolute (Mapbox) — never relative
+              const pin = document.querySelector('.photo-pin.mapboxgl-marker')
+                || document.querySelector('.photo-pin');
               const tr = pin ? getComputedStyle(pin).transitionProperty : '';
+              const pos = pin ? getComputedStyle(pin).position : '';
               const hasInner = !!document.querySelector('.photo-pin-inner');
+              // Pixel drift between geo projection and DOM box (relative stacking bug)
+              let maxPixelDrift = 0;
+              markers.forEach(m => {
+                try {
+                  const ll = m.getLngLat();
+                  const proj = map.project([ll.lng, ll.lat]);
+                  if (!Number.isFinite(proj.x) || !Number.isFinite(proj.y)) return;
+                  const rect = m.getElement().getBoundingClientRect();
+                  const dx = (rect.left + rect.width / 2) - proj.x;
+                  const dy = (rect.top + rect.height / 2) - proj.y;
+                  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+                  maxPixelDrift = Math.max(maxPixelDrift, Math.hypot(dx, dy));
+                } catch (_) {}
+              });
               return {
                 photoCount: photos.length,
                 markerCount: lngLats.length,
@@ -472,7 +488,9 @@ def main() -> int:
                 southOf32: south.length,
                 maxOffRouteMi: Math.round(maxOff * 100) / 100,
                 maxSpurMi: Math.round(spurMax * 100) / 100,
-                transformSafe: hasInner && !/transform/i.test(tr || ''),
+                markerPosition: pos,
+                maxPixelDrift: Math.round(maxPixelDrift * 10) / 10,
+                transformSafe: hasInner && !/transform/i.test(tr || '') && pos === 'absolute',
               };
             }"""
         )
@@ -906,7 +924,10 @@ def main() -> int:
             print(f"FAIL: Photo markers stacked into Mexico/south: {pp}")
             ok = False
         if not pp.get("transformSafe"):
-            print(f"FAIL: Photo pin root must not transition transform (Mapbox fight): {pp}")
+            print(f"FAIL: Photo pin root must be position:absolute without transform transition: {pp}")
+            ok = False
+        if float(pp.get("maxPixelDrift") or 0) > 8:
+            print(f"FAIL: Photo pin DOM drifted from geo projection (stacking bug): {pp}")
             ok = False
         if float(pp.get("maxOffRouteMi") or 0) > 2.5:
             print(f"FAIL: Photo pins must snap onto the corridor (<=2.5mi sample): {pp}")
