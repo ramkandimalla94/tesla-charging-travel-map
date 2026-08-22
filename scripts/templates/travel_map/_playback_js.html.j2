@@ -7,8 +7,9 @@
       if (!pb?.total_video_ms) { stopPlayback(); return; }
       const rawDelta = ts - lastTs;
       const delta = Math.min(rawDelta, 250);
-      // Equal day/night — speed slider only (no solar/time-of-day warp).
-      animTimeMs += delta * speed;
+      // Calibrated so UI 1× matches the former 0.5× passenger pace.
+      const PLAYBACK_SPEED_REF = 0.5;
+      animTimeMs += delta * speed * PLAYBACK_SPEED_REF;
       lastTs = ts;
       if (animTimeMs >= pb.total_video_ms) {
         animTimeMs = pb.total_video_ms;

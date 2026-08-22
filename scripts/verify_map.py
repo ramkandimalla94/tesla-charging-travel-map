@@ -795,8 +795,8 @@ def main() -> int:
     if cinema_ux.get("maxDwell", 9999) > 1600:
         print(f"FAIL: Dwell segments should be short (<=1.6s): {cinema_ux}")
         ok = False
-    if cinema_ux.get("maxMemory", 0) > 1600:
-        print(f"FAIL: Photo memory holds should stay readable but brief (<=1.6s): {cinema_ux}")
+    if cinema_ux.get("maxMemory", 0) > 2600:
+        print(f"FAIL: Photo memory holds should stay readable (<=2.6s timeline / ~5s wall): {cinema_ux}")
         ok = False
     if cinema_ux.get("dwellPct"):
         print(f"FAIL: Dock must not show dwell percentage: {cinema_ux}")
@@ -815,10 +815,10 @@ def main() -> int:
         print(f"FAIL: Trip clock must match photo caption instant: {pcm}")
         ok = False
     pcm_mem = float(pcm.get("maxMemory") or 0)
-    if pcm.get("ok") and pcm_mem > 1600:
-        print(f"FAIL: Photo album memory holds should stay brief: {pcm}")
+    if pcm.get("ok") and pcm_mem > 2600:
+        print(f"FAIL: Photo album memory holds should stay bounded: {pcm}")
         ok = False
-    if pcm.get("ok") and pcm.get("memoryCount", 0) > 0 and pcm_mem < 800:
+    if pcm.get("ok") and pcm.get("memoryCount", 0) > 0 and pcm_mem < 1800:
         print(f"FAIL: Photo memory holds too brief to read: {pcm}")
         ok = False
     hen = pcm.get("nightAtHenrietta") if isinstance(pcm, dict) else None
