@@ -296,11 +296,9 @@
       const next = mode === 'walking' ? 'walking' : 'driving';
       if (!vehicleMarker || vehicleMode !== next) {
         if (vehicleMarker) {
-        if (vehicleMarker) {
           try { vehicleMarker.remove(); } catch (_) {}
           vehicleMarker = null;
         }
-        vehicleMode = 'driving';
         const el = document.createElement('div');
         el.innerHTML = travelerHtml(next);
         vehicleMarker = new mapboxgl.Marker({
