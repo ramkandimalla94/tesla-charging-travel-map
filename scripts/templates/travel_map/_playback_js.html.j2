@@ -59,6 +59,7 @@
       isPlaying = true; lastTs = 0;
       syncPlayToggle(true);
       resetNavChase();
+      if (!forRecording) clearUserCameraControl();
       setPanelCollapsed(true);
       if (!forRecording) setWatching(true);
       setPlaybackVisuals(true);
@@ -85,6 +86,7 @@
       isPlaying=false;
       if (animFrame) cancelAnimationFrame(animFrame);
       syncPlayToggle(false);
+      clearUserCameraControl();
       if (!isRecording) {
         setPlaybackVisuals(false);
         setWatching(false);

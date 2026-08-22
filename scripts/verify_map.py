@@ -560,6 +560,47 @@ def main() -> int:
               defaultSpeed: parseFloat(document.getElementById('speed')?.value || '0'),
               speedMin: parseFloat(document.getElementById('speed')?.min || '0'),
               speedMax: parseFloat(document.getElementById('speed')?.max || '0'),
+              mapGestures: (() => {
+                if (!map) return false;
+                try {
+                  return !!(map.dragPan?.isEnabled?.()
+                    && map.scrollZoom?.isEnabled?.()
+                    && map.touchZoomRotate?.isEnabled?.());
+                } catch (_) { return false; }
+              })(),
+              navCtrlLive: (() => {
+                document.body.classList.add('watching');
+                const el = document.querySelector('.mapboxgl-ctrl-group');
+                if (!el) {
+                  document.body.classList.remove('watching');
+                  return false;
+                }
+                const s = getComputedStyle(el);
+                const ok = s.pointerEvents !== 'none' && parseFloat(s.opacity || '0') > 0.2;
+                document.body.classList.remove('watching');
+                return ok;
+              })(),
+              userExploreOk: (() => {
+                if (typeof noteUserCameraInteraction !== 'function') return false;
+                if (typeof applyPlaybackCamera !== 'function') return false;
+                if (typeof clearUserCameraControl !== 'function') return false;
+                const wasPlaying = !!isPlaying;
+                isPlaying = true;
+                document.body.classList.add('watching');
+                clearUserCameraControl();
+                noteUserCameraInteraction();
+                const armed = !!userCameraControl;
+                // While exploring, non-forced chase must no-op
+                const z0 = map.getZoom();
+                map.jumpTo({ zoom: Math.max(2, z0 - 0.35) });
+                const warm = positionAtTime(Math.max(animTimeMs, 1500)) || { phase: 'travel', lat: 39, lng: -105, bearing: 0 };
+                applyPlaybackCamera(warm, false);
+                const stayed = Math.abs(map.getZoom() - (z0 - 0.35)) < 0.2 || !!userCameraControl;
+                clearUserCameraControl();
+                isPlaying = wasPlaying;
+                document.body.classList.remove('watching');
+                return armed && stayed && !userCameraControl;
+              })(),
             })"""
         )
         print(f"Play control: {dock_state}")
@@ -851,6 +892,15 @@ def main() -> int:
         ok = False
     if abs(float(dock_state.get("defaultSpeed") or 0) - 1.0) > 0.001:
         print(f"FAIL: Default playback speed should be 1.0: {dock_state}")
+        ok = False
+    if not dock_state.get("mapGestures"):
+        print(f"FAIL: Map pan/zoom gestures should stay enabled during play: {dock_state}")
+        ok = False
+    if not dock_state.get("navCtrlLive"):
+        print(f"FAIL: Navigation zoom controls should remain usable in watch mode: {dock_state}")
+        ok = False
+    if not dock_state.get("userExploreOk"):
+        print(f"FAIL: User map explore should pause chase camera: {dock_state}")
         ok = False
     if float(dock_state.get("speedMin") or 1) > 0.25 + 1e-9:
         print(f"FAIL: Speed range should allow 0.25×: {dock_state}")

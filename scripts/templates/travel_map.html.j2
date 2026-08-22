@@ -272,6 +272,10 @@
     let navLat = null, navLng = null, navBearing = 0, navZoom = 6.5, navPitch = 52;
     let navRecapStarted = false;
     let lastNavTs = 0;
+    // When the viewer pans/zooms/rotates during play, pause chase-cam until idle.
+    let userCameraControl = false;
+    let userCameraIdleTimer = null;
+    const USER_CAMERA_RESUME_MS = 4500;
     const MAX_PITCH = 60;
     const NAV_LOOKAHEAD_KM = 0.7;        // course window ahead — kills vertex zig-zag
     const NAV_BEARING_SMOOTH = 0.12;     // bearing EMA after turn cap
@@ -460,6 +464,22 @@
         preserveDrawingBuffer: true, // required so export composite can read GL pixels
       });
       map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+      // Keep pan / pinch-zoom / scroll available during cinematic follow.
+      try {
+        map.dragPan.enable();
+        map.scrollZoom.enable();
+        map.boxZoom.enable();
+        map.dragRotate.enable();
+        map.keyboard.enable();
+        map.doubleClickZoom.enable();
+        map.touchZoomRotate.enable();
+        map.touchPitch.enable();
+      } catch (_) { /* older GL builds */ }
+      ['dragstart', 'zoomstart', 'rotatestart', 'pitchstart'].forEach((ev) => {
+        map.on(ev, (e) => {
+          if (e && e.originalEvent) noteUserCameraInteraction();
+        });
+      });
       map.on('load', onMapLoad);
     }
 
@@ -1200,9 +1220,32 @@
       return null;
     }
 
+    function noteUserCameraInteraction() {
+      if (!map || isRecording) return;
+      if (!(isPlaying || document.body.classList.contains('watching'))) return;
+      userCameraControl = true;
+      try { map.stop(); } catch (_) { /* ignore */ }
+      if (userCameraIdleTimer) clearTimeout(userCameraIdleTimer);
+      userCameraIdleTimer = setTimeout(() => {
+        userCameraControl = false;
+        lastNavTs = 0;
+        userCameraIdleTimer = null;
+      }, USER_CAMERA_RESUME_MS);
+    }
+
+    function clearUserCameraControl() {
+      userCameraControl = false;
+      if (userCameraIdleTimer) {
+        clearTimeout(userCameraIdleTimer);
+        userCameraIdleTimer = null;
+      }
+    }
+
     function applyPlaybackCamera(state, force = false) {
       if (!map || !state) return;
       if (!force && !(isPlaying || isRecording)) return;
+      // Viewer is exploring — keep the car/trail moving, but don't yank the camera.
+      if (userCameraControl && !isRecording && !force) return;
       if (state.phase === 'intro') return;
       if (state.phase === 'outro') {
         // Trip recap overview — like Apple/Google end-of-route summary
