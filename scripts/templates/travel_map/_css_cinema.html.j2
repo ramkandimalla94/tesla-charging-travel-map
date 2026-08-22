@@ -347,6 +347,11 @@
       }
       body:not(.trip-focus) .group-label.featured { display: none; }
       body:not(.trip-focus) .trip-item.featured { display: none; }
+      /* Accordion browse: one destination's trips at a time (incl. featured). */
+      body:not(.trip-focus).dest-browse .trip-item.nested { display: none !important; }
+      body:not(.trip-focus).dest-browse .trip-item.nested.dest-browse-visible {
+        display: flex !important;
+      }
       body:not(.trip-focus) .trip-hero,
       body:not(.trip-focus) .filmstrip {
         display: none;
