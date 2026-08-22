@@ -744,6 +744,8 @@ def main() -> int:
                   && (!document.getElementById('speed-rail')
                     || getComputedStyle(document.getElementById('speed-rail')).opacity === '0'),
                 titleText: document.getElementById('cinema-title-text')?.textContent || '',
+                statsText: document.getElementById('cinema-stats')?.innerText || '',
+                statsHidden: !!document.getElementById('cinema-stats')?.hidden,
               };
             }"""
         )
@@ -1033,6 +1035,10 @@ def main() -> int:
         ok = False
     if not cinema.get("portraitish"):
         print(f"FAIL: Map frame not portrait-ish for export: {cinema}")
+        ok = False
+    stats_text = (cinema.get("statsText") or "").lower()
+    if cinema.get("statsHidden") or "mile" not in stats_text:
+        print(f"FAIL: Intro/outro should show mapped miles: {cinema}")
         ok = False
     if not share_state.get("minimalDock"):
         print(f"FAIL: Dock should be minimal (no export/loop): {share_state}")
