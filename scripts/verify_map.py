@@ -692,7 +692,7 @@ def main() -> int:
 
         # Mobile sheet regression (iPhone-ish)
         page.set_viewport_size({"width": 390, "height": 844})
-        page.evaluate("selectTrip('all'); setPanelCollapsed(false)")
+        page.evaluate("selectTrip('all'); setPanelCollapsed(false); ensureMobileBrowseSheet();")
         page.wait_for_timeout(700)
         mobile = page.evaluate(
             """() => {
@@ -702,24 +702,34 @@ def main() -> int:
               const era = document.getElementById('era-rail');
               const timeline = document.querySelector('.timeline-bar');
               const speed = document.getElementById('speed-rail');
+              const list = document.getElementById('trip-list');
               const pr = panel?.getBoundingClientRect();
               const dr = dock?.getBoundingClientRect();
               const tr = toggle?.getBoundingClientRect();
               const tlr = timeline?.getBoundingClientRect();
               const sr = speed?.getBoundingClientRect();
+              const lr = list?.getBoundingClientRect();
               const overlaps = (a, b) => !!(a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top);
+              const items = Array.from(document.querySelectorAll('#trip-list .trip-item'));
+              const visibleTrips = items.filter(el => {
+                const r = el.getBoundingClientRect();
+                return r.top >= pr.top && r.bottom <= pr.bottom + 2;
+              }).length;
               return {
-                panelBottomSheet: pr.top > window.innerHeight * 0.35,
-                panelGrab: !!document.querySelector('.panel-grab') && getComputedStyle(document.querySelector('.panel-grab')).display !== 'none',
+                panelBottomSheet: pr.bottom > window.innerHeight * 0.55 && pr.top > window.innerHeight * 0.18,
+                panelGrab: !!document.getElementById('panel-grab') && getComputedStyle(document.getElementById('panel-grab')).display !== 'none',
+                panelHalf: panel?.classList.contains('sheet-half'),
                 panelMaxH: pr.height,
-                panelHeightOk: pr.height <= window.innerHeight * 0.38 + 2,
+                panelHeightOk: pr.height >= window.innerHeight * 0.45,
+                tripListVisible: visibleTrips >= 2,
+                listScrollable: list ? list.scrollHeight > list.clientHeight + 4 : false,
                 dockWidth: dr.width,
                 dockInView: dr.bottom <= window.innerHeight + 2 && dr.top >= 0,
                 toggleSize: Math.min(tr.width, tr.height),
                 eraScrollable: era ? era.scrollWidth >= era.clientWidth - 1 : false,
                 eraChips: document.querySelectorAll('.era-chip').length,
                 timelineInView: tlr ? (tlr.left >= -1 && tlr.right <= window.innerWidth + 1 && tlr.bottom <= window.innerHeight + 2) : false,
-                chromeOverlap: overlaps(pr, dr) || overlaps(pr, tlr) || overlaps(dr, sr) || overlaps(tr, sr),
+                chromeOverlap: overlaps(pr, dr) || overlaps(pr, tlr) || overlaps(tr, sr),
                 hubs: document.querySelectorAll('.home-hub').length,
                 vw: window.innerWidth,
                 vh: window.innerHeight,
@@ -728,6 +738,16 @@ def main() -> int:
         )
         print(f"Mobile 390x844: {mobile}")
         page.screenshot(path=str(SCREENSHOTS / "08-mobile-sheet.png"))
+        page.evaluate(f"selectTrip({json.dumps(trip_co)})")
+        page.wait_for_timeout(400)
+        mobile_pick = page.evaluate(
+            """() => ({
+              panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
+              tripFocus: document.body.classList.contains('trip-focus'),
+              activeItems: document.querySelectorAll('#trip-list .trip-item.active').length,
+            })"""
+        )
+        print(f"Mobile trip select: {mobile_pick}")
         page.evaluate("selectTrip('all'); startPlayback()")  # should no-op / ask select
         page.evaluate(f"selectTrip({json.dumps(trip_co)}); startPlayback()")
         page.wait_for_timeout(900)
@@ -736,6 +756,7 @@ def main() -> int:
               playing: isPlaying,
               watching: document.body.classList.contains('watching'),
               panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
+              panelOpenAfterSelect: !document.getElementById('sidebar')?.classList.contains('collapsed'),
               pad: typeof mapCameraPadding === 'function' ? mapCameraPadding() : null,
             })"""
         )
@@ -1041,11 +1062,14 @@ def main() -> int:
     if mobile.get("vw") != 390:
         print(f"FAIL: Mobile viewport not applied: {mobile}")
         ok = False
-    if not mobile.get("panelBottomSheet"):
-        print(f"FAIL: Mobile panel should be a bottom sheet: {mobile}")
+    if not mobile.get("panelHalf"):
+        print(f"FAIL: Mobile panel should default to half sheet for browsing: {mobile}")
         ok = False
     if not mobile.get("panelHeightOk"):
-        print(f"FAIL: Mobile panel too tall for map: {mobile}")
+        print(f"FAIL: Mobile panel too short to browse journeys: {mobile}")
+        ok = False
+    if not mobile.get("tripListVisible"):
+        print(f"FAIL: Mobile trip list not visible in sheet: {mobile}")
         ok = False
     if mobile.get("chromeOverlap"):
         print(f"FAIL: Mobile chrome overlaps (panel/dock/speed/timeline): {mobile}")
@@ -1061,6 +1085,9 @@ def main() -> int:
         ok = False
     if not mobile.get("panelGrab"):
         print(f"FAIL: Mobile panel grab handle missing: {mobile}")
+        ok = False
+    if mobile_pick.get("panelCollapsed") or not mobile_pick.get("tripFocus"):
+        print(f"FAIL: Mobile trip select should keep browse sheet open until play: {mobile_pick}")
         ok = False
     if mobile.get("eraChips", 0) < 2:
         print(f"FAIL: Mobile era chips missing: {mobile}")

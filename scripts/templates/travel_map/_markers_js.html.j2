@@ -71,10 +71,60 @@
       return document.getElementById('sidebar')?.classList.contains('collapsed');
     }
 
+    function isMobileLayout() {
+      return (window.innerWidth || 0) <= 640;
+    }
+
+    function syncMobileChrome() {
+      const sb = document.getElementById('sidebar');
+      if (!isMobileLayout()) {
+        document.body.classList.remove('mobile-sheet-open', 'mobile-sheet-full');
+        return;
+      }
+      const open = sb && !sb.classList.contains('collapsed');
+      document.body.classList.toggle('mobile-sheet-open', !!open);
+      document.body.classList.toggle('mobile-sheet-full', !!(open && sb.classList.contains('sheet-full')));
+      const hint = document.getElementById('panel-grab-hint');
+      if (hint && open) {
+        if (sb.classList.contains('sheet-full')) hint.textContent = 'Swipe down to see the map';
+        else if (sb.classList.contains('sheet-peek')) hint.textContent = 'Swipe up for all journeys';
+        else hint.textContent = selectedId === 'all' ? 'Pick a journey · tap bar to expand' : 'Tap bar to expand list';
+      }
+    }
+
+    function setSheetState(state) {
+      const sb = document.getElementById('sidebar');
+      if (!sb || !isMobileLayout()) return;
+      sb.classList.remove('sheet-peek', 'sheet-half', 'sheet-full');
+      if (state) sb.classList.add('sheet-' + state);
+      syncMobileChrome();
+    }
+
+    function ensureMobileBrowseSheet() {
+      if (!isMobileLayout()) return;
+      const sb = document.getElementById('sidebar');
+      if (!sb || sb.classList.contains('collapsed')) return;
+      if (!sb.classList.contains('sheet-peek')
+        && !sb.classList.contains('sheet-half')
+        && !sb.classList.contains('sheet-full')) {
+        setSheetState('half');
+      }
+      syncMobileChrome();
+    }
+
+    function mobileSheetInset() {
+      if (!isMobileLayout()) return 0;
+      const sb = document.getElementById('sidebar');
+      if (!sb || sb.classList.contains('collapsed')) return 0;
+      return Math.ceil(sb.getBoundingClientRect().height + 10);
+    }
+
     function setPanelCollapsed(collapsed) {
       const sb = document.getElementById('sidebar');
       if (!sb) return;
       sb.classList.toggle('collapsed', !!collapsed);
+      syncMobileChrome();
+      if (!collapsed && isMobileLayout()) ensureMobileBrowseSheet();
     }
 
     function mapCameraPadding() {
@@ -89,8 +139,10 @@
       if (watching) {
         bottomNeed = Math.min(mobile ? 100 : 120, Math.floor(h * (mobile ? 0.14 : 0.16)));
       } else if (mobile) {
-        // Sheet + dock + timeline claim the lower third on phones
-        bottomNeed = Math.min(300, Math.floor(h * 0.44));
+        const sheet = mobileSheetInset();
+        bottomNeed = sheet
+          ? Math.min(sheet + 96, Math.floor(h * 0.62))
+          : Math.min(180, Math.floor(h * 0.24));
       } else {
         bottomNeed = Math.min(200, Math.floor(h * 0.28));
       }

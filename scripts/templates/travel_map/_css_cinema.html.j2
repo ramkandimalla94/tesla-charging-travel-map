@@ -278,6 +278,7 @@
       :root {
         --dock-h: 60px;
         --timeline-h: 84px;
+        --sheet-h: min(58dvh, 480px);
       }
       #splash { padding: calc(16px + var(--safe-top)) 20px calc(16px + var(--safe-bottom)); }
       #splash h1 { font-size: clamp(28px, 9vw, 44px); }
@@ -294,34 +295,58 @@
         right: max(8px, var(--safe-right));
         bottom: calc(var(--dock-h) + var(--timeline-h) + 10px + var(--safe-bottom));
         width: auto;
-        height: min(32dvh, 260px);
-        max-height: min(32dvh, 260px);
+        height: var(--sheet-h);
+        max-height: var(--sheet-h);
         min-height: 0;
         border-radius: 16px 16px 12px 12px;
+        transition: transform 0.45s cubic-bezier(.22,1,.36,1), opacity 0.35s, max-height 0.35s var(--ease), height 0.35s var(--ease);
+      }
+      .trip-panel.sheet-peek { --sheet-h: min(26dvh, 210px); }
+      .trip-panel.sheet-half { --sheet-h: min(58dvh, 480px); }
+      .trip-panel.sheet-full {
+        --sheet-h: min(calc(100dvh - var(--safe-top) - var(--safe-bottom) - 56px), 760px);
+        border-radius: 18px 18px 0 0;
       }
       .panel-grab {
-        display: block; width: 40px; height: 4px; border-radius: 99px;
-        background: rgba(255,255,255,0.35); margin: 8px auto 2px; flex-shrink: 0;
+        display: flex; flex-direction: column; align-items: center;
       }
-      .panel-head { padding: 4px 14px 6px; flex-shrink: 0; }
+      .panel-grab-hint { display: block; }
+      .panel-head { padding: 2px 14px 6px; flex-shrink: 0; }
       .panel-head .eyebrow { margin-bottom: 4px; }
       .panel-head h2 { font-size: 18px; }
       .panel-head .sub { font-size: 11px; margin-top: 3px; }
-      .trip-hero {
-        margin: 0 10px 2px; padding: 8px 2px 8px; flex-shrink: 0;
+      body:not(.trip-focus) .trip-hero,
+      body:not(.trip-focus) .filmstrip {
+        display: none;
       }
-      .trip-hero-name { font-size: 13px; margin-bottom: 2px; }
-      .trip-hero-via { font-size: 10px; margin-bottom: 8px; }
-      .metric-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 6px 10px;
+      body.trip-focus .trip-hero {
+        margin: 0 10px 2px; padding: 8px 2px 6px; flex-shrink: 0;
       }
-      .metric { padding: 2px 4px 2px 0; }
-      .metric .val { font-size: 13px; }
-      .metric .lbl { font-size: 8px; letter-spacing: 0.08em; margin-top: 2px; }
-      .filmstrip { padding: 6px 10px 2px; flex-shrink: 0; }
-      .filmstrip img { width: 44px; height: 44px; }
-      .trip-scroll { padding: 2px 8px 12px; }
+      body.trip-focus .trip-hero-name { font-size: 13px; margin-bottom: 2px; }
+      body.trip-focus .trip-hero-via {
+        font-size: 10px; margin-bottom: 6px;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      body.trip-focus .metric-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 4px;
+      }
+      body.trip-focus .metric .val { font-size: 12px; }
+      body.trip-focus .metric .lbl { font-size: 8px; }
+      .trip-scroll {
+        flex: 1 1 auto; min-height: 0;
+        padding: 4px 8px calc(12px + var(--safe-bottom));
+      }
+      .trip-item {
+        min-height: 48px; padding: 12px 10px;
+      }
+      .trip-item.nested { margin-left: 4px; padding: 11px 10px; }
+      .trip-name { font-size: 13px; }
+      .trip-meta { font-size: 10px; margin-top: 4px; }
+      .group-label {
+        padding: 10px 8px 6px; position: sticky; top: 0; z-index: 1;
+        background: linear-gradient(180deg, rgba(10, 16, 14, 0.98) 70%, rgba(10, 16, 14, 0));
+      }
       .trip-panel.collapsed {
         transform: translateY(calc(100% + 24px));
         opacity: 0; pointer-events: none;
@@ -331,8 +356,21 @@
         bottom: calc(var(--dock-h) + var(--timeline-h) + 12px + var(--safe-bottom));
         left: max(12px, var(--safe-left));
         width: 44px; height: 44px;
+        z-index: 14;
+      }
+      .trip-panel:not(.collapsed) ~ .panel-toggle {
+        background: rgba(126, 200, 163, 0.18);
+        border-color: rgba(126, 200, 163, 0.42);
       }
       .trip-panel.collapsed ~ .panel-toggle { left: max(12px, var(--safe-left)); }
+      body.mobile-sheet-open .atlas-cta {
+        opacity: 0; pointer-events: none; transform: translateY(8px);
+      }
+      body.mobile-sheet-full .transport-dock,
+      body.mobile-sheet-full .speed-rail,
+      body.mobile-sheet-full .timeline-bar {
+        opacity: 0.25; pointer-events: none;
+      }
       .trip-clock {
         top: calc(48px + var(--safe-top)); left: max(12px, var(--safe-left));
         font-size: 16px; max-width: calc(100vw - 24px);
@@ -388,7 +426,8 @@
         min-height: 32px; min-width: 44px; padding: 4px 11px;
         flex-shrink: 0; font-size: 11px;
       }
-      .timeline-track { height: 18px; flex: 0 0 auto; }
+      .timeline-track { height: 28px; flex: 0 0 auto; touch-action: manipulation; }
+      .tl-seg { min-width: 10px; top: 4px; bottom: 4px; }
       .transport-dock {
         bottom: calc(var(--timeline-h) + 8px + var(--safe-bottom));
         left: 50%;
@@ -471,22 +510,15 @@
     }
     @media (max-width: 420px) {
       :root { --timeline-h: 90px; }
-      .trip-panel {
-        height: min(30dvh, 240px);
-        max-height: min(30dvh, 240px);
-      }
-      .metric-grid { gap: 4px 8px; }
-      .metric .val { font-size: 12px; }
+      .trip-panel.sheet-half { --sheet-h: min(56dvh, 440px); }
+      .trip-panel.sheet-peek { --sheet-h: min(24dvh, 200px); }
       .atlas-cta-meta { display: none; }
       .speed-rail { max-width: min(92px, 28vw); padding: 5px 6px; }
     }
     @media (max-width: 640px) and (max-height: 700px) {
-      .trip-panel {
-        height: min(28dvh, 220px);
-        max-height: min(28dvh, 220px);
-      }
+      .trip-panel.sheet-half { --sheet-h: min(52dvh, 400px); }
+      .trip-panel.sheet-full { --sheet-h: min(calc(100dvh - 48px), 680px); }
       .panel-head h2 { font-size: 16px; }
-      .trip-hero-via { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     }
     @media (max-height: 480px) and (orientation: landscape) {
       :root { --dock-h: 52px; --timeline-h: 56px; }
