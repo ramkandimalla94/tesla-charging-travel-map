@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>My Mile Diary</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
@@ -98,12 +98,15 @@
   <div class="export-status" id="export-status">Recording…</div>
   <div class="share-toast" id="share-toast" role="status" aria-live="polite"></div>
 
-  <button class="panel-toggle" id="sidebar-toggle" title="Toggle trips panel" aria-label="Toggle panel">
+  <button class="panel-toggle" id="sidebar-toggle" title="Toggle trips panel" aria-label="Toggle journeys panel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
 
-  <aside class="trip-panel" id="sidebar">
-    <div class="panel-grab" aria-hidden="true"></div>
+  <aside class="trip-panel sheet-half" id="sidebar">
+    <button type="button" class="panel-grab" id="panel-grab" aria-label="Resize journey list">
+      <span class="panel-grab-bar" aria-hidden="true"></span>
+      <span class="panel-grab-hint" id="panel-grab-hint">Swipe up for all journeys</span>
+    </button>
     <div class="panel-head">
       <div class="eyebrow">Travel diary</div>
       <h2 id="panel-title">Atlas</h2>
@@ -375,6 +378,7 @@
       setSplash(100);
       setTimeout(() => {
         document.getElementById('splash').classList.add('hidden');
+        ensureMobileBrowseSheet();
         showOnboarding();
       }, 400);
     }
@@ -1598,7 +1602,12 @@
       document.body.classList.toggle('trip-focus', id !== 'all');
       setBasemapTripFocus(id !== 'all');
       // Map-first on trip focus; restore panel when returning to atlas.
-      setPanelCollapsed(id !== 'all');
+      if (isMobileLayout()) {
+        setPanelCollapsed(false);
+        setSheetState(selectedId === 'all' ? 'half' : 'half');
+      } else {
+        setPanelCollapsed(id !== 'all');
+      }
       document.querySelectorAll('.trip-item').forEach(el=>{
         el.classList.toggle('active',el.dataset.id===id);
         el.classList.remove('preview');
@@ -1676,9 +1685,32 @@
     });
     document.getElementById('sidebar-toggle').addEventListener('click', ()=>{
       const sb=document.getElementById('sidebar');
-      sb.classList.toggle('collapsed');
-      // Reframe so the route isn't under chrome after toggle.
+      if (isMobileLayout()) {
+        if (sb.classList.contains('collapsed')) {
+          sb.classList.remove('collapsed');
+          setSheetState('half');
+        } else {
+          sb.classList.add('collapsed');
+        }
+        syncMobileChrome();
+      } else {
+        sb.classList.toggle('collapsed');
+      }
       if (map) fitTrip(true);
+    });
+    document.getElementById('panel-grab')?.addEventListener('click', () => {
+      if (!isMobileLayout()) return;
+      const sb = document.getElementById('sidebar');
+      const order = ['peek', 'half', 'full'];
+      const current = order.find(s => sb.classList.contains('sheet-' + s)) || 'half';
+      const next = order[(order.indexOf(current) + 1) % order.length];
+      sb.classList.remove('collapsed');
+      setSheetState(next);
+      if (map) fitTrip(true);
+    });
+    window.addEventListener('resize', () => {
+      syncMobileChrome();
+      if (map && isMobileLayout()) fitTrip(true);
     });
     document.getElementById('era-rail')?.addEventListener('click', e => {
       const chip = e.target.closest('.era-chip');
