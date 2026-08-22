@@ -107,7 +107,7 @@
       if (!sb.classList.contains('sheet-peek')
         && !sb.classList.contains('sheet-half')
         && !sb.classList.contains('sheet-full')) {
-        setSheetState('half');
+        setSheetState('peek');
       }
       syncMobileChrome();
     }
@@ -180,8 +180,7 @@
         document.body.classList.add('journey-done');
         document.getElementById('cinema-title-text').textContent = 'Journey Complete';
         fillCinemaStats(trip, state);
-        document.getElementById('cinema-subtitle').textContent = state?.caption
-          || tripPathStats(trip, state).line;
+        document.getElementById('cinema-subtitle').textContent = '';
         document.getElementById('cinema-highlights').innerHTML = '';
         title.classList.add('visible');
       } else {

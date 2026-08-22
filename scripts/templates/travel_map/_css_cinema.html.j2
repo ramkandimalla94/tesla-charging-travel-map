@@ -277,6 +277,7 @@
     @media (max-width: 640px) {
       :root {
         --dock-h: 60px;
+        --speed-stack: 44px;
         --timeline-h: 84px;
         --sheet-h: min(58dvh, 480px);
       }
@@ -293,7 +294,7 @@
         top: auto;
         left: max(8px, var(--safe-left));
         right: max(8px, var(--safe-right));
-        bottom: calc(var(--dock-h) + var(--timeline-h) + 10px + var(--safe-bottom));
+        bottom: calc(var(--dock-h) + var(--speed-stack) + var(--timeline-h) + 10px + var(--safe-bottom));
         width: auto;
         height: var(--sheet-h);
         max-height: var(--sheet-h);
@@ -301,8 +302,8 @@
         border-radius: 16px 16px 12px 12px;
         transition: transform 0.45s cubic-bezier(.22,1,.36,1), opacity 0.35s, max-height 0.35s var(--ease), height 0.35s var(--ease);
       }
-      .trip-panel.sheet-peek { --sheet-h: min(26dvh, 210px); }
-      .trip-panel.sheet-half { --sheet-h: min(58dvh, 480px); }
+      .trip-panel.sheet-peek { --sheet-h: min(22dvh, 180px); }
+      .trip-panel.sheet-half { --sheet-h: min(48dvh, 420px); }
       .trip-panel.sheet-full {
         --sheet-h: min(calc(100dvh - var(--safe-top) - var(--safe-bottom) - 56px), 760px);
         border-radius: 18px 18px 0 0;
@@ -315,6 +316,11 @@
       .panel-head .eyebrow { margin-bottom: 4px; }
       .panel-head h2 { font-size: 18px; }
       .panel-head .sub { font-size: 11px; margin-top: 3px; }
+      body:not(.trip-focus) .panel-head .sub {
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      body:not(.trip-focus) .group-label.featured { display: none; }
+      body:not(.trip-focus) .trip-item.featured { display: none; }
       body:not(.trip-focus) .trip-hero,
       body:not(.trip-focus) .filmstrip {
         display: none;
@@ -353,18 +359,20 @@
       }
       .panel-toggle {
         top: auto;
-        bottom: calc(var(--dock-h) + var(--timeline-h) + 12px + var(--safe-bottom));
+        bottom: calc(var(--dock-h) + var(--speed-stack) + var(--timeline-h) + 12px + var(--safe-bottom));
         left: max(12px, var(--safe-left));
         width: 44px; height: 44px;
         z-index: 14;
       }
-      .trip-panel:not(.collapsed) ~ .panel-toggle {
+      body.mobile-sheet-open .panel-toggle {
+        bottom: calc(var(--dock-h) + var(--speed-stack) + var(--timeline-h) + var(--sheet-h) + 10px + var(--safe-bottom));
         background: rgba(126, 200, 163, 0.18);
         border-color: rgba(126, 200, 163, 0.42);
       }
-      .trip-panel.collapsed ~ .panel-toggle { left: max(12px, var(--safe-left)); }
-      body.mobile-sheet-open .atlas-cta {
-        opacity: 0; pointer-events: none; transform: translateY(8px);
+      body.watching .panel-toggle {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
       }
       body.mobile-sheet-full .transport-dock,
       body.mobile-sheet-full .speed-rail,
@@ -383,11 +391,14 @@
       .onboard-actions { flex-direction: column; }
       .atlas-cta {
         top: auto;
-        bottom: calc(var(--dock-h) + var(--timeline-h) + 12px + var(--safe-bottom));
+        bottom: calc(var(--dock-h) + var(--speed-stack) + var(--timeline-h) + 12px + var(--safe-bottom));
         right: max(12px, var(--safe-right));
-        left: calc(12px + 44px + 8px);
+        left: max(12px, var(--safe-left));
         max-width: none;
-        padding: 10px 12px;
+        padding: 10px 14px;
+      }
+      body.mobile-sheet-open .atlas-cta {
+        opacity: 0; pointer-events: none; transform: translateY(8px);
       }
       .atlas-cta-title { font-size: 13px; }
       .timeline-bar {
@@ -442,25 +453,54 @@
       .speed-rail {
         left: auto;
         right: max(10px, var(--safe-right));
-        bottom: calc(var(--timeline-h) + 10px + var(--safe-bottom));
+        transform: none;
+        bottom: calc(var(--timeline-h) + var(--dock-h) + 12px + var(--safe-bottom));
         min-width: 0;
         width: auto;
-        max-width: min(96px, 26vw);
-        padding: 6px 7px;
-        gap: 5px;
+        max-width: min(128px, 34vw);
+        padding: 7px 10px;
+        gap: 8px;
       }
       .speed-rail label { display: none; }
-      .speed-rail input[type=range]#speed { min-width: 44px; }
+      .speed-rail input[type=range]#speed { min-width: 56px; flex: 1; }
       .speed-rail .speed-val,
-      .speed-rail #speed-label { min-width: 26px; font-size: 10px; }
+      .speed-rail #speed-label { min-width: 32px; font-size: 11px; }
       body.watching .speed-rail {
-        bottom: calc(18px + var(--safe-bottom));
-        right: max(12px, var(--safe-right));
-        max-width: min(140px, 36vw);
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        bottom: calc(18px + var(--safe-bottom) + var(--dock-h) + 6px);
+        max-width: min(188px, 52vw);
       }
       body.watching .transport-dock {
         bottom: calc(18px + var(--safe-bottom));
         opacity: 0.95;
+      }
+      body.watching.journey-done .cinema-title.visible {
+        top: 38%;
+        transform: translate(-50%, -50%);
+        width: min(88vw, 360px);
+        padding: 18px 20px 16px;
+      }
+      body.watching.journey-done .cinema-title h2 {
+        font-size: clamp(22px, 6vw, 30px);
+      }
+      body.watching.journey-done .cinema-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 14px;
+        margin-top: 14px;
+        justify-items: center;
+      }
+      body.watching.journey-done .cinema-stat {
+        font-size: 10px;
+      }
+      body.watching.journey-done .cinema-stat strong {
+        font-size: clamp(20px, 5.5vw, 28px);
+      }
+      body.watching.journey-done .cinema-title p,
+      body.watching.journey-done #cinema-subtitle {
+        display: none;
       }
       body.watching .trip-clock {
         top: calc(12px + var(--safe-top));
@@ -510,10 +550,10 @@
     }
     @media (max-width: 420px) {
       :root { --timeline-h: 90px; }
-      .trip-panel.sheet-half { --sheet-h: min(56dvh, 440px); }
-      .trip-panel.sheet-peek { --sheet-h: min(24dvh, 200px); }
+      .trip-panel.sheet-half { --sheet-h: min(46dvh, 400px); }
+      .trip-panel.sheet-peek { --sheet-h: min(20dvh, 168px); }
       .atlas-cta-meta { display: none; }
-      .speed-rail { max-width: min(92px, 28vw); padding: 5px 6px; }
+      .speed-rail { max-width: min(168px, 54vw); padding: 6px 8px; }
     }
     @media (max-width: 640px) and (max-height: 700px) {
       .trip-panel.sheet-half { --sheet-h: min(52dvh, 400px); }
