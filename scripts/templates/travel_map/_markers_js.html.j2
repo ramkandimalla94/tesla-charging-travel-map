@@ -75,6 +75,24 @@
       return (window.innerWidth || 0) <= 640;
     }
 
+    function measurePanelChrome() {
+      const panel = document.getElementById('sidebar');
+      const list = document.getElementById('trip-list');
+      if (!panel || !list || !isMobileLayout()) {
+        document.documentElement.style.removeProperty('--panel-chrome-h');
+        return;
+      }
+      const panelRect = panel.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      const chromeH = Math.max(96, Math.ceil(listRect.top - panelRect.top));
+      document.documentElement.style.setProperty('--panel-chrome-h', chromeH + 'px');
+    }
+
+    function schedulePanelChromeMeasure() {
+      if (!isMobileLayout()) return;
+      requestAnimationFrame(() => requestAnimationFrame(measurePanelChrome));
+    }
+
     function measureMobileChrome() {
       const root = document.documentElement;
       if (!isMobileLayout()) {
@@ -112,6 +130,7 @@
         }
       }
       root.style.setProperty('--mobile-chrome-h', Math.max(Math.ceil(stack), 160) + 'px');
+      schedulePanelChromeMeasure();
     }
 
     function scheduleMobileChromeMeasure() {
@@ -122,14 +141,17 @@
     function syncMobileChrome() {
       const sb = document.getElementById('sidebar');
       if (!isMobileLayout()) {
-        document.body.classList.remove('mobile-sheet-open', 'mobile-sheet-full');
+        document.body.classList.remove('mobile-sheet-open', 'mobile-sheet-full', 'mobile-sheet-peek', 'mobile-sheet-half');
         document.documentElement.style.removeProperty('--mobile-chrome-h');
         document.documentElement.style.removeProperty('--sheet-offset');
+        document.documentElement.style.removeProperty('--panel-chrome-h');
         return;
       }
       const open = sb && !sb.classList.contains('collapsed');
       document.body.classList.toggle('mobile-sheet-open', !!open);
       document.body.classList.toggle('mobile-sheet-full', !!(open && sb.classList.contains('sheet-full')));
+      document.body.classList.toggle('mobile-sheet-half', !!(open && sb.classList.contains('sheet-half')));
+      document.body.classList.toggle('mobile-sheet-peek', !!(open && sb.classList.contains('sheet-peek')));
       if (open && sb) {
         document.documentElement.style.setProperty(
           '--sheet-offset',
@@ -145,6 +167,7 @@
         else hint.textContent = selectedId === 'all' ? 'Swipe up for full list · tap bar to resize' : 'Tap bar to expand list';
       }
       scheduleMobileChromeMeasure();
+      if (typeof renderMobileDestRail === 'function') renderMobileDestRail();
     }
 
     function setSheetState(state) {
@@ -162,7 +185,7 @@
       if (!sb.classList.contains('sheet-peek')
         && !sb.classList.contains('sheet-half')
         && !sb.classList.contains('sheet-full')) {
-        setSheetState('half');
+        setSheetState(selectedId === 'all' ? 'peek' : 'half');
       }
       syncMobileChrome();
     }
