@@ -45,5 +45,17 @@
       "driver": "Akash",
       "vehicle_label": "Akash's car"
     }
+  ],
+  "trip_overrides": [
+    {
+      "match": {
+        "start_prefix": "2025-09-25",
+        "has_colorado": true,
+        "owner_contains": "Akash"
+      },
+      "end_before": "2025-10-01T00:00:00+00:00",
+      "end_location": "Frisco, TX - Preston Road",
+      "dest_label": "Frisco"
+    }
   ]
 }

@@ -48,9 +48,12 @@ PHOTO_CLUSTER_GAP_S = 8 * 60
 MEMORY_ROUTE_SNAP_MI = 45.0
 # Skip stray GPS that would yank the whole trip off-corridor (still show pins).
 MAX_PHOTO_ROUTE_MI = 45.0
-# Longer cinematic timeline — UI speed multiplies on top (default ~0.15×).
-PLAYBACK_TARGET_MIN_MS = 90_000
-PLAYBACK_TARGET_MAX_MS = 720_000
+# Cinematic timeline — UI speed (default 1×) multiplies on top.
+PLAYBACK_TARGET_MIN_MS = 80_000
+PLAYBACK_TARGET_MAX_MS = 480_000
+# Photo holds — keep brief so memories don't stall the drive.
+MEMORY_HOLD_MS = 650
+MEMORY_HOLD_OFF_CORRIDOR_MS = 500
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -177,6 +180,82 @@ def parse_waypoint_ts(value: str | None) -> datetime:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+def _lng_utc_offset_hours(lng: float | None) -> int:
+    """Rough continental-US offset from longitude (no tz database needed)."""
+    if lng is None:
+        return -6
+    if lng <= -112.5:
+        return -8
+    if lng <= -100:
+        return -7
+    if lng <= -85:
+        return -6
+    return -5
+
+
+def local_hour_from_utc(dt: datetime, lng: float | None) -> float:
+    utc = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    local = utc + timedelta(hours=_lng_utc_offset_hours(lng))
+    return local.hour + local.minute / 60.0
+
+
+def hour_playback_weight(hour: float) -> float:
+    """Early morning lingers; late night is compressed so overnights don't crawl."""
+    h = ((float(hour) % 24) + 24) % 24
+    if 6.0 <= h < 9.5:
+        return 1.9
+    if 9.5 <= h < 12.0:
+        return 1.35
+    if 12.0 <= h < 18.0:
+        return 1.0
+    if 18.0 <= h < 21.0:
+        return 0.85
+    if 5.0 <= h < 6.0:
+        return 1.25
+    return 0.32
+
+
+def clock_weighted_hours(t0: datetime, t1: datetime, lng: float | None) -> float:
+    if t1 <= t0:
+        return 0.15
+    step = timedelta(minutes=15)
+    total = 0.0
+    cursor = t0
+    while cursor < t1:
+        nxt = min(cursor + step, t1)
+        frac = (nxt - cursor).total_seconds() / 3600.0
+        total += frac * hour_playback_weight(local_hour_from_utc(cursor, lng))
+        cursor = nxt
+    return max(0.12, total)
+
+
+def driving_clock_window(
+    t0: datetime,
+    t1: datetime,
+    miles: float,
+    lng: float | None = None,
+) -> tuple[datetime, datetime]:
+    """Skip overnight rest in the playhead: drive in the hours before arrival."""
+    gap_h = max(0.08, (t1 - t0).total_seconds() / 3600.0)
+    drive_h = max(0.35, float(miles) / 55.0)
+    if gap_h <= drive_h + 2.5:
+        return t0, t1
+    drive_h = min(drive_h, gap_h * 0.85)
+    start = t1 - timedelta(hours=drive_h)
+    if start < t0:
+        start = t0
+    arr_hour = local_hour_from_utc(t1, lng)
+    start_hour = local_hour_from_utc(start, lng)
+    if arr_hour >= 10.5 and (start_hour >= 21 or start_hour < 5.5):
+        utc_off = _lng_utc_offset_hours(lng)
+        morning = t1.astimezone(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) + timedelta(hours=6 - utc_off)
+        if t0 < morning < t1:
+            start = max(t0, min(morning, t1 - timedelta(hours=max(0.5, drive_h))))
+    return start, t1
 
 
 def normalize_road_stops(stops: list[dict]) -> list[dict]:
@@ -462,12 +541,12 @@ def _renormalize_segment_durations(
         # Keep stop holds brief — long dwell % bars felt like waiting.
         "dwell": 450,
         "travel": 3_200,
-        "memory": 1_400,
+        "memory": 560,
     }
     ceilings = {
         "dwell": 1_000,
         "travel": 22_000,
-        "memory": 2_800,
+        "memory": 850,
     }
     for s in body:
         kind = s.get("type") or "travel"
@@ -516,7 +595,6 @@ def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]])
     days = trip_duration_days(trip["start"], trip["end"])
     all_pois = [p for pois in stop_pois for p in pois]
     visited_count = sum(1 for p in all_pois if p.get("visited"))
-    nearby_names = list(dict.fromkeys(p["name"] for p in all_pois))[:6]
     photo_n = sum(1 for s in stops if s.get("is_photo") or s.get("kind") == "photo")
     crew = trip.get("trip_crew") or trip.get("owner_short") or "you"
     vehicle = sanitize_vehicle_label(trip.get("vehicle_label"))
@@ -532,12 +610,7 @@ def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]])
         + "."
     )
     outro = (
-        f"Journey complete — {len(stops)} places across {via}. "
-        + (
-            f"{visited_count} confirmed visits · {len(all_pois)} nearby highlights."
-            if all_pois
-            else "Miles become memories."
-        )
+        f"Journey complete — {len(stops)} places across {via}."
     )
 
     stop_captions: list[dict] = []
@@ -545,44 +618,32 @@ def build_trip_story(trip: dict, stops: list[dict], stop_pois: list[list[dict]])
     for i, (stop, pois) in enumerate(zip(stops, stop_pois)):
         label = short_location_label(stop["location"])
         city = label.split(",")[0]
-        nearby = pois or []
         if stop.get("is_photo") or stop.get("kind") == "photo":
             album = (stop.get("album") or "memory").strip()
-            caption = f"Memory · {album.title() if album.islower() else album}"
-            sub = stop.get("source_name") or "Photo stop"
+            pretty = album.title() if album.islower() else album
+            caption = f"Memory · {pretty}"
+            sub = ""
         elif i == 0:
-            caption = f"Departing {city} — the adventure begins"
-            sub = f"First of {n} places"
+            caption = f"Departing {city}"
+            sub = f"Stop 1 of {n}"
         elif i == n - 1:
             caption = f"Final stop · {city}"
             sub = (
-                "Homeward bound — journey nearly complete"
+                "Homeward bound"
                 if origin.split(",")[0] == city or "Home" in (trip.get("dest_label") or "")
-                else f"Last stop of {n}"
+                else f"Stop {n} of {n}"
             )
-        elif nearby:
-            visited = [p for p in nearby if p.get("visited")]
-            if visited:
-                top = visited[0]
-                caption = f"In {city} — {top.get('emoji', '')} {top.get('name', 'a favorite')} ✓".strip()
-                sub = top.get("tagline") or f"Stop {i + 1} of {n}"
-            else:
-                poi_text = " · ".join(
-                    f"{p.get('emoji', '')} {p.get('name', '')}".strip() for p in nearby[:2]
-                )
-                caption = f"In {city} — nearby: {poi_text}"
-                sub = nearby[0].get("tagline") or f"Stop {i + 1} of {n}"
         else:
-            caption = f"Passing through {city}"
+            caption = f"Stopped in {city}"
             sub = f"Stop {i + 1} of {n}"
-        stop_captions.append({"caption": caption, "sub": sub, "pois": nearby})
+        stop_captions.append({"caption": caption, "sub": sub, "pois": []})
 
     return {
         "intro": intro,
         "outro": outro,
-        "highlights": nearby_names,
+        "highlights": [],
         "visited_count": visited_count,
-        "nearby_count": len(all_pois),
+        "nearby_count": 0,
         "stop_captions": stop_captions,
     }
 
@@ -1029,6 +1090,18 @@ def build_playback_timeline(
         miles = path_miles(path) if path else haversine_miles(
             a["lat"], a["lng"], b["lat"], b["lng"]
         )
+        to_lbl = short_location_label(b.get("location") or "") if not b.get("is_photo") else ""
+        if not to_lbl:
+            for j in range(i + 1, len(journey)):
+                if not journey[j].get("is_photo"):
+                    to_lbl = short_location_label(journey[j].get("location") or "")
+                    break
+        from_lbl = short_location_label(a.get("location") or "") if not a.get("is_photo") else ""
+        if not from_lbl:
+            for j in range(i, -1, -1):
+                if not journey[j].get("is_photo"):
+                    from_lbl = short_location_label(journey[j].get("location") or "")
+                    break
         legs.append({
             "from_idx": i,
             "to_idx": i + 1,
@@ -1037,8 +1110,8 @@ def build_playback_timeline(
             "gap_ms": gap_ms,
             "t0": parse_waypoint_ts(a.get("datetime")),
             "t1": parse_waypoint_ts(b.get("datetime")),
-            "from_label": short_location_label(a.get("location") or ""),
-            "to_label": short_location_label(b.get("location") or ""),
+            "from_label": from_lbl,
+            "to_label": to_lbl,
             "bearing": round(leg_bearing_deg(a["lat"], a["lng"], b["lat"], b["lng"]), 1),
         })
 
@@ -1092,7 +1165,7 @@ def build_playback_timeline(
         PLAYBACK_TARGET_MAX_MS,
         max(
             PLAYBACK_TARGET_MIN_MS,
-            int(n_road * 6_500 + n_mem * 5_500 + road_miles * 14),
+            int(n_road * 6_200 + n_mem * 1_100 + road_miles * 14),
         ),
     )
     # Short title card — interactive play also skips intro for instant motion.
@@ -1125,10 +1198,16 @@ def build_playback_timeline(
         if len(sub) < 2:
             return
         sub_mi = path_miles(sub)
-        dur = max(2_800, min(20_000, int(sub_mi * 65 + 1_800)))
         # Prefer explicit photo/stop instants so the playhead never jumps at memories.
         t_start = clock_t0 if clock_t0 is not None else _lerp_clock(leg["t0"], leg["t1"], f0)
         t_end = clock_t1 if clock_t1 is not None else _lerp_clock(leg["t0"], leg["t1"], f1)
+        lng_hint = sub[0][1] if sub else None
+        t_start, t_end = driving_clock_window(t_start, t_end, sub_mi, lng_hint)
+        weighted_h = clock_weighted_hours(t_start, t_end, lng_hint)
+        dur = max(2_800, min(20_000, int(sub_mi * 58 + 1_600 + weighted_h * 1_050)))
+        to_label = (leg.get("to_label") or "").strip()
+        if to_label.lower().startswith("photo"):
+            to_label = ""
         body.append({
             "type": "travel",
             "duration_ms": dur,
@@ -1137,7 +1216,7 @@ def build_playback_timeline(
                 leg_bearing_deg(sub[0][0], sub[0][1], sub[-1][0], sub[-1][1]), 1
             ),
             "from_label": leg["from_label"],
-            "to_label": leg["to_label"],
+            "to_label": to_label or leg.get("to_label") or "",
             "stop_index": stop_index,
             "leg_miles": round(sub_mi, 1),
             "clock_start": _clock_iso(t_start),
@@ -1156,7 +1235,7 @@ def build_playback_timeline(
         ts = parse_waypoint_ts(mem.get("datetime"))
         row = {
             "type": "memory",
-            "duration_ms": 2_400 if spur <= MEMORY_ROUTE_SNAP_MI else 1_800,
+            "duration_ms": MEMORY_HOLD_MS if spur <= MEMORY_ROUTE_SNAP_MI else MEMORY_HOLD_OFF_CORRIDOR_MS,
             "lat": lat,
             "lng": lng,
             "photo_lat": mem["lat"],
@@ -1164,7 +1243,7 @@ def build_playback_timeline(
             "label": short_location_label(mem.get("location") or album),
             "stop_index": stop_index,
             "caption": f"Memory · {album.title() if str(album).islower() else album}",
-            "subcaption": mem.get("source_name") or "",
+            "subcaption": "",
             "is_photo": True,
             "thumb": mem.get("thumb") or "",
             "album": album,
@@ -1195,11 +1274,8 @@ def build_playback_timeline(
         else:
             road_i += 1
             label = short_location_label(stop["location"])
-            pois = stop_pois[i] if i < len(stop_pois) else []
             cap = captions[road_i] if road_i < len(captions) else {}
             dwell_ms = 750 if not is_last else 950
-            if pois:
-                dwell_ms = int(dwell_ms * 1.08)
             stop_ts = parse_waypoint_ts(stop.get("datetime"))
             body.append({
                 "type": "dwell",
@@ -1208,7 +1284,7 @@ def build_playback_timeline(
                 "lng": stop["lng"],
                 "label": label,
                 "stop_index": road_i,
-                "pois": pois,
+                "pois": [],
                 "caption": cap.get(
                     "caption",
                     f"Final stop · {label}" if is_last else f"Stopped in {label}",

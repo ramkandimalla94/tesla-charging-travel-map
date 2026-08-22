@@ -353,7 +353,14 @@
         stage.setAttribute('aria-hidden', 'true');
       }
       memoryStageSrc = '';
+      document.body.classList.remove('memory-up');
       hideMemoryOnMap();
+    }
+
+    function prettyAlbum(name) {
+      const s = String(name || '').trim();
+      if (!s || /\.(heic|jpe?g|png|mov|mp4)$/i.test(s)) return 'Memory';
+      return s.charAt(0).toUpperCase() + s.slice(1);
     }
 
     function showMemoryStage(state) {
@@ -363,7 +370,7 @@
         return;
       }
       const src = photoThumbUrl(state.thumb);
-      const title = state.album || state.label || 'Memory';
+      const title = prettyAlbum(state.album || '');
       const lng = state.photo_lng != null ? state.photo_lng
         : (state.lng != null ? state.lng : state.seg?.photo_lng);
       const raw = state.datetime || state.seg?.datetime || state.seg?.clock_start || '';
@@ -371,7 +378,7 @@
         ? (typeof formatLocalClock === 'function'
           ? formatLocalClock(new Date(raw), lng, 'medium')
           : new Date(raw).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }))
-        : (state.label || '');
+        : '';
       const cached = (typeof thumbCache !== 'undefined') ? thumbCache.get(src) : null;
       const resolvedSrc = (cached && cached.complete && cached.naturalWidth) ? cached.src : src;
       const img = document.getElementById('memory-stage-img');
@@ -386,7 +393,7 @@
       if (metaEl) metaEl.textContent = when;
       stage.classList.add('visible');
       stage.setAttribute('aria-hidden', 'false');
-      // Keep map pin off — viewport stage is stable (no camera-linked shake).
+      document.body.classList.add('memory-up');
       hideMemoryOnMap();
     }
 
@@ -395,24 +402,51 @@
     function hideMemoryCard() { hideMemoryStage(); }
     function showMemoryCard(state) { showMemoryStage(state); }
 
+    function clusterPhotosForPins(photos, radiusKm) {
+      const items = (photos || []).filter(p => p?.lat != null && p?.lng != null && p.thumb);
+      const used = new Set();
+      const groups = [];
+      for (let i = 0; i < items.length; i++) {
+        if (used.has(i)) continue;
+        const seed = items[i];
+        const group = [seed];
+        used.add(i);
+        for (let j = i + 1; j < items.length; j++) {
+          if (used.has(j)) continue;
+          if (haversineKm(seed.lat, seed.lng, items[j].lat, items[j].lng) <= radiusKm) {
+            group.push(items[j]);
+            used.add(j);
+          }
+        }
+        groups.push(group);
+      }
+      return groups;
+    }
+
     function drawPhotoPins() {
       clearPhotoPins();
       if (!isSingleTrip()) return;
       const trip = activeTrip();
       const photos = trip?.photos || [];
-      const seen = new Set();
-      photos.forEach(photo => {
-        if (!photo?.lat || !photo?.lng || !photo.thumb) return;
-        const key = photo.id || `${photo.lat},${photo.lng},${photo.thumb}`;
-        if (seen.has(key)) return;
-        seen.add(key);
+      const clusters = clusterPhotosForPins(photos, 0.55);
+      clusters.forEach(group => {
+        const photo = group[0];
+        const lat = group.reduce((s, p) => s + p.lat, 0) / group.length;
+        const lng = group.reduce((s, p) => s + p.lng, 0) / group.length;
         const el = document.createElement('div');
         el.className = 'photo-pin';
         el.dataset.photoId = photo.id || '';
+        el.dataset.photoIds = group.map(p => p.id || '').filter(Boolean).join(',');
         const img = document.createElement('img');
         img.src = photoThumbUrl(photo.thumb);
-        img.alt = photo.album || 'Photo';
+        img.alt = prettyAlbum(photo.album || 'Photo');
         el.appendChild(img);
+        if (group.length > 1) {
+          const badge = document.createElement('span');
+          badge.className = 'count';
+          badge.textContent = String(group.length);
+          el.appendChild(badge);
+        }
         el.addEventListener('mouseenter', (ev) => showPhotoHover(photo, ev.clientX, ev.clientY));
         el.addEventListener('mousemove', (ev) => showPhotoHover(photo, ev.clientX, ev.clientY));
         el.addEventListener('mouseleave', hidePhotoHover);
@@ -420,8 +454,8 @@
           ev.stopPropagation();
           if (map) {
             map.easeTo({
-              center: [photo.lng, photo.lat],
-              zoom: Math.max(map.getZoom(), 10.5),
+              center: [lng, lat],
+              zoom: Math.max(map.getZoom(), 13.5),
               pitch: 45,
               duration: 700,
               essential: true,
@@ -433,14 +467,15 @@
             lng: photo.lng,
             album: photo.album,
             datetime: photo.datetime,
-            label: photo.location || photo.album || 'Memory',
+            label: prettyAlbum(photo.album || 'Memory'),
             photo_id: photo.id,
           });
         });
         const m = new mapboxgl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([photo.lng, photo.lat])
+          .setLngLat([lng, lat])
           .addTo(map);
         m._photo = photo;
+        m._cluster = group;
         photoMarkers.push(m);
       });
     }

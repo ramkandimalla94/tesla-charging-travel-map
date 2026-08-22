@@ -228,19 +228,24 @@
     body.watching .mapboxgl-ctrl-group,
     body.watching .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
     body.watching .transport-dock {
-      opacity: 0.85; transition: opacity 0.35s ease;
+      opacity: 0.94; transition: opacity 0.35s ease;
+      bottom: 22px;
     }
     body.watching .transport-dock:hover,
     body.watching .transport-dock:focus-within { opacity: 1; }
     body.watching .trip-clock { opacity: 0.95; }
-    body.watching .story-overlay { bottom: 88px; left: 50%; transform: translateX(-50%); max-width: min(520px, calc(100vw - 48px)); text-align: center; }
+    body.watching .story-overlay {
+      bottom: calc(var(--dock-h) + 18px); left: 50%; transform: translateX(-50%);
+      max-width: min(480px, calc(100vw - 48px)); text-align: center;
+      z-index: 13;
+    }
     body.watching .story-overlay .story-caption {
       text-shadow: 0 2px 16px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9);
       background: rgba(8,10,16,0.55);
       padding: 8px 14px; border-radius: 12px;
       display: inline-block;
     }
-    body.watching .cinema-title.visible { display: block; bottom: 140px; }
+    body.watching .cinema-title.visible { display: block; bottom: calc(var(--dock-h) + 72px); }
 
     /* Atlas featured CTA + memory reel */
     .atlas-cta {
@@ -343,19 +348,21 @@
       color: var(--text);
     }
     body.watching .memory-stage {
-      bottom: calc(var(--dock-h) + 36px);
-      width: min(780px, 90vw);
-      max-height: min(68vh, 620px);
+      bottom: calc(var(--dock-h) + 28px);
+      width: min(720px, 88vw);
+      max-height: min(56vh, 500px);
     }
     body.watching .memory-stage img {
-      max-height: min(58vh, 540px);
+      max-height: min(52vh, 480px);
     }
+    body.watching.memory-up .story-overlay { opacity: 0 !important; }
     .photo-pin {
       width: 30px; height: 30px; border-radius: 8px; overflow: hidden;
       border: 1.5px solid rgba(255,255,255,0.95);
       box-shadow: 0 2px 8px rgba(0,0,0,0.22);
       cursor: pointer; background: #efe8dc;
       transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+      position: relative;
     }
     .photo-pin:hover, .photo-pin.hot {
       transform: scale(1.18);
@@ -363,6 +370,13 @@
       z-index: 2;
     }
     .photo-pin img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-pin .count {
+      position: absolute; right: -6px; top: -6px;
+      min-width: 16px; height: 16px; padding: 0 4px;
+      border-radius: 999px; background: #0f172a; color: #fff;
+      border: 1px solid rgba(255,255,255,0.85);
+      font-size: 9px; font-weight: 700; line-height: 16px; text-align: center;
+    }
     body.watching .photo-pin:not(.hot) { opacity: 0.35; }
     .filmstrip {
       display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px 4px;
@@ -386,15 +400,35 @@
     .panel-toggle svg { width: 14px; height: 14px; opacity: 0.8; }
     .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
 
-    /* ── Floating play (no dock box — map commentary stays clear) ── */
+    /* ── Floating play + speed (controls stay below captions) ── */
     .transport-dock {
-      position: absolute; bottom: calc(var(--timeline-h) + 18px); left: 50%;
-      transform: translateX(-50%); z-index: 14;
+      position: absolute; bottom: calc(var(--timeline-h) + 14px); left: 50%;
+      transform: translateX(-50%); z-index: 16;
       width: auto; padding: 0; margin: 0;
       background: transparent; border: none; box-shadow: none;
       backdrop-filter: none;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
     }
     .transport-dock.idle { opacity: 0.78; transform: translateX(-50%) translateY(2px); }
+    .speed-control {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 6px; border-radius: 999px;
+      background: rgba(10, 14, 18, 0.55);
+      border: 1px solid rgba(255,255,255,0.16);
+      backdrop-filter: blur(12px);
+    }
+    .speed-pill {
+      min-width: 40px; height: 28px; padding: 0 8px;
+      border: none; border-radius: 999px;
+      background: transparent; color: rgba(243,239,230,0.78);
+      font-family: inherit; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.02em; cursor: pointer;
+    }
+    .speed-pill:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .speed-pill.active {
+      background: rgba(255,255,255,0.92); color: #0f172a;
+    }
+    .speed-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .dock-sr {
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
       overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;

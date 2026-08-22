@@ -13,9 +13,10 @@ Algorithm (in priority order):
      home → regional trip boundary.
   6. Same-location charges within 24 h are merged into one stop.
 
-Every trip start/end pin is forced to Addison, TX or Bellevue, WA (the only two
-home bases). Excursions that never logged a home Supercharge on return still get
-a synthetic home arrival so IDs/labels never show Leavenworth, Tumwater, etc.
+Every trip start pin is Addison, TX or Bellevue, WA. Returns usually snap to those
+hubs too, except when you came home with leftover range and Supercharged days
+later — that delayed home session is local charging, and the trip can end at
+the last home Supercharge (e.g. Frisco, TX on Sep 29, not Addison on Oct 2).
 
 Tuned against merged_charges.csv: ~15-22 trips for 240 charges.
 """
@@ -63,6 +64,11 @@ CO_BBOX = {"lat_min": 37.0, "lat_max": 41.0, "lng_min": -109.1, "lng_max": -102.
 
 TIME_GAP_DAYS = 14
 BIG_JUMP_MILES = 700
+# Came home with leftover range and Supercharged days later — that later
+# home session is local charging, not the trip end (e.g. Frisco Sep 29,
+# Addison charge on Oct 2).
+DELAYED_HOME_RETURN_HOURS = 30
+HOME_APPROACH_MILES = 120
 
 
 def load_cache() -> dict:
@@ -272,10 +278,23 @@ def extract_state_code(location: str) -> str | None:
     return m.group(1) if m else None
 
 
+def endpoint_city(location: str) -> str | None:
+    """City label for a trip pin — Addison/Bellevue, or another configured home base."""
+    loc = (location or "").strip()
+    if loc.startswith("Addison"):
+        return "Addison"
+    if loc.startswith("Bellevue"):
+        return "Bellevue"
+    if loc in HOME_BASES:
+        return extract_city(loc)
+    return None
+
+
 def origin_label(stops: list[dict]) -> str:
     first = stops[0]
-    if is_canonical_home_location(first.get("location", "")):
-        return "Addison" if first["location"].startswith("Addison") else "Bellevue"
+    city = endpoint_city(first.get("location", ""))
+    if city:
+        return city
     if first.get("is_home_anchor") or first.get("region") == "HOME":
         lbl = nearest_home_label(first.get("lat"), first.get("lng"))
         if lbl in {"Addison", "Bellevue"}:
@@ -285,14 +304,16 @@ def origin_label(stops: list[dict]) -> str:
         dh = dist_to_nearest_home(first.get("lat"), first.get("lng"))
         if dh is not None and dh < HOME_RADIUS_MILES:
             return lbl
-    # Endpoints are constrained to the two home pins only.
     return lbl if lbl in {"Addison", "Bellevue"} else "Addison"
 
 
 def dest_label(stops: list[dict]) -> str:
     last = stops[-1]
-    if is_canonical_home_location(last.get("location", "")):
-        return "Addison" if last["location"].startswith("Addison") else "Bellevue"
+    city = endpoint_city(last.get("location", ""))
+    if city:
+        return city
+    if last.get("preserve_home_location"):
+        return extract_city(last.get("location") or "") or origin_label(stops)
     if last.get("is_home_anchor") or last.get("region") == "HOME":
         lbl = nearest_home_label(last.get("lat"), last.get("lng"))
         if lbl in {"Addison", "Bellevue"}:
@@ -349,6 +370,25 @@ def merge_consecutive_stops(charges: list[dict]) -> list[dict]:
         else:
             merged.append(charge.copy())
     return merged
+
+
+def is_delayed_home_return(prev: dict, home_charge: dict) -> bool:
+    """
+    True when the last away stop is already approaching home and the next
+    home Supercharge is days later (leftover range — not the trip arrival).
+    """
+    try:
+        gap_h = (
+            pd.Timestamp(home_charge["datetime"]) - pd.Timestamp(prev["datetime"])
+        ).total_seconds() / 3600.0
+    except Exception:
+        return False
+    if gap_h < DELAYED_HOME_RETURN_HOURS:
+        return False
+    dh = prev.get("dist_home")
+    if dh is None:
+        return False
+    return float(dh) <= HOME_APPROACH_MILES
 
 
 def should_split_trip(prev: dict, curr: dict) -> tuple[bool, str]:
@@ -774,6 +814,8 @@ def ensure_canonical_home_endpoints(stops: list[dict]) -> list[dict]:
                     out.insert(0, anchor)
 
     last = out[-1]
+    if last.get("preserve_home_location") and last.get("location") in HOME_BASES:
+        return out
     if last.get("is_home_anchor") and is_canonical_home_location(last.get("location", "")):
         return out
 
@@ -851,6 +893,25 @@ def segment_trips(
                     # and keep the later home Supercharge as local charging.
                     flush_trip(end_dt=prev["datetime"])
                     local.append(charge)
+                elif is_delayed_home_return(prev, charge):
+                    # Approached home with leftover range; Supercharged days later.
+                    # End at the home region they were heading toward — not the
+                    # later local charge. (owner_config can pin Frisco, etc.)
+                    if not (
+                        prev.get("is_home_anchor")
+                        or prev.get("region") == "HOME"
+                        or is_near_any_home(prev)
+                    ):
+                        approach = nearest_home_region(prev.get("lat"), prev.get("lng"))
+                        end_home = synthesize_home_anchor(
+                            prev, last_home, region=approach, as_return=True
+                        )
+                        if end_home is not None:
+                            current_stops.append(end_home)
+                    flush_trip(
+                        end_dt=current_stops[-1]["datetime"] if current_stops else prev["datetime"]
+                    )
+                    local.append(charge)
                 else:
                     # Snap the return pin to the canonical home for that region
                     end_home = synthesize_home_anchor(charge, charge)
@@ -897,6 +958,88 @@ def init_home_config(locations: list[str], cache: dict) -> None:
     FAR_FROM_HOME_MILES = cfg["far_from_home_miles"]
 
 
+def trip_matches_end_override(trip: dict, match: dict) -> bool:
+    if match.get("id_contains") and match["id_contains"] not in str(trip.get("id") or ""):
+        return False
+    if match.get("start_prefix") and not str(trip.get("start") or "").startswith(str(match["start_prefix"])):
+        return False
+    if match.get("has_colorado") and not trip.get("has_colorado"):
+        return False
+    owner = trip.get("owner") or ""
+    if match.get("owner_contains") and match["owner_contains"].lower() not in owner.lower():
+        return False
+    return True
+
+
+def apply_configured_trip_overrides(trips: list[dict], cache: dict) -> None:
+    """
+    Optional owner_config.trip_overrides — pin a trip end when Supercharging
+    after returning home with leftover range would otherwise extend the trip.
+    """
+    cfg = load_owner_config()
+    rules = cfg.get("trip_overrides") or []
+    if not rules:
+        return
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        match = rule.get("match") or {}
+        for trip in trips:
+            if not trip_matches_end_override(trip, match):
+                continue
+            end_before = rule.get("end_before")
+            if end_before:
+                cut = pd.Timestamp(end_before)
+                if cut.tzinfo is None:
+                    cut = cut.tz_localize("UTC")
+                trip["stops"] = [
+                    s for s in trip["stops"]
+                    if pd.Timestamp(s["datetime"]) < cut
+                ]
+            end_loc = rule.get("end_location")
+            stops = trip.get("stops") or []
+            if end_loc and stops and stops[-1].get("location") != end_loc:
+                last = stops[-1]
+                if last.get("is_home_anchor") and last.get("synthetic"):
+                    stops.pop()
+                    last = stops[-1] if stops else last
+                entry = cache.get(end_loc) or {}
+                dt = (pd.Timestamp(last["datetime"]) + timedelta(hours=2)).isoformat()
+                lat = entry.get("lat")
+                lng = entry.get("lng")
+                stops.append({
+                    "datetime": dt,
+                    "location": end_loc,
+                    "lat": lat,
+                    "lng": lng,
+                    "kwh": 0.0,
+                    "invoice_url": "",
+                    "dist_home": 0.0,
+                    "region": "HOME",
+                    "in_colorado": False,
+                    "owner": trip.get("owner", ""),
+                    "vin": trip.get("vin", ""),
+                    "is_home_anchor": True,
+                    "synthetic": True,
+                    "preserve_home_location": True,
+                })
+                trip["stops"] = stops
+            if not trip.get("stops"):
+                continue
+            trip["end"] = trip["stops"][-1]["datetime"]
+            trip["dest_label"] = rule.get("dest_label") or dest_label(trip["stops"])
+            trip["name"] = make_trip_name(trip["start"], trip["stops"])
+            short = trip.get("owner_short") or ""
+            if short and not trip["name"].endswith(f" · {short}"):
+                trip["name"] = f"{trip['name']} · {short}"
+            trip["via_states"] = ordered_via_states(trip["stops"])
+            trip["via_summary"] = format_via_summary(trip["stops"])
+            co = [s for s in trip["stops"] if s.get("in_colorado")]
+            trip["has_colorado"] = bool(co)
+            trip["colorado_stops"] = len(co)
+            trip["origin_label"] = origin_label(trip["stops"])
+
+
 def main() -> None:
     if not MERGED.exists():
         raise FileNotFoundError(f"Run merge_csvs.py first. Missing {MERGED}")
@@ -941,6 +1084,7 @@ def main() -> None:
         print(f"  Vehicle {label}: {len(trips)} trips · {len(local)} local from {len(charges)} charges")
 
     all_trips.sort(key=lambda t: str(t["start"]))
+    apply_configured_trip_overrides(all_trips, cache)
     apply_trip_crew_labels(all_trips)
     # Re-number trip ids in chronological order after multi-vehicle merge
     for i, trip in enumerate(all_trips, start=1):

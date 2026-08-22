@@ -45,8 +45,33 @@ def main() -> int:
     SCREENSHOTS.mkdir(parents=True, exist_ok=True)
     trip_co = load_trip_id("2024-06-29_Addison")  # Colorado round trip
     trip_sea = load_trip_id("2024-11-17_Addison_to_Bellevue")
-    trip_photos = load_trip_id("2025-09-25_Addison_to_Addison")  # Colorado album memories
+    trip_photos = load_trip_id("2025-09-25_Addison")  # Colorado album memories
     photo_clock: dict = {}
+
+    trips_data = json.loads(TRIPS_FILE.read_text(encoding="utf-8"))
+    sep_co = next(
+        (
+            t for t in trips_data["trips"]
+            if "2025-09-25" in t.get("id", "") and t.get("has_colorado")
+        ),
+        None,
+    )
+    if not sep_co:
+        print("FAIL: Sep 2025 Colorado trip missing from trips.json")
+        return 1
+    sep_end = str(sep_co.get("end") or "")
+    sep_dest = (sep_co.get("dest_label") or "").lower()
+    sep_last = (sep_co.get("stops") or [{}])[-1].get("location") or ""
+    if not sep_end.startswith("2025-09-29"):
+        print(f"FAIL: Sep Colorado trip should end Sep 29, got {sep_end}")
+        return 1
+    if "frisco" not in sep_dest and "Frisco" not in sep_last:
+        print(f"FAIL: Sep Colorado dest should be Frisco, got dest={sep_co.get('dest_label')} last={sep_last}")
+        return 1
+    if any(str(s.get("datetime") or "").startswith("2025-10-02") for s in sep_co.get("stops") or []):
+        print("FAIL: Sep Colorado trip should not include the Oct 2 home charge")
+        return 1
+    print(f"Sep Colorado trip: {sep_co['id']} → {sep_co.get('dest_label')} end={sep_end[:10]}")
 
     console_errors: list[str] = []
     base_url = "http://127.0.0.1:8765/output/travel_map.html"
@@ -220,6 +245,10 @@ def main() -> int:
               const maxDwell = dwells.length
                 ? Math.max(...dwells.map(s => s.duration_ms || 0))
                 : 0;
+              const mems = (pb?.segments || []).filter(s => s.type === 'memory');
+              const maxMemory = mems.length
+                ? Math.max(...mems.map(s => s.duration_ms || 0))
+                : 0;
               // Sample dwell chrome — must not show %
               let dwellPct = false;
               const dSeg = dwells[0];
@@ -271,6 +300,7 @@ def main() -> int:
               return {
                 avgDwell,
                 maxDwell,
+                maxMemory,
                 dwellPct,
                 nightOk,
                 nightFactor,
@@ -329,9 +359,9 @@ def main() -> int:
         )
         print(f"Story overlay: {story_state}")
         print(f"Caption pacing: {story_pacing}")
-        page.evaluate("stopPlayback()")
         print(f"Playback: {play_state}")
         page.screenshot(path=str(SCREENSHOTS / "06-watch-mode.png"))
+        page.evaluate("stopPlayback()")
 
         # Photo trip: live clock + memory caption must share capture instant
         print(f"Checking photo clock on {trip_photos} …")
@@ -373,6 +403,10 @@ def main() -> int:
                   clock: (document.getElementById('trip-clock')?.textContent || '').trim(),
                 };
               }
+              const mems = (pb?.segments || []).filter(s => s.type === 'memory');
+              const maxMemory = mems.length
+                ? Math.max(...mems.map(s => s.duration_ms || 0))
+                : 0;
               return {
                 ok: true,
                 photoId: memSeg.photo_id || '',
@@ -381,6 +415,8 @@ def main() -> int:
                 metaOk: metaText === expectMed,
                 datetime: memSeg.datetime || memSeg.clock_start,
                 nightAtHenrietta,
+                maxMemory,
+                memoryCount: mems.length,
               };
             }"""
         )
@@ -389,13 +425,20 @@ def main() -> int:
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
         page.wait_for_timeout(300)
 
-        # Floating play control (no dock box); speed via hidden range + [ ] keys
+        # Floating play + visible speed pills (0.5×–4×)
         dock_state = page.evaluate(
             """() => ({
               play: !!document.getElementById('btn-play'),
               pauseGone: !document.getElementById('btn-pause'),
               toggleWorks: typeof syncPlayToggle === 'function',
               speed: !!document.getElementById('speed'),
+              speedPills: document.querySelectorAll('.speed-pill').length,
+              speedControlOn: (() => {
+                const el = document.getElementById('speed-control');
+                if (!el) return false;
+                const s = getComputedStyle(el);
+                return s.display !== 'none' && s.visibility !== 'hidden';
+              })(),
               scrubber: !!document.getElementById('scrubber'),
               dockBoxGone: (() => {
                 const dock = document.getElementById('transport-dock');
@@ -509,8 +552,13 @@ def main() -> int:
               const blurb = typeof tripShareBlurb === 'function' ? tripShareBlurb(trip) : '';
               const dwellSegs = (trip?.playback?.segments || []).filter(s => s.type === 'dwell');
               const rich = dwellSegs.filter(s =>
-                /Memory|Passing through|Departing|Final stop|nearby:|✓/i.test(s.caption || '')
-                || /Stop \\d|nearby|Homeward|Photo|places/i.test(s.subcaption || '')
+                /Memory|Departing|Final stop|Stopped in/i.test(s.caption || '')
+                || /Stop \\d|Homeward/i.test(s.subcaption || '')
+              );
+              const nearbyLeak = dwellSegs.some(s =>
+                /nearby:|Passing through/i.test(s.caption || '')
+                || /nearby/i.test(s.subcaption || '')
+                || (s.pois || []).length > 0
               );
               return {
                 btn: !!btn,
@@ -520,6 +568,7 @@ def main() -> int:
                 sampleCaption: dwellSegs[0]?.caption || '',
                 dwellCount: dwellSegs.length,
                 richCaptionCount: rich.length,
+                nearbyLeak,
                 hasNativeShareHelper: typeof shareTripBlurb === 'function',
                 hasOfferShare: typeof offerShareAfterPlay === 'function',
                 hasHideShare: typeof hideShareToast === 'function',
@@ -639,6 +688,9 @@ def main() -> int:
     if cinema_ux.get("maxDwell", 9999) > 1200:
         print(f"FAIL: Dwell segments should be short (<=1.2s): {cinema_ux}")
         ok = False
+    if cinema_ux.get("maxMemory", 0) > 900:
+        print(f"FAIL: Photo memory holds should be short (<=0.9s): {cinema_ux}")
+        ok = False
     if cinema_ux.get("dwellPct"):
         print(f"FAIL: Dock must not show dwell percentage: {cinema_ux}")
         ok = False
@@ -654,6 +706,13 @@ def main() -> int:
         ok = False
     elif not pcm.get("clockOk") or not pcm.get("metaOk"):
         print(f"FAIL: Trip clock must match photo caption instant: {pcm}")
+        ok = False
+    pcm_mem = float(pcm.get("maxMemory") or 0)
+    if pcm.get("ok") and pcm_mem > 900:
+        print(f"FAIL: Photo album memory holds should be short: {pcm}")
+        ok = False
+    if pcm.get("ok") and pcm.get("memoryCount", 0) > 0 and pcm_mem < 450:
+        print(f"FAIL: Photo memory holds too brief to read: {pcm}")
         ok = False
     hen = pcm.get("nightAtHenrietta") if isinstance(pcm, dict) else None
     if hen is not None:
@@ -683,11 +742,14 @@ def main() -> int:
     if not dock_state.get("memoryStage"):
         print(f"FAIL: Memory stage overlay missing: {dock_state}")
         ok = False
-    if abs(float(dock_state.get("defaultSpeed") or 0) - 0.15) > 0.001:
-        print(f"FAIL: Default playback speed should be 0.15: {dock_state}")
+    if abs(float(dock_state.get("defaultSpeed") or 0) - 1) > 0.001:
+        print(f"FAIL: Default playback speed should be 1: {dock_state}")
         ok = False
-    if float(dock_state.get("speedMin") or 1) > 0.05 + 1e-9:
-        print(f"FAIL: Speed range should allow 0.05×: {dock_state}")
+    if float(dock_state.get("speedMin") or 1) > 0.5 + 1e-9:
+        print(f"FAIL: Speed range should allow 0.5×: {dock_state}")
+        ok = False
+    if dock_state.get("speedPills", 0) < 4 or not dock_state.get("speedControlOn"):
+        print(f"FAIL: Visible speed control missing: {dock_state}")
         ok = False
     if mobile.get("vw") != 390:
         print(f"FAIL: Mobile viewport not applied: {mobile}")
@@ -731,8 +793,11 @@ def main() -> int:
     if share_state.get("dwellCount", 0) > 2 and share_state.get("richCaptionCount", 0) < 1:
         print(f"FAIL: Expected richer dwell captions: {share_state}")
         ok = False
-    if abs(float(share_state.get("defaultSpeed") or 0) - 0.15) > 0.001:
-        print(f"FAIL: Default speed should be 0.15×: {share_state}")
+    if abs(float(share_state.get("defaultSpeed") or 0) - 1) > 0.001:
+        print(f"FAIL: Default speed should be 1×: {share_state}")
+        ok = False
+    if share_state.get("nearbyLeak"):
+        print(f"FAIL: Nearby-place copy should be removed: {share_state}")
         ok = False
     if story_pacing.get("ok"):
         if story_pacing.get("midTravelVisible"):
@@ -743,6 +808,9 @@ def main() -> int:
             ok = False
         if story_pacing.get("lateDwellMode") is False:
             print(f"FAIL: Late dwell should use dwell caption mode: {story_pacing}")
+            ok = False
+        if story_pacing.get("lateDwellPois", 0) > 0:
+            print(f"FAIL: Nearby-place chips should be gone: {story_pacing}")
             ok = False
     else:
         print(f"WARN: Caption pacing samples skipped: {story_pacing}")

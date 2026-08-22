@@ -177,15 +177,21 @@
     </div>
   </aside>
 
-  <!-- Floating play only — no dock box (commentary stays readable). Speed: [ ] keys -->
+  <!-- Play + speed — captions sit above this row -->
   <div class="transport-dock" id="transport-dock">
-    <button class="icon-btn primary" id="btn-play" disabled title="Play (Space) · Speed [ ]" aria-label="Play">
+    <div class="speed-control" id="speed-control" role="group" aria-label="Playback speed">
+      <button type="button" class="speed-pill" data-speed="0.5">0.5×</button>
+      <button type="button" class="speed-pill active" data-speed="1">1×</button>
+      <button type="button" class="speed-pill" data-speed="2">2×</button>
+      <button type="button" class="speed-pill" data-speed="4">4×</button>
+    </div>
+    <button class="icon-btn primary" id="btn-play" disabled title="Play (Space)" aria-label="Play">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
     </button>
     <div class="dock-sr" aria-hidden="true">
       <div id="prog-text">Select a trip to replay</div>
-      <span id="speed-label">0.15×</span>
-      <input type="range" id="speed" min="0.05" max="2" step="0.05" value="0.15" tabindex="-1">
+      <span id="speed-label">1×</span>
+      <input type="range" id="speed" min="0.5" max="4" step="0.5" value="1" tabindex="-1">
       <div id="scrub-fill"></div>
       <input type="range" id="scrubber" min="0" max="1000" value="0" tabindex="-1">
     </div>
@@ -255,7 +261,8 @@
     let hubMarkers = [];
     let destMarkers = [];
     let isPlaying = false, animFrame = null, lastTs = 0;
-    let speed = 0.15, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
+    let speed = 1, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
+    const SPEED_PRESETS = [0.5, 1, 2, 4];
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
     let poiMarkerKey = '';
@@ -777,13 +784,13 @@
       const isPhoto = !!(state?.is_photo || stop?.is_photo || stop?.kind === 'photo');
       const isHome = !!(stop?.is_home_anchor || stop?.kind === 'home');
       if (isPhoto) {
-        const place = (state?.album || stop?.album || shortLabel(state?.label || stop?.location || 'photo'));
+        const place = prettyAlbum(state?.album || stop?.album || '');
         return {
           phase: 'Memory',
           icon: '📷',
           mode: 'memory',
           dock: `Memory · ${place}`,
-          caption: state?.caption || `Memory · ${place}`,
+          caption: `Memory · ${place}`,
         };
       }
       if (isHome) {
@@ -893,6 +900,33 @@
       return smoothstep(18, 20.5, h);
     }
 
+    function localHourFromState(state) {
+      const dt = clockFromState(state);
+      if (!dt) return 12;
+      const lng = state?.lng != null ? state.lng : (activeTrip()?.stops?.[0]?.lng);
+      try {
+        const tz = tripTzFromLng(lng);
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz, hour: 'numeric', minute: '2-digit', hourCycle: 'h23',
+        }).formatToParts(dt);
+        const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '12', 10);
+        const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+        return hour + minute / 60;
+      } catch (_) {
+        return dt.getUTCHours() + dt.getUTCMinutes() / 60;
+      }
+    }
+
+    function clockPlayPace(hour) {
+      // Interactive play: linger on early morning, skip dead night hours.
+      const h = ((Number(hour) % 24) + 24) % 24;
+      if (h >= 6 && h < 9.5) return 0.52;
+      if (h >= 9.5 && h < 12) return 0.78;
+      if (h >= 21 || h < 5.5) return 1.95;
+      if (h >= 5.5 && h < 6) return 0.85;
+      return 1.0;
+    }
+
     function setNightIntensity(factor) {
       const next = Math.max(0, Math.min(1, Number(factor) || 0));
       if (Math.abs(next - nightFactor) < 0.01 && !!nightMode === next >= 0.45) return;
@@ -939,16 +973,31 @@
     }
 
     function syncSpeedLabel() {
-      const label = Number.isInteger(speed) ? String(speed) : speed.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+      const snapped = SPEED_PRESETS.reduce((best, v) =>
+        Math.abs(v - speed) < Math.abs(best - speed) ? v : best, SPEED_PRESETS[0]);
+      const label = Number.isInteger(snapped) ? String(snapped) : String(snapped);
       const el = document.getElementById('speed-label');
       if (el) el.textContent = label + '×';
       const input = document.getElementById('speed');
-      if (input && Math.abs(parseFloat(input.value) - speed) > 0.001) input.value = String(speed);
+      if (input && Math.abs(parseFloat(input.value) - snapped) > 0.001) input.value = String(snapped);
+      document.querySelectorAll('.speed-pill').forEach(btn => {
+        const v = parseFloat(btn.dataset.speed || '0');
+        btn.classList.toggle('active', Math.abs(v - snapped) < 0.001);
+      });
+    }
+
+    function setPlaybackSpeed(next) {
+      const snapped = SPEED_PRESETS.reduce((best, v) =>
+        Math.abs(v - next) < Math.abs(best - next) ? v : best, SPEED_PRESETS[1]);
+      speed = snapped;
+      syncSpeedLabel();
     }
 
     function nudgeSpeed(delta) {
-      speed = Math.max(0.05, Math.min(2, Math.round((speed + delta) * 100) / 100));
-      syncSpeedLabel();
+      const idx = SPEED_PRESETS.findIndex(v => Math.abs(v - speed) < 0.001);
+      const at = idx >= 0 ? idx : 1;
+      const next = SPEED_PRESETS[Math.max(0, Math.min(SPEED_PRESETS.length - 1, at + (delta > 0 ? 1 : -1)))];
+      setPlaybackSpeed(next);
     }
 
     function firstTravelOffsetMs(pb) {
@@ -977,53 +1026,48 @@
       let next = { visible: false, mode: '', caption: '', sub: '', pois: '' };
 
       if (state && isSingleTrip() && (isPlaying || isRecording)) {
-        if (state.phase === 'intro') {
+        const memoryUp = state.phase === 'memory' || (state.phase === 'dwell' && state.is_photo);
+        if (memoryUp) {
+          next = { visible: false, mode: '', caption: '', sub: '', pois: '' };
+        } else if (state.phase === 'intro') {
           next = {
             visible: true, mode: 'intro',
             caption: state.label || activeTrip()?.name || '',
             sub: state.caption || '',
-            pois: (state.highlights || []).map(h => `<span class="story-poi-chip">${h}</span>`).join(''),
+            pois: '',
           };
         } else if (state.phase === 'outro') {
-          const vc = state.visitedCount || 0;
-          const nc = state.nearbyCount || 0;
           next = {
             visible: true, mode: 'outro',
             caption: 'Journey Complete',
             sub: state.caption || '',
-            pois: nc
-              ? `<span class="story-poi-chip visited">${vc} confirmed visits</span><span class="story-poi-chip">${nc} nearby highlights</span>`
-              : '',
+            pois: '',
           };
-        } else if ((state.phase === 'dwell' || state.phase === 'memory') && (state.caption || state.pois?.length || state.label || state.thumb)) {
-          // Hold dwell/memory captions; reveal POI chips after a short settle-in beat
-          const frac = state.frac || 0;
+        } else if (state.phase === 'dwell' && (state.caption || state.label)) {
           const stop = activeStops()[state.stopIndex ?? 0];
           const copy = dwellUiCopy(state, stop);
-          const poisHtml = (!state.is_photo && state.phase === 'dwell' && frac >= 0.14)
-            ? (state.pois || []).map(p =>
-                `<span class="story-poi-chip${p.visited ? ' visited' : ''}">${p.emoji} ${p.name}${p.visited ? ' ✓' : ''}</span>`
-              ).join('')
-            : '';
+          const n = activeStops().length;
+          const idx = (state.stopIndex ?? 0) + 1;
           next = {
-            visible: true, mode: state.is_photo || state.phase === 'memory' ? 'dwell memory' : 'dwell',
+            visible: true, mode: 'dwell',
             caption: copy.caption,
-            sub: state.subcaption || '',
-            pois: poisHtml,
+            sub: n > 1 ? `Stop ${idx} of ${n}` : (state.subcaption || ''),
+            pois: '',
           };
         } else if (state.phase === 'travel') {
-          // Pace travel captions: only at segment start / approach — avoid mid-drive spam
           const frac = state.frac || 0;
+          const dest = (state.label || '').replace(/^Photo\s*·\s*/i, '').trim();
+          const destOk = dest && !/^photo/i.test(dest);
           if (frac <= 0.1) {
             next = {
               visible: true, mode: 'travel',
-              caption: `En route · ${state.label || 'next stop'}`,
+              caption: destOk ? `En route · ${dest}` : 'En route',
               sub: '', pois: '',
             };
-          } else if (frac >= 0.78) {
+          } else if (frac >= 0.78 && destOk) {
             next = {
               visible: true, mode: 'travel approaching',
-              caption: `Approaching ${state.label || 'next stop'}`,
+              caption: `Approaching ${dest}`,
               sub: '', pois: '',
             };
           }
@@ -1049,38 +1093,8 @@
       poiMarkerKey = '';
     }
 
-    function updatePoiMarkers(pois, visible) {
-      const key = (visible && pois?.length)
-        ? pois.map(p => `${p.id || p.name}:${p.lat},${p.lng}`).join('|')
-        : '';
-      if (key === poiMarkerKey) return;
+    function updatePoiMarkers(_pois, _visible) {
       clearPoiMarkers();
-      poiMarkerKey = key;
-      if (!key || !map) return;
-      // Keep POIs away from stacked home pins — skip landmarks within ~2.5km of a same-home endpoint
-      const trip = activeTrip();
-      const home = isSameHomeTrip(trip) ? trip.stops[0] : null;
-      pois.forEach(poi => {
-        if (home) {
-          const dLat = poi.lat - home.lat;
-          const dLng = poi.lng - home.lng;
-          if ((dLat * dLat + dLng * dLng) < 0.0006) return; // ~2.5km
-        }
-        const wrap = document.createElement('div');
-        wrap.className = 'poi-wrap visible';
-        const pin = document.createElement('div');
-        pin.className = 'poi-pin' + (poi.visited ? ' visited' : '');
-        pin.textContent = poi.emoji || '📍';
-        const lbl = document.createElement('div');
-        lbl.className = 'poi-label' + (poi.visited ? ' visited' : '');
-        lbl.textContent = poi.name;
-        wrap.appendChild(pin);
-        wrap.appendChild(lbl);
-        const m = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
-          .setLngLat([poi.lng, poi.lat])
-          .addTo(map);
-        poiMarkers.push(m);
-      });
     }
 
     function setPlaybackVisuals(playing) {
@@ -1118,23 +1132,56 @@
       return 9.6;
     }
 
+    function pathBboxKm(path) {
+      if (!path || path.length < 2) return 0;
+      let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+      for (const p of path) {
+        if (!p) continue;
+        minLat = Math.min(minLat, p[0]); maxLat = Math.max(maxLat, p[0]);
+        minLng = Math.min(minLng, p[1]); maxLng = Math.max(maxLng, p[1]);
+      }
+      return haversineKm(minLat, minLng, maxLat, maxLng);
+    }
+
+    function localSpeedMph(state) {
+      const seg = state?.seg;
+      if (!seg?.clock_start || !seg?.clock_end) return 999;
+      const hours = Math.max(0.03, (Date.parse(seg.clock_end) - Date.parse(seg.clock_start)) / 3_600_000);
+      const km = pathLengthKm(state.path);
+      return (km * 0.621371) / hours;
+    }
+
+    function confinedTravelZoom(state) {
+      const path = state.path;
+      const km = pathLengthKm(path);
+      const bbox = pathBboxKm(path);
+      const mph = localSpeedMph(state);
+      const circling = bbox > 0 && bbox < Math.max(1.2, km * 0.45);
+      const confined = bbox < 7.5 && (circling || km < 14);
+      const slow = mph < 28;
+      if ((confined && slow) || (bbox < 3.2 && km < 9)) {
+        const span = Math.max(0.28, bbox || km);
+        return Math.min(15.5, Math.max(13.6, 15.2 - Math.log2(span)));
+      }
+      return travelZoomForLegKm(km);
+    }
+
     function playbackCameraTarget(state) {
       if (!state || state.lat == null || state.lng == null) return null;
       // Navigation padding: keep the car in the lower third (Apple/Google follow mode)
       const padding = { top: 40, bottom: Math.max(200, Math.floor(window.innerHeight * 0.28)), left: 40, right: 40 };
 
       if (state.phase === 'travel') {
-        const km = pathLengthKm(state.path);
-        const zoom = travelZoomForLegKm(km);
+        const zoom = confinedTravelZoom(state);
         const bearing = navBearing || state.bearing || 0;
-        // Camera looks slightly ahead so the road fills the upper frame
+        const lookM = zoom >= 13.4 ? 60 : 180;
         const center = offsetAlongBearing(
-          state.lng, state.lat, bearing, 180
+          state.lng, state.lat, bearing, lookM
         );
         return {
           center,
           zoom,
-          pitch: NAV_PITCH_TRAVEL,
+          pitch: zoom >= 13.4 ? 52 : NAV_PITCH_TRAVEL,
           bearing: directorMode ? bearing : 0,
           padding,
           duration: 0,
@@ -1144,7 +1191,7 @@
       if (state.phase === 'dwell') {
         return {
           center: [state.lng, state.lat],
-          zoom: state.pois?.length ? 11.0 : 10.4,
+          zoom: 11.2,
           pitch: 48,
           bearing: directorMode ? navBearing : 0,
           padding,
@@ -1154,11 +1201,11 @@
       if (state.phase === 'memory') {
         return {
           center: [state.lng, state.lat],
-          zoom: 11.2,
+          zoom: 14.2,
           pitch: 50,
           bearing: directorMode ? navBearing : 0,
           padding,
-          duration: 650,
+          duration: 450,
           lock: true,
         };
       }
@@ -1198,7 +1245,7 @@
         target.bearing = camBearing;
       }
 
-      navZoom = navZoom + (target.zoom - navZoom) * (phaseChanged ? 0.35 : NAV_ZOOM_SMOOTH);
+      navZoom = navZoom + (target.zoom - navZoom) * (phaseChanged ? 0.35 : (Math.abs(target.zoom - navZoom) > 1.2 ? 0.2 : NAV_ZOOM_SMOOTH));
       navPitch = navPitch + (target.pitch - navPitch) * (phaseChanged ? 0.4 : 0.1);
       camZoom = navZoom;
 
@@ -1340,12 +1387,16 @@
           label: state.label || '',
         });
         document.querySelectorAll('.photo-pin').forEach(el => el.classList.remove('hot'));
+        const pid = state.photo_id || '';
         const leaf = (state.thumb || '').split('/').pop();
-        if (leaf) {
-          const hotImg = [...document.querySelectorAll('.photo-pin img')]
-            .find(i => (i.getAttribute('src') || '').includes(leaf));
-          hotImg?.closest('.photo-pin')?.classList.add('hot');
-        }
+        document.querySelectorAll('.photo-pin').forEach(el => {
+          const ids = (el.dataset.photoIds || el.dataset.photoId || '');
+          const img = el.querySelector('img');
+          const src = img?.getAttribute('src') || '';
+          if ((pid && ids.includes(pid)) || (leaf && src.includes(leaf))) {
+            el.classList.add('hot');
+          }
+        });
       } else {
         hideMemoryStage();
         document.querySelectorAll('.photo-pin.hot').forEach(el => el.classList.remove('hot'));
@@ -1486,8 +1537,12 @@
       else startPlayback();
     });
     document.getElementById('speed').addEventListener('input', e=>{
-      speed = parseFloat(e.target.value);
-      syncSpeedLabel();
+      setPlaybackSpeed(parseFloat(e.target.value));
+    });
+    document.getElementById('speed-control')?.addEventListener('click', e => {
+      const btn = e.target.closest('.speed-pill');
+      if (!btn) return;
+      setPlaybackSpeed(parseFloat(btn.dataset.speed || '1'));
     });
     document.getElementById('scrubber').addEventListener('input', e=>{
       if (!isSingleTrip()) return;
@@ -1522,8 +1577,8 @@
         return;
       }
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
-      if (e.key === '[' || e.code === 'BracketLeft') { e.preventDefault(); nudgeSpeed(-0.05); }
-      if (e.key === ']' || e.code === 'BracketRight') { e.preventDefault(); nudgeSpeed(0.05); }
+      if (e.key === '[' || e.code === 'BracketLeft') { e.preventDefault(); nudgeSpeed(-1); }
+      if (e.key === ']' || e.code === 'BracketRight') { e.preventDefault(); nudgeSpeed(1); }
     });
 
     document.getElementById('onboard-featured').addEventListener('click', startWithFeatured);
@@ -1553,6 +1608,7 @@
     })();
 
     // ── Boot ──
+    syncSpeedLabel();
     (function boot() {
       const saved = localStorage.getItem('mapbox-token');
       const token = MAPBOX_TOKEN || saved;

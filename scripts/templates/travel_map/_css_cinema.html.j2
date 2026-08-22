@@ -39,33 +39,14 @@
     .vehicle-body .tesla-accent,
     .vehicle-body .car-accent { fill: rgba(255,255,255,0.85); }
 
-    /* ── Nearby place pins (text only, no heavy discs) ── */
-    .poi-wrap {
-      display: flex; flex-direction: column; align-items: center; pointer-events: none;
-      opacity: 0; transform: translateY(6px);
-      transition: opacity 0.4s ease, transform 0.4s var(--ease);
-    }
-    .poi-wrap.visible { opacity: 1; transform: translateY(0); }
-    .poi-pin {
-      width: auto; height: auto; border-radius: 0;
-      display: none;
-      font-size: 0; background: transparent;
-      border: none; box-shadow: none; animation: none;
-    }
-    .poi-label {
-      margin-top: 0; padding: 4px 9px; border-radius: 999px;
-      font-size: 10px; font-weight: 600; letter-spacing: 0.01em; color: #fff;
-      background: rgba(10,14,12,0.78); border: 1px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(8px); white-space: nowrap; max-width: 150px;
-      overflow: hidden; text-overflow: ellipsis;
-      box-shadow: none;
-    }
-    .poi-label.visited { border-color: rgba(126,200,163,0.45); color: #c8ead9; }
+    /* Nearby-place pins removed */
+    .poi-wrap, .poi-pin, .poi-label, .story-pois { display: none !important; }
 
     /* ── Story overlay (cinema captions) ── */
     .story-overlay {
-      position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 14;
-      width: min(92vw, 640px); text-align: center; pointer-events: none;
+      position: absolute; bottom: calc(var(--dock-h) + var(--timeline-h) + 16px);
+      left: 50%; transform: translateX(-50%); z-index: 13;
+      width: min(92vw, 560px); text-align: center; pointer-events: none;
       opacity: 0; transition: opacity 0.6s ease;
     }
     .story-overlay.visible { opacity: 1; }
@@ -84,17 +65,10 @@
       display: inline-block;
     }
     .story-sub {
-      font-size: 12px; color: #cbd5e1; margin-top: 8px; letter-spacing: 0.04em;
+      font-size: 12px; color: #cbd5e1; margin-top: 6px; letter-spacing: 0.04em;
       text-shadow: 0 2px 12px rgba(0,0,0,0.9);
     }
-    .story-pois {
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px;
-    }
-    .story-poi-chip {
-      font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
-      background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.35); color: var(--gold);
-    }
-    .story-poi-chip.visited { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.4); color: #6ee7b7; }
+    .story-pois { display: none !important; }
     body.cinema-mode .story-overlay { bottom: 14%; }
     body.cinema-mode.portrait-export .story-overlay {
       bottom: 18%; width: min(84%, 400px); left: 50%; transform: translateX(-50%);
