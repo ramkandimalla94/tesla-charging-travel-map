@@ -49,11 +49,12 @@ MEMORY_ROUTE_SNAP_MI = 45.0
 # Skip stray GPS that would yank the whole trip off-corridor (still show pins).
 MAX_PHOTO_ROUTE_MI = 45.0
 # Cinematic timeline — UI speed (default 1×) multiplies on top.
-PLAYBACK_TARGET_MIN_MS = 80_000
-PLAYBACK_TARGET_MAX_MS = 480_000
-# Photo holds — keep brief so memories don't stall the drive.
-MEMORY_HOLD_MS = 650
-MEMORY_HOLD_OFF_CORRIDOR_MS = 500
+# Targets sized so 1× feels like an easy passenger-seat pace (not rushed).
+PLAYBACK_TARGET_MIN_MS = 120_000
+PLAYBACK_TARGET_MAX_MS = 720_000
+# Photo holds — long enough to read the memory stage, still brief vs travel.
+MEMORY_HOLD_MS = 1200
+MEMORY_HOLD_OFF_CORRIDOR_MS = 950
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -539,14 +540,14 @@ def _renormalize_segment_durations(
     scale = body_budget / raw
     floors = {
         # Keep stop holds brief — long dwell % bars felt like waiting.
-        "dwell": 450,
-        "travel": 3_200,
-        "memory": 560,
+        "dwell": 650,
+        "travel": 4_800,
+        "memory": 1100,
     }
     ceilings = {
-        "dwell": 1_000,
-        "travel": 22_000,
-        "memory": 850,
+        "dwell": 1_400,
+        "travel": 30_000,
+        "memory": 1_600,
     }
     for s in body:
         kind = s.get("type") or "travel"
@@ -556,11 +557,11 @@ def _renormalize_segment_durations(
         miles = float(s.get("leg_miles") or 0)
         if kind == "travel":
             if miles > 250:
-                lo = max(lo, 7_000)
+                lo = max(lo, 10_000)
             elif miles > 120:
-                lo = max(lo, 5_200)
+                lo = max(lo, 7_500)
             elif miles > 60:
-                lo = max(lo, 4_000)
+                lo = max(lo, 5_800)
         s["duration_ms"] = int(max(lo, min(hi, dur)))
 
     # Second pass: if still over budget, shrink short travels first; protect long drives
@@ -572,11 +573,11 @@ def _renormalize_segment_durations(
         def travel_floor(s: dict) -> int:
             miles = float(s.get("leg_miles") or 0)
             if miles > 250:
-                return 6_500
+                return 9_500
             if miles > 120:
-                return 4_800
+                return 7_000
             if miles > 60:
-                return 3_800
+                return 5_500
             return floors["travel"]
 
         soft = [s for s in travels if s["duration_ms"] > travel_floor(s)]
@@ -1212,7 +1213,7 @@ def build_playback_timeline(
         lng_hint = sub[0][1] if sub else None
         t_start, t_end = driving_clock_window(t_start, t_end, sub_mi, lng_hint)
         weighted_h = clock_weighted_hours(t_start, t_end, lng_hint)
-        dur = max(2_800, min(20_000, int(sub_mi * 58 + 1_600 + weighted_h * 1_050)))
+        dur = max(4_200, min(28_000, int(sub_mi * 85 + 2_400 + weighted_h * 1_500)))
         to_label = (leg.get("to_label") or "").strip()
         if to_label.lower().startswith("photo"):
             to_label = ""
@@ -1283,7 +1284,7 @@ def build_playback_timeline(
             road_i += 1
             label = short_location_label(stop["location"])
             cap = captions[road_i] if road_i < len(captions) else {}
-            dwell_ms = 750 if not is_last else 950
+            dwell_ms = 1100 if not is_last else 1400
             stop_ts = parse_waypoint_ts(stop.get("datetime"))
             body.append({
                 "type": "dwell",

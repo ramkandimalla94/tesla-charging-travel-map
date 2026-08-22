@@ -22,7 +22,7 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **Year era filter** — isolate diary chapters by year
 - **3D satellite map** with Mapbox terrain and elevated route lines
 - **Watch mode** — Play hides chrome for a passenger-seat replay
-- **Steady journey playback** — distance-paced travel along chargers and photo GPS; smart zoom when you linger in a small area; memory holds are brief (default **0.75×**; continuous **0.25×–4×** speed slider; `[` / `]` nudge by 0.25×)
+- **Steady journey playback** — distance-paced travel along chargers and photo GPS; smart zoom when you linger in a small area; memory holds linger just long enough to read (default **1×** easy pace; continuous **0.25×–4×** speed slider; `[` / `]` nudge by 0.25×)
 - **Separated play + speed** — play/pause stays bottom-center; continuous speed rail sits bottom-right so captions and Journey Complete never cover controls
 - **Live trip clock** — large HUD date/time tracks the playhead in the trip’s local timezone; memory captions use the same photo capture instant (not charger stop times). Day and night play at the same rate (no night skip / morning linger).
 - **Gradual day↔night** — map lighting ramps through twilight from the live clock (visual only; does not change playback speed)

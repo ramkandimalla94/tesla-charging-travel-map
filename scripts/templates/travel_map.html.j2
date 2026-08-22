@@ -190,8 +190,8 @@
   </div>
   <div class="speed-rail" id="speed-rail" title="Playback speed">
     <label for="speed">Speed</label>
-    <input type="range" id="speed" min="0.25" max="4" step="0.05" value="0.75" aria-valuemin="0.25" aria-valuemax="4" aria-label="Playback speed">
-    <span id="speed-label" class="speed-val">0.75×</span>
+    <input type="range" id="speed" min="0.25" max="4" step="0.05" value="1" aria-valuemin="0.25" aria-valuemax="4" aria-label="Playback speed">
+    <span id="speed-label" class="speed-val">1×</span>
   </div>
 
   <!-- Master timeline -->
@@ -258,7 +258,7 @@
     let hubMarkers = [];
     let destMarkers = [];
     let isPlaying = false, animFrame = null, lastTs = 0;
-    let speed = 0.75, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
+    let speed = 1, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
     const SPEED_MIN = 0.25, SPEED_MAX = 4, SPEED_STEP = 0.25;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];

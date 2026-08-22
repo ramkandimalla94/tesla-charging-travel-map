@@ -792,11 +792,11 @@ def main() -> int:
     if not play_state.get("clockVisible") or not play_state.get("clockText"):
         print(f"FAIL: Live trip clock should show during play: {play_state}")
         ok = False
-    if cinema_ux.get("maxDwell", 9999) > 1200:
-        print(f"FAIL: Dwell segments should be short (<=1.2s): {cinema_ux}")
+    if cinema_ux.get("maxDwell", 9999) > 1600:
+        print(f"FAIL: Dwell segments should be short (<=1.6s): {cinema_ux}")
         ok = False
-    if cinema_ux.get("maxMemory", 0) > 900:
-        print(f"FAIL: Photo memory holds should be short (<=0.9s): {cinema_ux}")
+    if cinema_ux.get("maxMemory", 0) > 1600:
+        print(f"FAIL: Photo memory holds should stay readable but brief (<=1.6s): {cinema_ux}")
         ok = False
     if cinema_ux.get("dwellPct"):
         print(f"FAIL: Dock must not show dwell percentage: {cinema_ux}")
@@ -815,10 +815,10 @@ def main() -> int:
         print(f"FAIL: Trip clock must match photo caption instant: {pcm}")
         ok = False
     pcm_mem = float(pcm.get("maxMemory") or 0)
-    if pcm.get("ok") and pcm_mem > 900:
-        print(f"FAIL: Photo album memory holds should be short: {pcm}")
+    if pcm.get("ok") and pcm_mem > 1600:
+        print(f"FAIL: Photo album memory holds should stay brief: {pcm}")
         ok = False
-    if pcm.get("ok") and pcm.get("memoryCount", 0) > 0 and pcm_mem < 450:
+    if pcm.get("ok") and pcm.get("memoryCount", 0) > 0 and pcm_mem < 800:
         print(f"FAIL: Photo memory holds too brief to read: {pcm}")
         ok = False
     hen = pcm.get("nightAtHenrietta") if isinstance(pcm, dict) else None
@@ -849,8 +849,8 @@ def main() -> int:
     if not dock_state.get("memoryStage"):
         print(f"FAIL: Memory stage overlay missing: {dock_state}")
         ok = False
-    if abs(float(dock_state.get("defaultSpeed") or 0) - 0.75) > 0.001:
-        print(f"FAIL: Default playback speed should be 0.75: {dock_state}")
+    if abs(float(dock_state.get("defaultSpeed") or 0) - 1.0) > 0.001:
+        print(f"FAIL: Default playback speed should be 1.0: {dock_state}")
         ok = False
     if float(dock_state.get("speedMin") or 1) > 0.25 + 1e-9:
         print(f"FAIL: Speed range should allow 0.25×: {dock_state}")
@@ -915,8 +915,8 @@ def main() -> int:
     if share_state.get("dwellCount", 0) > 2 and share_state.get("richCaptionCount", 0) < 1:
         print(f"FAIL: Expected richer dwell captions: {share_state}")
         ok = False
-    if abs(float(share_state.get("defaultSpeed") or 0) - 0.75) > 0.001:
-        print(f"FAIL: Default speed should be 0.75×: {share_state}")
+    if abs(float(share_state.get("defaultSpeed") or 0) - 1.0) > 0.001:
+        print(f"FAIL: Default speed should be 1×: {share_state}")
         ok = False
     if share_state.get("nearbyLeak"):
         print(f"FAIL: Nearby-place copy should be removed: {share_state}")
