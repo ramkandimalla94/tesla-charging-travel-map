@@ -1460,9 +1460,18 @@
       const EXPLORE_SLOP = 14;
       let exploreX = 0, exploreY = 0;
 
-      const armExplore = (e) => {
+      const armExplore = () => {
         if (!isPlaying || isRecording) return;
+        userCameraInteracting = true;
         noteUserCameraInteraction();
+      };
+
+      const markGestureActive = () => {
+        if (userCameraControl) userCameraInteracting = true;
+      };
+
+      const clearGestureActive = () => {
+        userCameraInteracting = false;
       };
 
       const resetExplorePointer = (x, y) => {
@@ -1477,6 +1486,7 @@
 
       container.addEventListener('touchstart', (e) => {
         if (e.touches.length >= 2 && isPlaying && !isRecording) armExplore();
+        else markGestureActive();
         resetExplorePointer(e.touches[0]?.clientX || 0, e.touches[0]?.clientY || 0);
       }, { passive: true });
       container.addEventListener('touchmove', (e) => {
@@ -1484,14 +1494,18 @@
         if (!t) return;
         maybeArmFromMove(t.clientX, t.clientY);
       }, { passive: true });
+      container.addEventListener('touchend', clearGestureActive, { passive: true });
+      container.addEventListener('touchcancel', clearGestureActive, { passive: true });
 
       container.addEventListener('mousedown', (e) => {
+        markGestureActive();
         resetExplorePointer(e.clientX, e.clientY);
       });
       container.addEventListener('mousemove', (e) => {
         if ((e.buttons & 1) === 0) return;
         maybeArmFromMove(e.clientX, e.clientY);
       });
+      container.addEventListener('mouseup', clearGestureActive);
 
       container.addEventListener('wheel', (e) => {
         if (!isPlaying || isRecording) return;
@@ -1499,14 +1513,9 @@
         armExplore();
       }, { passive: true });
 
-      ['dragstart', 'zoomstart', 'rotatestart', 'pitchstart'].forEach((ev) => {
-        map.on(ev, (e) => {
-          if (e?.originalEvent) userCameraInteracting = true;
-        });
-      });
       ['moveend', 'zoomend', 'rotateend', 'pitchend'].forEach((ev) => {
         map.on(ev, () => {
-          userCameraInteracting = false;
+          clearGestureActive();
           if (userCameraControl && !isRecording) resetUserCameraIdleTimer();
         });
       });
