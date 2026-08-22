@@ -116,7 +116,9 @@
       }
       if (dock) {
         const dockStyle = getComputedStyle(dock);
-        if (parseFloat(dockStyle.opacity || '1') > 0.12) {
+        const dockVisible = dockStyle.display !== 'none'
+          && parseFloat(dockStyle.opacity || '1') > 0.12;
+        if (dockVisible) {
           const dockH = Math.ceil(dock.getBoundingClientRect().height);
           if (dockH > 0) stack += dockH + gap;
         }

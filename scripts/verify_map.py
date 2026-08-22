@@ -1150,7 +1150,7 @@ def main() -> int:
     if not mobile_default.get("panelPeek"):
         print(f"FAIL: Mobile panel should default to peek sheet for map-first browsing: {mobile_default}")
         ok = False
-    if (mobile_default.get("mapVisiblePx") or 0) < 280:
+    if (mobile_default.get("mapVisiblePx") or 0) < 420:
         print(f"FAIL: Mobile peek sheet hides too much map: {mobile_default}")
         ok = False
     if not mobile_default.get("destRailVisible"):
