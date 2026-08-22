@@ -449,6 +449,7 @@
               photo_lng: seg.photo_lng != null ? seg.photo_lng : seg.lng,
               spur_miles: seg.spur_miles || 0,
               on_corridor: seg.on_corridor !== false,
+              profile: seg.profile || 'driving',
             };
           }
           const path = seg.path || [];
@@ -1415,9 +1416,14 @@
       }
 
       if (pos.lat != null) {
-        const mode = (state.profile || state.seg?.profile || 'driving') === 'walking'
-          ? 'walking'
-          : 'driving';
+        const explicit = state.profile || state.seg?.profile;
+        let mode = 'driving';
+        if (explicit === 'walking' || explicit === 'driving') {
+          mode = explicit;
+        } else if (state.phase === 'memory' || state.is_photo) {
+          // Keep the traveler that arrived here — never flash car under a trail memory.
+          mode = vehicleMode || 'driving';
+        }
         ensureVehicleMarker(mode, pos.lng, pos.lat, bearing);
         // Feed path coords into camera chase
         applyPlaybackCamera({ ...state, lat: pos.lat, lng: pos.lng, bearing });
