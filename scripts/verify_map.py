@@ -47,6 +47,7 @@ def main() -> int:
     trip_sea = load_trip_id("2024-11-17_Addison_to_Bellevue")
     trip_photos = load_trip_id("2025-09-25_Addison")  # Colorado album memories
     photo_clock: dict = {}
+    photo_pins: dict = {}
 
     trips_data = json.loads(TRIPS_FILE.read_text(encoding="utf-8"))
     sep_co = next(
@@ -421,11 +422,37 @@ def main() -> int:
             }"""
         )
         print(f"Photo clock sync: {photo_clock}", flush=True)
+        # Photo pins must sit at real GPS (Colorado), not stacked off-route
+        photo_pins = page.evaluate(
+            """() => {
+              const trip = activeTrip();
+              const photos = trip?.photos || [];
+              const markers = (typeof photoMarkers !== 'undefined' ? photoMarkers : []) || [];
+              const lngLats = markers.map(m => {
+                try { return m.getLngLat(); } catch (_) { return null; }
+              }).filter(Boolean);
+              const co = lngLats.filter(ll =>
+                ll.lat >= 37 && ll.lat <= 41 && ll.lng >= -109 && ll.lng <= -102);
+              const south = lngLats.filter(ll => ll.lat < 32);
+              // Marker root must not fight Mapbox transform
+              const pin = document.querySelector('.photo-pin');
+              const tr = pin ? getComputedStyle(pin).transitionProperty : '';
+              const hasInner = !!document.querySelector('.photo-pin-inner');
+              return {
+                photoCount: photos.length,
+                markerCount: lngLats.length,
+                inColorado: co.length,
+                southOf32: south.length,
+                transformSafe: hasInner && !/transform/i.test(tr || ''),
+              };
+            }"""
+        )
+        print(f"Photo pin geo: {photo_pins}", flush=True)
         page.evaluate("isPlaying = false; stopPlayback()")
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
         page.wait_for_timeout(300)
 
-        # Floating play + visible speed pills (0.5×–4×)
+        # Floating play + continuous speed rail (bottom-right, not pills)
         dock_state = page.evaluate(
             """() => ({
               play: !!document.getElementById('btn-play'),
@@ -433,12 +460,33 @@ def main() -> int:
               toggleWorks: typeof syncPlayToggle === 'function',
               speed: !!document.getElementById('speed'),
               speedPills: document.querySelectorAll('.speed-pill').length,
-              speedControlOn: (() => {
-                const el = document.getElementById('speed-control');
+              speedRail: (() => {
+                const el = document.getElementById('speed-rail');
                 if (!el) return false;
                 const s = getComputedStyle(el);
                 return s.display !== 'none' && s.visibility !== 'hidden';
               })(),
+              speedControlOn: (() => {
+                const el = document.getElementById('speed-rail') || document.getElementById('speed-control');
+                if (!el) return false;
+                const s = getComputedStyle(el);
+                return s.display !== 'none' && s.visibility !== 'hidden';
+              })(),
+              speedRailRight: (() => {
+                const el = document.getElementById('speed-rail');
+                if (!el) return false;
+                const r = el.getBoundingClientRect();
+                return r.left > window.innerWidth * 0.55;
+              })(),
+              playCentered: (() => {
+                const el = document.getElementById('btn-play');
+                if (!el) return false;
+                const r = el.getBoundingClientRect();
+                const mid = (r.left + r.right) / 2;
+                return Math.abs(mid - window.innerWidth / 2) < 80;
+              })(),
+              equalPace: typeof clockPlayPace === 'function' && Math.abs(clockPlayPace(2) - 1) < 0.001
+                && Math.abs(clockPlayPace(8) - 1) < 0.001 && Math.abs(clockPlayPace(14) - 1) < 0.001,
               scrubber: !!document.getElementById('scrubber'),
               dockBoxGone: (() => {
                 const dock = document.getElementById('transport-dock');
@@ -455,6 +503,7 @@ def main() -> int:
               memoryStage: !!document.getElementById('memory-stage'),
               defaultSpeed: parseFloat(document.getElementById('speed')?.value || '0'),
               speedMin: parseFloat(document.getElementById('speed')?.min || '0'),
+              speedMax: parseFloat(document.getElementById('speed')?.max || '0'),
             })"""
         )
         print(f"Play control: {dock_state}")
@@ -529,7 +578,9 @@ def main() -> int:
                 titleInUpper: (tr?.top ?? 9999) < window.innerHeight * 0.35,
                 mapAspect: Math.round(aspect * 100) / 100,
                 portraitish: aspect > 0 && aspect < 0.75,
-                dockHidden: getComputedStyle(document.getElementById('transport-dock')).opacity === '0',
+                dockHidden: getComputedStyle(document.getElementById('transport-dock')).opacity === '0'
+                  && (!document.getElementById('speed-rail')
+                    || getComputedStyle(document.getElementById('speed-rail')).opacity === '0'),
                 titleText: document.getElementById('cinema-title-text')?.textContent || '',
               };
             }"""
@@ -742,14 +793,29 @@ def main() -> int:
     if not dock_state.get("memoryStage"):
         print(f"FAIL: Memory stage overlay missing: {dock_state}")
         ok = False
-    if abs(float(dock_state.get("defaultSpeed") or 0) - 1) > 0.001:
-        print(f"FAIL: Default playback speed should be 1: {dock_state}")
+    if abs(float(dock_state.get("defaultSpeed") or 0) - 0.75) > 0.001:
+        print(f"FAIL: Default playback speed should be 0.75: {dock_state}")
         ok = False
-    if float(dock_state.get("speedMin") or 1) > 0.5 + 1e-9:
-        print(f"FAIL: Speed range should allow 0.5×: {dock_state}")
+    if float(dock_state.get("speedMin") or 1) > 0.25 + 1e-9:
+        print(f"FAIL: Speed range should allow 0.25×: {dock_state}")
         ok = False
-    if dock_state.get("speedPills", 0) < 4 or not dock_state.get("speedControlOn"):
-        print(f"FAIL: Visible speed control missing: {dock_state}")
+    if float(dock_state.get("speedMax") or 0) < 4 - 1e-9:
+        print(f"FAIL: Speed range should allow 4×: {dock_state}")
+        ok = False
+    if dock_state.get("speedPills", 0) > 0:
+        print(f"FAIL: Discrete speed pills should be removed: {dock_state}")
+        ok = False
+    if not dock_state.get("speedRail") or not dock_state.get("speedControlOn"):
+        print(f"FAIL: Continuous speed rail missing: {dock_state}")
+        ok = False
+    if not dock_state.get("speedRailRight"):
+        print(f"FAIL: Speed rail should sit bottom-right (not bottom-middle): {dock_state}")
+        ok = False
+    if not dock_state.get("playCentered"):
+        print(f"FAIL: Play button should stay bottom-center: {dock_state}")
+        ok = False
+    if not dock_state.get("equalPace"):
+        print(f"FAIL: Day/night clockPlayPace must be equal (1.0): {dock_state}")
         ok = False
     if mobile.get("vw") != 390:
         print(f"FAIL: Mobile viewport not applied: {mobile}")
@@ -793,12 +859,26 @@ def main() -> int:
     if share_state.get("dwellCount", 0) > 2 and share_state.get("richCaptionCount", 0) < 1:
         print(f"FAIL: Expected richer dwell captions: {share_state}")
         ok = False
-    if abs(float(share_state.get("defaultSpeed") or 0) - 1) > 0.001:
-        print(f"FAIL: Default speed should be 1×: {share_state}")
+    if abs(float(share_state.get("defaultSpeed") or 0) - 0.75) > 0.001:
+        print(f"FAIL: Default speed should be 0.75×: {share_state}")
         ok = False
     if share_state.get("nearbyLeak"):
         print(f"FAIL: Nearby-place copy should be removed: {share_state}")
         ok = False
+    pp = photo_pins if isinstance(photo_pins, dict) else {}
+    if pp.get("photoCount", 0) >= 5:
+        if pp.get("markerCount", 0) < 3:
+            print(f"FAIL: Expected photo markers on album trip: {pp}")
+            ok = False
+        if pp.get("inColorado", 0) < 3:
+            print(f"FAIL: Photo markers should be in Colorado GPS bounds: {pp}")
+            ok = False
+        if pp.get("southOf32", 0) > 0:
+            print(f"FAIL: Photo markers stacked into Mexico/south: {pp}")
+            ok = False
+        if not pp.get("transformSafe"):
+            print(f"FAIL: Photo pin root must not transition transform (Mapbox fight): {pp}")
+            ok = False
     if story_pacing.get("ok"):
         if story_pacing.get("midTravelVisible"):
             print(f"FAIL: Mid-travel caption should be hidden: {story_pacing}")

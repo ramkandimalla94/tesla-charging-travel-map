@@ -7,12 +7,8 @@
       if (!pb?.total_video_ms) { stopPlayback(); return; }
       const rawDelta = ts - lastTs;
       const delta = Math.min(rawDelta, 250);
-      let pace = 1;
-      if (!isRecording) {
-        const peek = positionAtTime(animTimeMs);
-        if (peek?.phase === 'travel') pace = clockPlayPace(localHourFromState(peek));
-      }
-      animTimeMs += delta * speed * pace;
+      // Equal day/night — speed slider only (no solar/time-of-day warp).
+      animTimeMs += delta * speed;
       lastTs = ts;
       if (animTimeMs >= pb.total_video_ms) {
         animTimeMs = pb.total_video_ms;

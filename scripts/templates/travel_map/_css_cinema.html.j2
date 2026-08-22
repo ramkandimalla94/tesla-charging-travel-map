@@ -89,6 +89,7 @@
     body.cinema-mode .panel-toggle,
     body.cinema-mode .top-bar,
     body.cinema-mode .transport-dock,
+    body.cinema-mode .speed-rail,
     body.cinema-mode .timeline-bar,
     body.cinema-mode #onboarding,
     body.cinema-mode .atlas-cta,
@@ -217,6 +218,15 @@
       .transport-dock {
         bottom: calc(var(--timeline-h) + 14px);
       }
+      .speed-rail {
+        right: 12px; bottom: calc(var(--timeline-h) + 16px);
+        min-width: 140px; max-width: min(180px, 46vw); padding: 7px 10px;
+      }
+      body.watching .speed-rail { bottom: 22px; right: 12px; }
       body.watching .transport-dock { opacity: 0.95; }
       body.watching .trip-clock { font-size: 20px; }
+      body.watching .memory-stage {
+        top: 36%; width: min(92vw, 420px); max-height: min(42vh, 360px);
+      }
+      body.watching .memory-stage img { max-height: min(32vh, 280px); }
     }

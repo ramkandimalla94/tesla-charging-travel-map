@@ -98,6 +98,7 @@
       if (isRecording) return;
       document.body.classList.toggle('watching', !!on);
       if (!on) {
+        document.body.classList.remove('journey-done');
         document.getElementById('cinema-title')?.classList.remove('visible');
       }
     }
@@ -106,6 +107,7 @@
       const title = document.getElementById('cinema-title');
       if (!title || isRecording) return;
       if (phase === 'intro') {
+        document.body.classList.remove('journey-done');
         document.getElementById('cinema-title-text').textContent = trip?.name || state?.label || '';
         document.getElementById('cinema-subtitle').textContent = state?.caption
           || (trip ? `${trip.miles.toLocaleString()} mi · ${trip.stop_count} stops · ${trip.duration_days}d` : '');
@@ -114,11 +116,17 @@
           .map(h => `<span>${h}</span>`).join('');
         title.classList.add('visible');
       } else if (phase === 'outro') {
+        document.body.classList.add('journey-done');
+        const miles = trip?.miles != null ? `${Number(trip.miles).toLocaleString()} mi` : '';
+        const stops = trip?.stop_count != null ? `${trip.stop_count} places` : '';
+        const states = (trip?.state_names || trip?.states || []).slice(0, 6).join(', ');
+        const fallback = [miles, stops, states ? `across ${states}` : ''].filter(Boolean).join(' · ');
         document.getElementById('cinema-title-text').textContent = 'Journey Complete';
-        document.getElementById('cinema-subtitle').textContent = state?.caption || '';
+        document.getElementById('cinema-subtitle').textContent = state?.caption || fallback;
         document.getElementById('cinema-highlights').innerHTML = '';
         title.classList.add('visible');
       } else {
+        document.body.classList.remove('journey-done');
         title.classList.remove('visible');
       }
     }
@@ -431,22 +439,31 @@
       const clusters = clusterPhotosForPins(photos, 0.55);
       clusters.forEach(group => {
         const photo = group[0];
-        const lat = group.reduce((s, p) => s + p.lat, 0) / group.length;
-        const lng = group.reduce((s, p) => s + p.lng, 0) / group.length;
+        // Use representative EXIF coords (not a drifted average) so pins stay on-route.
+        const lat = Number(photo.lat);
+        const lng = Number(photo.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
         const el = document.createElement('div');
         el.className = 'photo-pin';
         el.dataset.photoId = photo.id || '';
         el.dataset.photoIds = group.map(p => p.id || '').filter(Boolean).join(',');
+        // Inner wrapper holds scale/hover effects — Mapbox owns transform on `el`.
+        const inner = document.createElement('div');
+        inner.className = 'photo-pin-inner';
+        const face = document.createElement('div');
+        face.className = 'photo-pin-face';
         const img = document.createElement('img');
         img.src = photoThumbUrl(photo.thumb);
         img.alt = prettyAlbum(photo.album || 'Photo');
-        el.appendChild(img);
+        face.appendChild(img);
+        inner.appendChild(face);
         if (group.length > 1) {
           const badge = document.createElement('span');
           badge.className = 'count';
           badge.textContent = String(group.length);
-          el.appendChild(badge);
+          inner.appendChild(badge);
         }
+        el.appendChild(inner);
         el.addEventListener('mouseenter', (ev) => showPhotoHover(photo, ev.clientX, ev.clientY));
         el.addEventListener('mousemove', (ev) => showPhotoHover(photo, ev.clientX, ev.clientY));
         el.addEventListener('mouseleave', hidePhotoHover);

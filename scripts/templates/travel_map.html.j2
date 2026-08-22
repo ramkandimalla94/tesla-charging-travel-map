@@ -177,24 +177,21 @@
     </div>
   </aside>
 
-  <!-- Play + speed — captions sit above this row -->
+  <!-- Play (bottom-center) — continuous speed lives in #speed-rail (bottom-right) -->
   <div class="transport-dock" id="transport-dock">
-    <div class="speed-control" id="speed-control" role="group" aria-label="Playback speed">
-      <button type="button" class="speed-pill" data-speed="0.5">0.5×</button>
-      <button type="button" class="speed-pill active" data-speed="1">1×</button>
-      <button type="button" class="speed-pill" data-speed="2">2×</button>
-      <button type="button" class="speed-pill" data-speed="4">4×</button>
-    </div>
     <button class="icon-btn primary" id="btn-play" disabled title="Play (Space)" aria-label="Play">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
     </button>
     <div class="dock-sr" aria-hidden="true">
       <div id="prog-text">Select a trip to replay</div>
-      <span id="speed-label">1×</span>
-      <input type="range" id="speed" min="0.5" max="4" step="0.5" value="1" tabindex="-1">
       <div id="scrub-fill"></div>
       <input type="range" id="scrubber" min="0" max="1000" value="0" tabindex="-1">
     </div>
+  </div>
+  <div class="speed-rail" id="speed-rail" title="Playback speed">
+    <label for="speed">Speed</label>
+    <input type="range" id="speed" min="0.25" max="4" step="0.05" value="0.75" aria-valuemin="0.25" aria-valuemax="4" aria-label="Playback speed">
+    <span id="speed-label" class="speed-val">0.75×</span>
   </div>
 
   <!-- Master timeline -->
@@ -261,8 +258,8 @@
     let hubMarkers = [];
     let destMarkers = [];
     let isPlaying = false, animFrame = null, lastTs = 0;
-    let speed = 1, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
-    const SPEED_PRESETS = [0.5, 1, 2, 4];
+    let speed = 0.75, loopTrip = false, queueEpics = false, directorMode = true, nightMode = false;
+    const SPEED_MIN = 0.25, SPEED_MAX = 4, SPEED_STEP = 0.25;
     let isRecording = false, mediaRecorder = null, recordedChunks = [];
     let vehicleMarker = null, stopMarkers = [], poiMarkers = [];
     let poiMarkerKey = '';
@@ -917,14 +914,9 @@
       }
     }
 
-    function clockPlayPace(hour) {
-      // Interactive play: linger on early morning, skip dead night hours.
-      const h = ((Number(hour) % 24) + 24) % 24;
-      if (h >= 6 && h < 9.5) return 0.52;
-      if (h >= 9.5 && h < 12) return 0.78;
-      if (h >= 21 || h < 5.5) return 1.95;
-      if (h >= 5.5 && h < 6) return 0.85;
-      return 1.0;
+    function clockPlayPace(_hour) {
+      // Equal day/night pacing — no night skip or morning linger.
+      return 1;
     }
 
     function setNightIntensity(factor) {
@@ -972,32 +964,28 @@
       setNightIntensity(nightIntensityFromHour(hour + minute / 60));
     }
 
+    function formatSpeedLabel(v) {
+      const n = Math.round(Number(v) * 100) / 100;
+      return (Number.isInteger(n) ? String(n) : String(n)) + '×';
+    }
+
     function syncSpeedLabel() {
-      const snapped = SPEED_PRESETS.reduce((best, v) =>
-        Math.abs(v - speed) < Math.abs(best - speed) ? v : best, SPEED_PRESETS[0]);
-      const label = Number.isInteger(snapped) ? String(snapped) : String(snapped);
       const el = document.getElementById('speed-label');
-      if (el) el.textContent = label + '×';
+      if (el) el.textContent = formatSpeedLabel(speed);
       const input = document.getElementById('speed');
-      if (input && Math.abs(parseFloat(input.value) - snapped) > 0.001) input.value = String(snapped);
-      document.querySelectorAll('.speed-pill').forEach(btn => {
-        const v = parseFloat(btn.dataset.speed || '0');
-        btn.classList.toggle('active', Math.abs(v - snapped) < 0.001);
-      });
+      if (input && Math.abs(parseFloat(input.value) - speed) > 0.001) input.value = String(speed);
     }
 
     function setPlaybackSpeed(next) {
-      const snapped = SPEED_PRESETS.reduce((best, v) =>
-        Math.abs(v - next) < Math.abs(best - next) ? v : best, SPEED_PRESETS[1]);
-      speed = snapped;
+      const n = Number(next);
+      if (!Number.isFinite(n)) return;
+      speed = Math.max(SPEED_MIN, Math.min(SPEED_MAX, Math.round(n * 100) / 100));
       syncSpeedLabel();
     }
 
     function nudgeSpeed(delta) {
-      const idx = SPEED_PRESETS.findIndex(v => Math.abs(v - speed) < 0.001);
-      const at = idx >= 0 ? idx : 1;
-      const next = SPEED_PRESETS[Math.max(0, Math.min(SPEED_PRESETS.length - 1, at + (delta > 0 ? 1 : -1)))];
-      setPlaybackSpeed(next);
+      const dir = delta > 0 ? 1 : -1;
+      setPlaybackSpeed(speed + dir * SPEED_STEP);
     }
 
     function firstTravelOffsetMs(pb) {
@@ -1536,13 +1524,8 @@
       if (isPlaying) stopPlayback();
       else startPlayback();
     });
-    document.getElementById('speed').addEventListener('input', e=>{
+    document.getElementById('speed')?.addEventListener('input', e=>{
       setPlaybackSpeed(parseFloat(e.target.value));
-    });
-    document.getElementById('speed-control')?.addEventListener('click', e => {
-      const btn = e.target.closest('.speed-pill');
-      if (!btn) return;
-      setPlaybackSpeed(parseFloat(btn.dataset.speed || '1'));
     });
     document.getElementById('scrubber').addEventListener('input', e=>{
       if (!isSingleTrip()) return;

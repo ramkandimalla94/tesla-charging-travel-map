@@ -235,8 +235,9 @@
     body.watching .transport-dock:focus-within { opacity: 1; }
     body.watching .trip-clock { opacity: 0.95; }
     body.watching .story-overlay {
-      bottom: calc(var(--dock-h) + 18px); left: 50%; transform: translateX(-50%);
-      max-width: min(480px, calc(100vw - 48px)); text-align: center;
+      /* Center status — clear of play (bottom-center) and speed rail (bottom-right) */
+      bottom: calc(var(--dock-h) + 64px); left: 50%; transform: translateX(-50%);
+      max-width: min(420px, calc(100vw - 200px)); text-align: center;
       z-index: 13;
     }
     body.watching .story-overlay .story-caption {
@@ -245,7 +246,31 @@
       padding: 8px 14px; border-radius: 12px;
       display: inline-block;
     }
-    body.watching .cinema-title.visible { display: block; bottom: calc(var(--dock-h) + 72px); }
+    body.watching .cinema-title.visible {
+      display: block;
+      bottom: auto; top: 18%;
+      left: 50%; transform: translateX(-50%);
+    }
+    body.watching.journey-done .cinema-title.visible {
+      top: 50%; transform: translate(-50%, -55%);
+      width: min(92%, 440px);
+      padding: 22px 26px 20px;
+      border-radius: 18px;
+      background: rgba(10, 16, 14, 0.88);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+      backdrop-filter: blur(16px);
+    }
+    body.watching.journey-done .cinema-title h2 {
+      font-size: clamp(26px, 4.2vw, 36px);
+      letter-spacing: -0.02em;
+    }
+    body.watching.journey-done .cinema-title p {
+      margin-top: 10px; font-size: 13px; color: #d5ddd6; line-height: 1.45;
+    }
+    body.watching.journey-done .story-overlay { opacity: 0 !important; }
+    body.watching.journey-done .memory-stage { opacity: 0 !important; visibility: hidden !important; }
+    body.watching.memory-up .story-overlay { opacity: 0 !important; }
 
     /* Atlas featured CTA + memory reel */
     .atlas-cta {
@@ -304,11 +329,13 @@
     .memory-stage {
       position: fixed;
       left: 50%;
-      bottom: calc(var(--dock-h) + var(--timeline-h) + 28px);
-      transform: translateX(-50%);
+      /* Sit mid-viewport so caption never lands on play / speed chrome */
+      bottom: auto;
+      top: 46%;
+      transform: translate(-50%, -50%);
       z-index: 22;
-      width: min(720px, 86vw);
-      max-height: min(62vh, 560px);
+      width: min(640px, 78vw);
+      max-height: min(52vh, 480px);
       padding: 10px;
       border-radius: 18px;
       background: rgba(12, 18, 16, 0.88);
@@ -326,7 +353,7 @@
     .memory-stage img {
       display: block;
       width: 100%;
-      max-height: min(52vh, 480px);
+      max-height: min(42vh, 400px);
       object-fit: contain;
       border-radius: 12px;
       background: #0a100e;
@@ -348,26 +375,43 @@
       color: var(--text);
     }
     body.watching .memory-stage {
-      bottom: calc(var(--dock-h) + 28px);
-      width: min(720px, 88vw);
-      max-height: min(56vh, 500px);
+      top: 42%;
+      width: min(620px, 76vw);
+      max-height: min(48vh, 440px);
     }
     body.watching .memory-stage img {
-      max-height: min(52vh, 480px);
+      max-height: min(38vh, 360px);
     }
-    body.watching.memory-up .story-overlay { opacity: 0 !important; }
+    /*
+      CRITICAL: never put transform / transition:transform on the Mapbox marker
+      root (.photo-pin). Mapbox owns that node's transform for geographic placement;
+      CSS transform fights cause pins to lag into vertical stacks off-route.
+    */
     .photo-pin {
+      width: 30px; height: 30px;
+      background: transparent; border: none; box-shadow: none;
+      cursor: pointer; position: relative;
+      transition: none !important;
+    }
+    .photo-pin-inner {
+      width: 30px; height: 30px; border-radius: 8px; overflow: visible;
+      position: relative;
+      transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+    }
+    .photo-pin-face {
       width: 30px; height: 30px; border-radius: 8px; overflow: hidden;
       border: 1.5px solid rgba(255,255,255,0.95);
       box-shadow: 0 2px 8px rgba(0,0,0,0.22);
-      cursor: pointer; background: #efe8dc;
-      transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
-      position: relative;
+      background: #efe8dc;
     }
-    .photo-pin:hover, .photo-pin.hot {
+    .photo-pin:hover .photo-pin-inner,
+    .photo-pin.hot .photo-pin-inner {
       transform: scale(1.18);
-      box-shadow: 0 4px 14px rgba(0,0,0,0.28);
       z-index: 2;
+    }
+    .photo-pin:hover .photo-pin-face,
+    .photo-pin.hot .photo-pin-face {
+      box-shadow: 0 4px 14px rgba(0,0,0,0.28);
     }
     .photo-pin img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .photo-pin .count {
@@ -376,8 +420,10 @@
       border-radius: 999px; background: #0f172a; color: #fff;
       border: 1px solid rgba(255,255,255,0.85);
       font-size: 9px; font-weight: 700; line-height: 16px; text-align: center;
+      pointer-events: none;
     }
-    body.watching .photo-pin:not(.hot) { opacity: 0.35; }
+    body.watching .photo-pin:not(.hot) { opacity: 0.55; }
+    body.watching .photo-pin.hot { opacity: 1; }
     .filmstrip {
       display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px 4px;
       border-top: 1px solid var(--border);
@@ -400,35 +446,47 @@
     .panel-toggle svg { width: 14px; height: 14px; opacity: 0.8; }
     .trip-panel.collapsed ~ .panel-toggle { left: 18px; }
 
-    /* ── Floating play + speed (controls stay below captions) ── */
+    /* ── Play (bottom-center) + continuous speed (bottom-right) ── */
     .transport-dock {
       position: absolute; bottom: calc(var(--timeline-h) + 14px); left: 50%;
       transform: translateX(-50%); z-index: 16;
       width: auto; padding: 0; margin: 0;
       background: transparent; border: none; box-shadow: none;
       backdrop-filter: none;
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      display: flex; flex-direction: column; align-items: center; gap: 0;
     }
     .transport-dock.idle { opacity: 0.78; transform: translateX(-50%) translateY(2px); }
-    .speed-control {
-      display: flex; align-items: center; gap: 6px;
-      padding: 4px 6px; border-radius: 999px;
-      background: rgba(10, 14, 18, 0.55);
+    body.watching .transport-dock { bottom: 22px; }
+    .speed-rail {
+      position: absolute; z-index: 17;
+      right: 18px; bottom: calc(var(--timeline-h) + 18px);
+      display: flex; align-items: center; gap: 10px;
+      min-width: 168px; max-width: min(220px, 42vw);
+      padding: 8px 12px;
+      border-radius: 14px;
+      background: rgba(10, 14, 18, 0.62);
       border: 1px solid rgba(255,255,255,0.16);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.35);
     }
-    .speed-pill {
-      min-width: 40px; height: 28px; padding: 0 8px;
-      border: none; border-radius: 999px;
-      background: transparent; color: rgba(243,239,230,0.78);
-      font-family: inherit; font-size: 11px; font-weight: 700;
-      letter-spacing: 0.02em; cursor: pointer;
+    body.watching .speed-rail { bottom: 24px; right: 16px; }
+    .speed-rail label {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: rgba(243,239,230,0.62);
+      flex-shrink: 0;
     }
-    .speed-pill:hover { color: #fff; background: rgba(255,255,255,0.08); }
-    .speed-pill.active {
-      background: rgba(255,255,255,0.92); color: #0f172a;
+    .speed-rail input[type=range]#speed {
+      flex: 1; min-width: 72px; height: 4px; margin: 0;
+      accent-color: var(--accent); cursor: pointer;
     }
-    .speed-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .speed-rail .speed-val,
+    .speed-rail #speed-label {
+      font-size: 11px; font-weight: 700; color: var(--accent);
+      min-width: 38px; text-align: right; letter-spacing: 0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+    .speed-control { display: none !important; }
+    .speed-pill { display: none !important; }
     .dock-sr {
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
       overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
@@ -515,12 +573,7 @@
       opacity: 0; cursor: pointer; margin: 0;
     }
     .dock-sliders { display: none; }
-    .speed-wrap {
-      width: 84px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px;
-    }
-    .speed-wrap label { display: none; }
-    input[type=range]#speed { width: 100%; accent-color: var(--accent); height: 3px; margin: 0; }
-    .speed-val { font-size: 10px; font-weight: 700; color: var(--accent); text-align: right; letter-spacing: 0.02em; }
+    .speed-wrap { display: none; }
 
     /* ── Timeline ── */
     .timeline-bar {
