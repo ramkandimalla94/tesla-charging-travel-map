@@ -283,7 +283,40 @@
     const NAV_ZOOM_SMOOTH = 0.08;
     const NAV_PITCH_TRAVEL = 58;
 
-    const carHtml = `<div class="vehicle-wrap"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 64 28" aria-hidden="true"><path class="car-body" d="M2 18 Q8 9 16 8 L48 8 Q56 9 62 18 L60 22 L4 22 Z"/><path class="car-accent" d="M18 8 L26 4 L34 8"/><circle cx="14" cy="21" r="3.2" fill="#111"/><circle cx="50" cy="21" r="3.2" fill="#111"/><path class="car-accent" d="M28 8 L32 6 L36 8" opacity="0.6"/></svg></div></div>`;
+    const carHtml = `<div class="vehicle-wrap" data-mode="driving"><div class="vehicle-glow"></div><div class="vehicle-body"><svg viewBox="0 0 64 28" aria-hidden="true"><path class="car-body" d="M2 18 Q8 9 16 8 L48 8 Q56 9 62 18 L60 22 L4 22 Z"/><path class="car-accent" d="M18 8 L26 4 L34 8"/><circle cx="14" cy="21" r="3.2" fill="#111"/><circle cx="50" cy="21" r="3.2" fill="#111"/><path class="car-accent" d="M28 8 L32 6 L36 8" opacity="0.6"/></svg></div></div>`;
+    // Trail walker — soft bob + forest badge; faces "up" like the car for map rotation.
+    const hikeHtml = `<div class="vehicle-wrap hike" data-mode="walking"><div class="vehicle-glow hike-glow"></div><div class="hike-ring"></div><div class="vehicle-body hike-body"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="hike-head" cx="32" cy="14" r="7"/><path class="hike-torso" d="M32 22 L32 38"/><path class="hike-pack" d="M26 24 Q20 30 24 38 L28 36"/><path class="hike-leg hike-leg-a" d="M32 38 L24 54"/><path class="hike-leg hike-leg-b" d="M32 38 L40 54"/><path class="hike-pole" d="M40 28 L48 50"/><path class="hike-boot" d="M20 54 L28 54"/><path class="hike-boot" d="M36 54 L46 54"/></svg></div><div class="hike-caption">On foot</div></div>`;
+    let vehicleMode = 'driving';
+
+    function travelerHtml(mode) {
+      return mode === 'walking' ? hikeHtml : carHtml;
+    }
+
+    function ensureVehicleMarker(mode, lng, lat, bearing) {
+      const next = mode === 'walking' ? 'walking' : 'driving';
+      if (!vehicleMarker || vehicleMode !== next) {
+        if (vehicleMarker) {
+        if (vehicleMarker) {
+          try { vehicleMarker.remove(); } catch (_) {}
+          vehicleMarker = null;
+        }
+        vehicleMode = 'driving';
+        const el = document.createElement('div');
+        el.innerHTML = travelerHtml(next);
+        vehicleMarker = new mapboxgl.Marker({
+          element: el,
+          anchor: 'center',
+          rotationAlignment: 'map',
+          pitchAlignment: 'viewport',
+        }).setLngLat([lng, lat]).addTo(map);
+        vehicleMode = next;
+      } else {
+        vehicleMarker.setLngLat([lng, lat]);
+      }
+      if (typeof vehicleMarker.setRotation === 'function') {
+        vehicleMarker.setRotation(bearing || 0);
+      }
+    }
 
     // ── Splash progress ──
     function setSplash(pct) { document.getElementById('splash-fill').style.width = pct + '%'; }
@@ -429,6 +462,7 @@
           return {
             ...pos, phase: 'travel', label: seg.to_label, stopIndex: seg.stop_index,
             frac, bearing, path, seg,
+            profile: seg.profile || 'driving',
           };
         }
         cursor = end;
@@ -1383,22 +1417,10 @@
       }
 
       if (pos.lat != null) {
-        if (vehicleMarker) {
-          vehicleMarker.setLngLat([pos.lng, pos.lat]);
-          // Map-aligned rotation only — do NOT also CSS-rotate the body (double-spin)
-          if (typeof vehicleMarker.setRotation === 'function') vehicleMarker.setRotation(bearing);
-        } else {
-          const el = document.createElement('div');
-          el.innerHTML = carHtml;
-          vehicleMarker = new mapboxgl.Marker({
-            element: el,
-            anchor: 'center',
-            rotationAlignment: 'map',
-            // Keep puck upright on screen while map pitches (Google TILTED style)
-            pitchAlignment: 'viewport',
-          }).setLngLat([pos.lng, pos.lat]).addTo(map);
-          if (typeof vehicleMarker.setRotation === 'function') vehicleMarker.setRotation(bearing);
-        }
+        const mode = (state.profile || state.seg?.profile || 'driving') === 'walking'
+          ? 'walking'
+          : 'driving';
+        ensureVehicleMarker(mode, pos.lng, pos.lat, bearing);
         // Feed path coords into camera chase
         applyPlaybackCamera({ ...state, lat: pos.lat, lng: pos.lng, bearing });
       }
@@ -1438,8 +1460,10 @@
         const copy = dwellUiCopy(state, cur);
         setPlaybackChrome(animProg, copy.dock);
       } else {
+        const hiking = (state.profile || state.seg?.profile) === 'walking';
+        const place = state.label || (cur ? shortLabel(cur.location) : '');
         const label = cur
-          ? `Driving · ${state.label || shortLabel(cur.location)}`
+          ? (hiking ? `On foot · ${place || 'trail'}` : `Driving · ${place}`)
           : 'Ready to replay';
         setPlaybackChrome(animProg, label);
       }

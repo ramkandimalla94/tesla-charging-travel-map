@@ -354,6 +354,16 @@ def nearest_point_on_path(
     lat: float, lng: float, path: list[list[float]]
 ) -> tuple[float, float, float, float]:
     """Return (lat, lng, path_frac 0..1, distance_miles) for nearest vertex/lerp on path."""
+    return nearest_point_on_path_from(lat, lng, path, min_frac=0.0)
+
+
+def nearest_point_on_path_from(
+    lat: float,
+    lng: float,
+    path: list[list[float]],
+    min_frac: float = 0.0,
+) -> tuple[float, float, float, float]:
+    """Nearest point on path with frac >= min_frac (forward-only search for out-and-backs)."""
     if not path:
         return lat, lng, 0.0, 9999.0
     if len(path) == 1:
@@ -361,8 +371,7 @@ def nearest_point_on_path(
         return path[0][0], path[0][1], 0.0, d
 
     best_d = float("inf")
-    best = (path[0][0], path[0][1], 0.0, best_d)
-    # Cumulative distance for frac
+    best = (path[0][0], path[0][1], max(0.0, min_frac), best_d)
     seg_lens = []
     total = 0.0
     for i in range(1, len(path)):
@@ -373,21 +382,30 @@ def nearest_point_on_path(
         d = haversine_miles(lat, lng, path[0][0], path[0][1])
         return path[0][0], path[0][1], 0.0, d
 
+    floor = max(0.0, min(1.0, float(min_frac) - 1e-4))
     traveled = 0.0
+    found = False
     for i, seg_len in enumerate(seg_lens):
         a, b = path[i], path[i + 1]
-        # Sample a few points on the segment
         steps = max(2, min(8, int(seg_len) + 1))
         for s in range(steps + 1):
             t = s / steps
+            frac = (traveled + seg_len * t) / total
+            if frac < floor:
+                continue
             plat = a[0] + (b[0] - a[0]) * t
             plng = a[1] + (b[1] - a[1]) * t
             d = haversine_miles(lat, lng, plat, plng)
             if d < best_d:
                 best_d = d
-                frac = (traveled + seg_len * t) / total
                 best = (plat, plng, frac, d)
+                found = True
         traveled += seg_len
+    if not found:
+        # Past the end — clamp to tip
+        tip = path[-1]
+        d = haversine_miles(lat, lng, tip[0], tip[1])
+        return tip[0], tip[1], 1.0, d
     return best
 
 
@@ -556,7 +574,16 @@ def _renormalize_segment_durations(
         lo = floors.get(kind, 1_200)
         hi = ceilings.get(kind, 12_000)
         miles = float(s.get("leg_miles") or 0)
-        if kind == "travel":
+        profile = s.get("profile") or "driving"
+        if kind == "travel" and profile == "walking":
+            # Keep hike beats lively — don't inherit highway travel floors.
+            lo = 2_200
+            hi = 12_000
+            if miles > 8:
+                lo = max(lo, 4_000)
+            elif miles > 3:
+                lo = max(lo, 3_000)
+        elif kind == "travel":
             if miles > 250:
                 lo = max(lo, 10_000)
             elif miles > 120:
@@ -572,6 +599,13 @@ def _renormalize_segment_durations(
         travels = [s for s in body if s["type"] == "travel"]
 
         def travel_floor(s: dict) -> int:
+            if (s.get("profile") or "driving") == "walking":
+                miles = float(s.get("leg_miles") or 0)
+                if miles > 8:
+                    return 3_600
+                if miles > 3:
+                    return 2_800
+                return 2_200
             miles = float(s.get("leg_miles") or 0)
             if miles > 250:
                 return 9_500
@@ -865,6 +899,29 @@ def leg_wants_walking(a: dict, b: dict, dist: float) -> bool:
     return photo_leg and dist <= WALK_SPUR_MILES
 
 
+def leg_is_hiking(
+    a: dict,
+    b: dict,
+    dist: float,
+    gap_hours: float | None = None,
+) -> bool:
+    """True when this leg should play as on-foot (icon + pacing), not highway driving."""
+    if leg_wants_walking(a, b, dist):
+        return True
+    photoish = bool(
+        a.get("is_photo") or b.get("is_photo")
+        or a.get("kind") == "photo" or b.get("kind") == "photo"
+    )
+    if gap_hours is not None and dist > 0.02 and gap_hours > 0:
+        mph = dist / max(float(gap_hours), 0.05)
+        # Trail / camp crawls: slow + photo-linked, or clearly pedestrian pace.
+        if photoish and mph < 8.0 and dist <= 25.0:
+            return True
+        if mph < 3.5 and dist <= 12.0:
+            return True
+    return False
+
+
 def get_route_segment(
     lat1: float, lng1: float, lat2: float, lng2: float,
     cache: dict, token: str, refresh: bool, stats: dict,
@@ -1100,6 +1157,20 @@ def build_playback_timeline(
         miles = path_miles(path) if path else haversine_miles(
             a["lat"], a["lng"], b["lat"], b["lng"]
         )
+        gap_h = max(0.0, float(gap_ms) / 3_600_000.0)
+        crow = haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"])
+        profile = "walking" if leg_is_hiking(a, b, miles or crow, gap_h) else "driving"
+        # Speed/photo hike detector may outrank Mapbox driving geometry — prefer walking paths.
+        if profile == "walking" and not leg_wants_walking(a, b, crow):
+            path = get_route_segment(
+                float(a["lat"]), float(a["lng"]), float(b["lat"]), float(b["lng"]),
+                cache, token, refresh, stats, "walking",
+            )
+            if path:
+                path = list(path)
+                path[0] = [float(a["lat"]), float(a["lng"])]
+                path[-1] = [float(b["lat"]), float(b["lng"])]
+                miles = path_miles(path)
         to_lbl = short_location_label(b.get("location") or "") if not b.get("is_photo") else ""
         if not to_lbl:
             for j in range(i + 1, len(journey)):
@@ -1118,6 +1189,7 @@ def build_playback_timeline(
             "path": path,
             "miles": miles,
             "gap_ms": gap_ms,
+            "profile": profile,
             "t0": parse_waypoint_ts(a.get("datetime")),
             "t1": parse_waypoint_ts(b.get("datetime")),
             "from_label": from_lbl,
@@ -1166,7 +1238,11 @@ def build_playback_timeline(
         leg_memories[best_li].append(m)
 
     for bucket in leg_memories:
-        bucket.sort(key=lambda m: m.get("leg_frac", 0))
+        # Time-first: keeps overnight camp shots in capture order on out-and-back trails.
+        bucket.sort(key=lambda m: (
+            parse_waypoint_ts(m.get("datetime")),
+            float(m.get("leg_frac") or 0),
+        ))
 
     n_road = len(road_only)
     n_mem = sum(1 for s in journey if s.get("is_photo")) + sum(len(b) for b in leg_memories)
@@ -1201,20 +1277,32 @@ def build_playback_timeline(
         stop_index: int,
         clock_t0: datetime | None = None,
         clock_t1: datetime | None = None,
+        path_override: list[list[float]] | None = None,
+        profile_override: str | None = None,
     ) -> None:
-        if f1 - f0 < 0.012:
-            return
-        sub = slice_path_by_frac(path, f0, f1)
-        if len(sub) < 2:
-            return
+        profile = profile_override or leg.get("profile") or "driving"
+        if path_override is not None:
+            sub = path_override
+            if len(sub) < 2:
+                return
+        else:
+            if f1 - f0 < 0.012:
+                return
+            sub = slice_path_by_frac(path, f0, f1)
+            if len(sub) < 2:
+                return
         sub_mi = path_miles(sub)
         # Prefer explicit photo/stop instants so the playhead never jumps at memories.
         t_start = clock_t0 if clock_t0 is not None else _lerp_clock(leg["t0"], leg["t1"], f0)
         t_end = clock_t1 if clock_t1 is not None else _lerp_clock(leg["t0"], leg["t1"], f1)
         lng_hint = sub[0][1] if sub else None
-        t_start, t_end = driving_clock_window(t_start, t_end, sub_mi, lng_hint)
-        weighted_h = clock_weighted_hours(t_start, t_end, lng_hint)
-        dur = max(4_200, min(28_000, int(sub_mi * 85 + 2_400 + weighted_h * 1_500)))
+        if profile == "walking":
+            # Pleasant on-foot pace — skip overnight clock stretch that made trail crawls crawl.
+            dur = max(2_400, min(11_000, int(sub_mi * 220 + 1_600)))
+        else:
+            t_start, t_end = driving_clock_window(t_start, t_end, sub_mi, lng_hint)
+            weighted_h = clock_weighted_hours(t_start, t_end, lng_hint)
+            dur = max(4_200, min(28_000, int(sub_mi * 85 + 2_400 + weighted_h * 1_050)))
         to_label = (leg.get("to_label") or "").strip()
         if to_label.lower().startswith("photo"):
             to_label = ""
@@ -1229,6 +1317,7 @@ def build_playback_timeline(
             "to_label": to_label or leg.get("to_label") or "",
             "stop_index": stop_index,
             "leg_miles": round(sub_mi, 1),
+            "profile": profile,
             "clock_start": _clock_iso(t_start),
             "clock_end": _clock_iso(t_end),
         })
@@ -1319,41 +1408,87 @@ def build_playback_timeline(
         ]
 
         for mem in mems:
+            photo_lat, photo_lng = float(mem["lat"]), float(mem["lng"])
+            spur = float(mem.get("spur_miles") or 0)
             if path and len(path) >= 2:
-                # Hold at exact photo GPS when the path already reaches it.
-                spur = float(mem.get("spur_miles") or 0)
-                if spur <= 1.25:
-                    slat, slng = float(mem["lat"]), float(mem["lng"])
-                    _, _, snap_frac, _ = nearest_point_on_path(slat, slng, path)
-                    frac = float(snap_frac)
-                else:
-                    slat = float(mem.get("route_lat", mem["lat"]))
-                    slng = float(mem.get("route_lng", mem["lng"]))
-                    frac = float(mem.get("leg_frac") or 0.5)
-            else:
-                slat = float(mem.get("route_lat", mem["lat"]))
-                slng = float(mem.get("route_lng", mem["lng"]))
-                frac = float(mem.get("leg_frac") or 0.5)
-                spur = float(mem.get("spur_miles") or 0)
+                # Forward-only snap avoids outbound→return teleport on out-and-back hikes.
+                _, _, snap_frac, _ = nearest_point_on_path_from(
+                    photo_lat, photo_lng, path, min_frac=cursor_frac
+                )
+                g_lat, g_lng, g_frac, g_dist = nearest_point_on_path(
+                    photo_lat, photo_lng, path
+                )
+                frac = float(snap_frac)
+                slat, slng = photo_lat, photo_lng
+                if spur > 1.25:
+                    slat = float(mem.get("route_lat", photo_lat))
+                    slng = float(mem.get("route_lng", photo_lng))
+                    frac = float(mem.get("leg_frac") or frac)
+                    if frac < cursor_frac:
+                        frac = float(snap_frac)
 
-            if frac < cursor_frac + 0.012:
-                frac = min(0.98, cursor_frac + 0.015)
-                if path and len(path) >= 2 and float(mem.get("spur_miles") or 0) > 1.25:
-                    slat, slng = point_at_arc_frac(path, frac)
+                cur_pt = point_at_arc_frac(path, cursor_frac)
+                direct = haversine_miles(cur_pt[0], cur_pt[1], photo_lat, photo_lng)
+                along = 0.0
+                if frac > cursor_frac + 0.002:
+                    along = path_miles(slice_path_by_frac(path, cursor_frac, frac))
+                # If the corridor detours far past a nearby shot (camp / spur),
+                # walk a short spur instead of racing ahead and snapping back.
+                use_spur = (
+                    direct < 2.0
+                    and along > max(0.55, direct * 3.2)
+                ) or (
+                    g_frac + 0.02 < cursor_frac
+                    and g_dist < 0.5
+                    and along > max(0.4, direct * 2.5)
+                )
+            else:
+                slat = float(mem.get("route_lat", photo_lat))
+                slng = float(mem.get("route_lng", photo_lng))
+                frac = max(cursor_frac, float(mem.get("leg_frac") or 0.5))
+                use_spur = False
+                cur_pt = [stop["lat"], stop["lng"]]
+                direct = 0.0
 
             mem_ts = parse_waypoint_ts(mem.get("datetime"))
-            append_travel(
-                path, cursor_frac, frac, leg, max(0, road_i),
-                clock_t0=cursor_clock, clock_t1=mem_ts,
-            )
-            if body and body[-1]["type"] == "travel":
-                body[-1]["path"][-1] = [slat, slng]
-                slat, slng = body[-1]["path"][-1][0], body[-1]["path"][-1][1]
+            hike_profile = "walking" if (
+                (leg.get("profile") == "walking")
+                or float(mem.get("spur_miles") or 0) <= WALK_SPUR_MILES
+            ) else (leg.get("profile") or "driving")
+
+            if use_spur:
+                spur_path = [list(cur_pt), [photo_lat, photo_lng]]
+                append_travel(
+                    path, cursor_frac, cursor_frac, leg, max(0, road_i),
+                    clock_t0=cursor_clock, clock_t1=mem_ts,
+                    path_override=spur_path,
+                    profile_override=hike_profile,
+                )
+                slat, slng = photo_lat, photo_lng
+                # Stay on the corridor tip — don't jump to a return-leg frac.
+                frac = cursor_frac
+            else:
+                if frac < cursor_frac + 0.008:
+                    frac = min(0.98, cursor_frac + 0.01)
+                append_travel(
+                    path, cursor_frac, frac, leg, max(0, road_i),
+                    clock_t0=cursor_clock, clock_t1=mem_ts,
+                    profile_override=hike_profile if hike_profile == "walking" else None,
+                )
+                if body and body[-1]["type"] == "travel":
+                    # Pin exact photo GPS only when we didn't take a long corridor detour.
+                    tip = body[-1]["path"][-1]
+                    tip_d = haversine_miles(tip[0], tip[1], photo_lat, photo_lng)
+                    if tip_d <= 1.25:
+                        body[-1]["path"][-1] = [photo_lat, photo_lng]
+                        slat, slng = photo_lat, photo_lng
+                    else:
+                        slat, slng = tip[0], tip[1]
 
             append_memory_at(
                 mem, slat, slng, float(mem.get("spur_miles") or 0), max(0, road_i), frac
             )
-            cursor_frac = frac
+            cursor_frac = max(cursor_frac, frac)
             cursor_clock = mem_ts
 
         append_travel(

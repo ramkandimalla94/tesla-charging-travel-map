@@ -408,6 +408,44 @@ def main() -> int:
               const maxMemory = mems.length
                 ? Math.max(...mems.map(s => s.duration_ms || 0))
                 : 0;
+              const walks = (pb?.segments || []).filter(s => s.type === 'travel' && s.profile === 'walking');
+              // Seek first walking travel and confirm hike marker swaps in
+              let hikeMarker = false;
+              let hikeDock = false;
+              if (walks.length) {
+                let c = 0;
+                for (const seg of (pb?.segments || [])) {
+                  if (seg.type === 'travel' && seg.profile === 'walking') {
+                    updateTrailFromState(positionAtTime(c + Math.min(400, (seg.duration_ms || 800) * 0.35)));
+                    hikeMarker = !!document.querySelector('.vehicle-wrap.hike, .vehicle-wrap[data-mode="walking"]');
+                    const dock = (document.getElementById('prog-text')?.textContent || '');
+                    hikeDock = /on foot/i.test(dock);
+                    break;
+                  }
+                  c += seg.duration_ms || 0;
+                }
+              }
+              // Path backtrack heuristic: no travel leg should reverse >2.5mi as the crow flies
+              // relative to its own start→end while covering much more along-path (spur ok).
+              let badBacktrack = 0;
+              for (const seg of (pb?.segments || [])) {
+                if (seg.type !== 'travel' || !seg.path || seg.path.length < 2) continue;
+                const a = seg.path[0], b = seg.path[seg.path.length - 1];
+                const crow = havMi(a[0], a[1], b[0], b[1]);
+                let along = 0;
+                for (let i = 1; i < seg.path.length; i++) {
+                  along += havMi(seg.path[i-1][0], seg.path[i-1][1], seg.path[i][0], seg.path[i][1]);
+                }
+                // Extreme hairpin spur on same corridor: along >> crow is OK for trails;
+                // flag only absurd teleports where crow is tiny but along is huge AND ends near start.
+                if (crow < 0.15 && along > 4.0) badBacktrack += 1;
+              }
+              function havMi(a, b, c, d) {
+                const R = 3958.8, p = Math.PI / 180;
+                const dlat = (c - a) * p, dlng = (d - b) * p;
+                const x = Math.sin(dlat/2)**2 + Math.cos(a*p)*Math.cos(c*p)*Math.sin(dlng/2)**2;
+                return 2 * R * Math.asin(Math.sqrt(x));
+              }
               return {
                 ok: true,
                 photoId: memSeg.photo_id || '',
@@ -418,6 +456,11 @@ def main() -> int:
                 nightAtHenrietta,
                 maxMemory,
                 memoryCount: mems.length,
+                walkCount: walks.length,
+                hikeMarker,
+                hikeDock,
+                badBacktrack,
+                hasHikeHtml: typeof hikeHtml === 'string' && hikeHtml.includes('hike'),
               };
             }"""
         )
@@ -862,6 +905,19 @@ def main() -> int:
     if pcm.get("ok") and pcm.get("memoryCount", 0) > 0 and pcm_mem < 1800:
         print(f"FAIL: Photo memory holds too brief to read: {pcm}")
         ok = False
+    if pcm.get("ok") and pcm.get("memoryCount", 0) >= 5:
+        if int(pcm.get("walkCount") or 0) < 1:
+            print(f"FAIL: Photo album trip should include walking/hike travel segments: {pcm}")
+            ok = False
+        if not pcm.get("hasHikeHtml"):
+            print(f"FAIL: Hike traveler HTML missing: {pcm}")
+            ok = False
+        if int(pcm.get("walkCount") or 0) > 0 and not pcm.get("hikeMarker"):
+            print(f"FAIL: Walking segment should swap to hike marker: {pcm}")
+            ok = False
+        if int(pcm.get("badBacktrack") or 0) > 2:
+            print(f"FAIL: Too many absurd out-and-back teleports in travel paths: {pcm}")
+            ok = False
     hen = pcm.get("nightAtHenrietta") if isinstance(pcm, dict) else None
     if hen is not None:
         if not hen.get("night") or float(hen.get("factor") or 0) < 0.9:
