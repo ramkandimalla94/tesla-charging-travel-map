@@ -331,9 +331,10 @@
       img.src = photoThumbUrl(photo.thumb);
       document.getElementById('photo-hover-title').textContent =
         (photo.album ? photo.album : 'Memory');
+      const clockLng = photo.photo_lng != null ? photo.photo_lng : photo.lng;
       const when = photo.datetime
         ? (typeof formatLocalClock === 'function'
-          ? formatLocalClock(new Date(photo.datetime), photo.lng, 'medium')
+          ? formatLocalClock(new Date(photo.datetime), clockLng, 'medium')
           : new Date(photo.datetime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }))
         : '';
       document.getElementById('photo-hover-meta').textContent = when;
@@ -436,10 +437,11 @@
       if (!isSingleTrip()) return;
       const trip = activeTrip();
       const photos = trip?.photos || [];
-      const clusters = clusterPhotosForPins(photos, 0.55);
+      // Corridor coords are already snapped in build_map — cluster on those.
+      const clusters = clusterPhotosForPins(photos, 0.85);
       clusters.forEach(group => {
         const photo = group[0];
-        // Use representative EXIF coords (not a drifted average) so pins stay on-route.
+        // lat/lng are corridor-snapped; photo_lat/lng keep EXIF for captions.
         const lat = Number(photo.lat);
         const lng = Number(photo.lng);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
@@ -457,10 +459,11 @@
         img.alt = prettyAlbum(photo.album || 'Photo');
         face.appendChild(img);
         inner.appendChild(face);
-        if (group.length > 1) {
+        const count = group.reduce((n, p) => n + (Number(p.cluster_size) || 1), 0);
+        if (count > 1) {
           const badge = document.createElement('span');
           badge.className = 'count';
-          badge.textContent = String(group.length);
+          badge.textContent = String(count);
           inner.appendChild(badge);
         }
         el.appendChild(inner);
@@ -482,6 +485,8 @@
             thumb: photo.thumb,
             lat: photo.lat,
             lng: photo.lng,
+            photo_lat: photo.photo_lat != null ? photo.photo_lat : photo.lat,
+            photo_lng: photo.photo_lng != null ? photo.photo_lng : photo.lng,
             album: photo.album,
             datetime: photo.datetime,
             label: prettyAlbum(photo.album || 'Memory'),

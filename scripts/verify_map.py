@@ -434,6 +434,33 @@ def main() -> int:
               const co = lngLats.filter(ll =>
                 ll.lat >= 37 && ll.lat <= 41 && ll.lng >= -109 && ll.lng <= -102);
               const south = lngLats.filter(ll => ll.lat < 32);
+              // Pins must sit on the corridor (snapped), not wilderness EXIF
+              const path = trip?.route_path || [];
+              function havMi(a, b, c, d) {
+                const R = 3958.8, p = Math.PI / 180;
+                const dlat = (c - a) * p, dlng = (d - b) * p;
+                const x = Math.sin(dlat/2)**2 + Math.cos(a*p)*Math.cos(c*p)*Math.sin(dlng/2)**2;
+                return 2 * R * Math.asin(Math.sqrt(x));
+              }
+              let maxOff = 0;
+              const step = Math.max(1, Math.floor(path.length / 1200));
+              lngLats.forEach(ll => {
+                let best = 9999;
+                for (let i = 0; i < path.length; i += step) {
+                  const pt = path[i];
+                  const d = havMi(ll.lat, ll.lng, pt[0], pt[1]);
+                  if (d < best) best = d;
+                }
+                // Also check last vertex
+                if (path.length) {
+                  const pt = path[path.length - 1];
+                  const d = havMi(ll.lat, ll.lng, pt[0], pt[1]);
+                  if (d < best) best = d;
+                }
+                if (best > maxOff) maxOff = best;
+              });
+              // Prefer server-side spur when present (exact snap distance)
+              const spurMax = Math.max(0, ...photos.map(p => Number(p.spur_miles) || 0));
               // Marker root must not fight Mapbox transform
               const pin = document.querySelector('.photo-pin');
               const tr = pin ? getComputedStyle(pin).transitionProperty : '';
@@ -443,6 +470,8 @@ def main() -> int:
                 markerCount: lngLats.length,
                 inColorado: co.length,
                 southOf32: south.length,
+                maxOffRouteMi: Math.round(maxOff * 100) / 100,
+                maxSpurMi: Math.round(spurMax * 100) / 100,
                 transformSafe: hasInner && !/transform/i.test(tr || ''),
               };
             }"""
@@ -878,6 +907,14 @@ def main() -> int:
             ok = False
         if not pp.get("transformSafe"):
             print(f"FAIL: Photo pin root must not transition transform (Mapbox fight): {pp}")
+            ok = False
+        if float(pp.get("maxOffRouteMi") or 0) > 2.5:
+            print(f"FAIL: Photo pins must snap onto the corridor (<=2.5mi sample): {pp}")
+            ok = False
+        # Server spur is the EXIF→corridor distance; pin itself is on-path (off≈0).
+        # Guard against pins that somehow kept wilderness coords (spur unused).
+        if float(pp.get("maxOffRouteMi") or 0) > 2.5 and float(pp.get("maxSpurMi") or 0) > 0:
+            print(f"FAIL: Photo pin markers drifted off corridor: {pp}")
             ok = False
     if story_pacing.get("ok"):
         if story_pacing.get("midTravelVisible"):
