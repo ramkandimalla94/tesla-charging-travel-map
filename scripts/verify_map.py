@@ -45,7 +45,7 @@ def main() -> int:
     SCREENSHOTS.mkdir(parents=True, exist_ok=True)
     trip_co = load_trip_id("2024-06-29_Addison")  # Colorado round trip
     trip_sea = load_trip_id("2024-11-17_Addison_to_Bellevue")
-    trip_photos = load_trip_id("2025-09-25_Addison")  # Colorado album memories
+    trip_photos = load_trip_id("2025-09-25_Frisco")  # Colorado album memories (Warren Pkwy)
     photo_clock: dict = {}
     photo_pins: dict = {}
 
@@ -62,12 +62,20 @@ def main() -> int:
         return 1
     sep_end = str(sep_co.get("end") or "")
     sep_dest = (sep_co.get("dest_label") or "").lower()
+    sep_origin = (sep_co.get("origin_label") or "").lower()
+    sep_first = (sep_co.get("stops") or [{}])[0].get("location") or ""
     sep_last = (sep_co.get("stops") or [{}])[-1].get("location") or ""
     if not sep_end.startswith("2025-09-29"):
         print(f"FAIL: Sep Colorado trip should end Sep 29, got {sep_end}")
         return 1
     if "frisco" not in sep_dest and "Frisco" not in sep_last:
         print(f"FAIL: Sep Colorado dest should be Frisco, got dest={sep_co.get('dest_label')} last={sep_last}")
+        return 1
+    if "warren" not in sep_last.lower() or "warren" not in sep_first.lower():
+        print(f"FAIL: Sep Colorado should start/end at Warren Parkway, got first={sep_first!r} last={sep_last!r}")
+        return 1
+    if "frisco" not in sep_origin and "frisco" not in sep_first.lower():
+        print(f"FAIL: Sep Colorado origin should be Frisco, got origin={sep_co.get('origin_label')} first={sep_first}")
         return 1
     if any(str(s.get("datetime") or "").startswith("2025-10-02") for s in sep_co.get("stops") or []):
         print("FAIL: Sep Colorado trip should not include the Oct 2 home charge")
@@ -412,6 +420,7 @@ def main() -> int:
               // Seek first walking travel and confirm hike marker swaps in
               let hikeMarker = false;
               let hikeDock = false;
+              let memoryKeepsHike = false;
               if (walks.length) {
                 let c = 0;
                 for (const seg of (pb?.segments || [])) {
@@ -420,6 +429,18 @@ def main() -> int:
                     hikeMarker = !!document.querySelector('.vehicle-wrap.hike, .vehicle-wrap[data-mode="walking"]');
                     const dock = (document.getElementById('prog-text')?.textContent || '');
                     hikeDock = /on foot/i.test(dock);
+                    // Advance into the next memory (if any) — icon must stay on foot
+                    let c2 = c + (seg.duration_ms || 0);
+                    for (const seg2 of (pb?.segments || []).slice((pb?.segments || []).indexOf(seg) + 1)) {
+                      if (seg2.type === 'memory') {
+                        updateTrailFromState(positionAtTime(c2 + Math.min(200, (seg2.duration_ms || 400) * 0.3)));
+                        memoryKeepsHike = (seg2.profile === 'walking')
+                          && !!document.querySelector('.vehicle-wrap.hike, .vehicle-wrap[data-mode="walking"]');
+                        break;
+                      }
+                      if (seg2.type === 'travel' && seg2.profile !== 'walking') break;
+                      c2 += seg2.duration_ms || 0;
+                    }
                     break;
                   }
                   c += seg.duration_ms || 0;
@@ -459,6 +480,7 @@ def main() -> int:
                 walkCount: walks.length,
                 hikeMarker,
                 hikeDock,
+                memoryKeepsHike,
                 badBacktrack,
                 hasHikeHtml: typeof hikeHtml === 'string' && hikeHtml.includes('hike'),
               };
@@ -879,8 +901,8 @@ def main() -> int:
     if cinema_ux.get("maxDwell", 9999) > 1600:
         print(f"FAIL: Dwell segments should be short (<=1.6s): {cinema_ux}")
         ok = False
-    if cinema_ux.get("maxMemory", 0) > 2600:
-        print(f"FAIL: Photo memory holds should stay readable (<=2.6s timeline / ~5s wall): {cinema_ux}")
+    if cinema_ux.get("maxMemory", 0) > 2900:
+        print(f"FAIL: Photo memory holds should stay readable (<=2.9s timeline / ~5.8s wall): {cinema_ux}")
         ok = False
     if cinema_ux.get("dwellPct"):
         print(f"FAIL: Dock must not show dwell percentage: {cinema_ux}")
@@ -899,10 +921,10 @@ def main() -> int:
         print(f"FAIL: Trip clock must match photo caption instant: {pcm}")
         ok = False
     pcm_mem = float(pcm.get("maxMemory") or 0)
-    if pcm.get("ok") and pcm_mem > 2600:
+    if pcm.get("ok") and pcm_mem > 2900:
         print(f"FAIL: Photo album memory holds should stay bounded: {pcm}")
         ok = False
-    if pcm.get("ok") and pcm.get("memoryCount", 0) > 0 and pcm_mem < 1800:
+    if pcm.get("ok") and pcm.get("memoryCount", 0) > 0 and pcm_mem < 2200:
         print(f"FAIL: Photo memory holds too brief to read: {pcm}")
         ok = False
     if pcm.get("ok") and pcm.get("memoryCount", 0) >= 5:
@@ -914,6 +936,9 @@ def main() -> int:
             ok = False
         if int(pcm.get("walkCount") or 0) > 0 and not pcm.get("hikeMarker"):
             print(f"FAIL: Walking segment should swap to hike marker: {pcm}")
+            ok = False
+        if int(pcm.get("walkCount") or 0) > 0 and pcm.get("memoryKeepsHike") is False:
+            print(f"FAIL: Memory hold after a hike should keep the walker icon: {pcm}")
             ok = False
         if int(pcm.get("badBacktrack") or 0) > 2:
             print(f"FAIL: Too many absurd out-and-back teleports in travel paths: {pcm}")

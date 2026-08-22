@@ -997,6 +997,29 @@ def apply_configured_trip_overrides(trips: list[dict], cache: dict) -> None:
                     if pd.Timestamp(s["datetime"]) < cut
                 ]
             end_loc = rule.get("end_location")
+            start_loc = rule.get("start_location")
+            stops = trip.get("stops") or []
+            if start_loc and stops:
+                first = stops[0]
+                entry = cache.get(start_loc) or {}
+                lat = entry.get("lat")
+                lng = entry.get("lng")
+                if lat is not None and lng is not None:
+                    pinned = {
+                        **first,
+                        "location": start_loc,
+                        "lat": lat,
+                        "lng": lng,
+                        "dist_home": 0.0,
+                        "region": "HOME",
+                        "in_colorado": False,
+                        "is_home_anchor": True,
+                        "preserve_home_location": True,
+                    }
+                    # Keep original departure time; mark synthetic only if location changed.
+                    pinned["synthetic"] = first.get("location") != start_loc or bool(first.get("synthetic"))
+                    stops[0] = pinned
+                    trip["stops"] = stops
             stops = trip.get("stops") or []
             if end_loc and stops and stops[-1].get("location") != end_loc:
                 last = stops[-1]
@@ -1027,8 +1050,21 @@ def apply_configured_trip_overrides(trips: list[dict], cache: dict) -> None:
             if not trip.get("stops"):
                 continue
             trip["end"] = trip["stops"][-1]["datetime"]
+            trip["start"] = trip["stops"][0]["datetime"]
             trip["dest_label"] = rule.get("dest_label") or dest_label(trip["stops"])
+            if rule.get("origin_label"):
+                trip["origin_label"] = rule["origin_label"]
+            else:
+                trip["origin_label"] = origin_label(trip["stops"])
             trip["name"] = make_trip_name(trip["start"], trip["stops"])
+            if rule.get("origin_label"):
+                # make_trip_name may still resolve DFW pins to Addison — force pinned origin.
+                trip["name"] = re.sub(
+                    r"(— )[^→]+( → )",
+                    rf"\1{rule['origin_label']}\2",
+                    trip["name"],
+                    count=1,
+                )
             short = trip.get("owner_short") or ""
             if short and not trip["name"].endswith(f" · {short}"):
                 trip["name"] = f"{trip['name']} · {short}"
@@ -1037,7 +1073,6 @@ def apply_configured_trip_overrides(trips: list[dict], cache: dict) -> None:
             co = [s for s in trip["stops"] if s.get("in_colorado")]
             trip["has_colorado"] = bool(co)
             trip["colorado_stops"] = len(co)
-            trip["origin_label"] = origin_label(trip["stops"])
 
 
 def main() -> None:

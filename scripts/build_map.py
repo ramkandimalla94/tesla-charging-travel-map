@@ -52,10 +52,9 @@ MAX_PHOTO_ROUTE_MI = 45.0
 # Targets sized so 1× feels like an easy passenger-seat pace (not rushed).
 PLAYBACK_TARGET_MIN_MS = 120_000
 PLAYBACK_TARGET_MAX_MS = 720_000
-# Photo holds — ~1.2s prior + 3s linger (wall-clock at default 1× after SPEED_REF).
-# JS advances the timeline at PLAYBACK_SPEED_REF (0.5), so duration_ms ≈ half of wall ms.
-MEMORY_HOLD_MS = 2100
-MEMORY_HOLD_OFF_CORRIDOR_MS = 1950
+# Photo holds — ~1.2s prior + 4s linger wall-clock at default 1× (SPEED_REF 0.5).
+MEMORY_HOLD_MS = 2500
+MEMORY_HOLD_OFF_CORRIDOR_MS = 2400
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -561,12 +560,12 @@ def _renormalize_segment_durations(
         # Keep stop holds brief — long dwell % bars felt like waiting.
         "dwell": 650,
         "travel": 4_800,
-        "memory": 2000,
+        "memory": 2400,
     }
     ceilings = {
         "dwell": 1_400,
         "travel": 30_000,
-        "memory": 2_400,
+        "memory": 2_800,
     }
     for s in body:
         kind = s.get("type") or "travel"
@@ -906,18 +905,18 @@ def leg_is_hiking(
     gap_hours: float | None = None,
 ) -> bool:
     """True when this leg should play as on-foot (icon + pacing), not highway driving."""
+    # Photo↔photo / photo↔stop trail spurs (Mapbox walking geometry).
     if leg_wants_walking(a, b, dist):
         return True
     photoish = bool(
         a.get("is_photo") or b.get("is_photo")
         or a.get("kind") == "photo" or b.get("kind") == "photo"
     )
-    if gap_hours is not None and dist > 0.02 and gap_hours > 0:
+    # Only clear trail crawls — require a photo endpoint and short, slow motion.
+    # (Overnight highway gaps with leftover photos must stay driving.)
+    if photoish and gap_hours is not None and dist > 0.02 and gap_hours > 0:
         mph = dist / max(float(gap_hours), 0.05)
-        # Trail / camp crawls: slow + photo-linked, or clearly pedestrian pace.
-        if photoish and mph < 8.0 and dist <= 25.0:
-            return True
-        if mph < 3.5 and dist <= 12.0:
+        if mph < 4.0 and dist <= 8.0:
             return True
     return False
 
@@ -1329,6 +1328,7 @@ def build_playback_timeline(
         spur: float,
         stop_index: int,
         leg_frac: float | None = None,
+        profile: str = "driving",
     ) -> None:
         album = mem.get("album") or "memory"
         ts = parse_waypoint_ts(mem.get("datetime"))
@@ -1351,6 +1351,7 @@ def build_playback_timeline(
             "datetime": mem.get("datetime") or _clock_iso(ts),
             "spur_miles": round(float(spur), 2),
             "on_corridor": float(spur) <= MEMORY_ROUTE_SNAP_MI,
+            "profile": profile if profile in ("walking", "driving") else "driving",
             "pois": [],
             "clock_start": _clock_iso(ts),
             "clock_end": _clock_iso(ts + timedelta(minutes=2)),
@@ -1363,12 +1364,16 @@ def build_playback_timeline(
         is_last = i == len(journey) - 1
         if stop.get("is_photo"):
             album = stop.get("album") or "memory"
+            arrive_profile = "driving"
+            if i > 0 and (i - 1) < len(legs):
+                arrive_profile = legs[i - 1].get("profile") or "driving"
             append_memory_at(
                 stop,
                 float(stop["lat"]),
                 float(stop["lng"]),
                 0.0,
                 max(0, road_i),
+                profile=arrive_profile,
             )
         else:
             road_i += 1
@@ -1451,10 +1456,8 @@ def build_playback_timeline(
                 direct = 0.0
 
             mem_ts = parse_waypoint_ts(mem.get("datetime"))
-            hike_profile = "walking" if (
-                (leg.get("profile") == "walking")
-                or float(mem.get("spur_miles") or 0) <= WALK_SPUR_MILES
-            ) else (leg.get("profile") or "driving")
+            # Inherit the leg's mode — never force walking just because a photo is nearby.
+            travel_profile = leg.get("profile") or "driving"
 
             if use_spur:
                 spur_path = [list(cur_pt), [photo_lat, photo_lng]]
@@ -1462,7 +1465,7 @@ def build_playback_timeline(
                     path, cursor_frac, cursor_frac, leg, max(0, road_i),
                     clock_t0=cursor_clock, clock_t1=mem_ts,
                     path_override=spur_path,
-                    profile_override=hike_profile,
+                    profile_override=travel_profile,
                 )
                 slat, slng = photo_lat, photo_lng
                 # Stay on the corridor tip — don't jump to a return-leg frac.
@@ -1473,7 +1476,6 @@ def build_playback_timeline(
                 append_travel(
                     path, cursor_frac, frac, leg, max(0, road_i),
                     clock_t0=cursor_clock, clock_t1=mem_ts,
-                    profile_override=hike_profile if hike_profile == "walking" else None,
                 )
                 if body and body[-1]["type"] == "travel":
                     # Pin exact photo GPS only when we didn't take a long corridor detour.
@@ -1484,9 +1486,11 @@ def build_playback_timeline(
                         slat, slng = photo_lat, photo_lng
                     else:
                         slat, slng = tip[0], tip[1]
+                    travel_profile = body[-1].get("profile") or travel_profile
 
             append_memory_at(
-                mem, slat, slng, float(mem.get("spur_miles") or 0), max(0, road_i), frac
+                mem, slat, slng, float(mem.get("spur_miles") or 0), max(0, road_i), frac,
+                profile=travel_profile,
             )
             cursor_frac = max(cursor_frac, frac)
             cursor_clock = mem_ts

@@ -2227,16 +2227,16 @@
       "is_shared": false
     },
     {
-      "id": "trip_016_2025-09-25_Addison_to_Frisco",
-      "name": "Sep 2025 — Addison → Colorado (Round Trip) · Rama + Akash (Akash's car)",
+      "id": "trip_016_2025-09-25_Frisco_to_Frisco",
+      "name": "Sep 2025 — Frisco → Colorado (Round Trip) · Rama + Akash (Akash's car)",
       "start": "2025-09-25 05:23:51+00:00",
       "end": "2025-09-29T12:09:10+00:00",
       "stops": [
         {
           "datetime": "2025-09-25 05:23:51+00:00",
-          "location": "Addison, TX",
-          "lat": 32.9601193,
-          "lng": -96.8300029,
+          "location": "Frisco, TX - 8404 Warren Parkway",
+          "lat": 33.1097617,
+          "lng": -96.8125339,
           "kwh": 11.5041,
           "invoice_url": "https://tesla.com/teslaaccount/charging/invoice/63ccb70d-59b3-460d-98fe-8a92da60f34c",
           "dist_home": 0.0,
@@ -2245,7 +2245,8 @@
           "owner": "Akash deep Konda",
           "vin": "7SAYGDED1TA438386",
           "is_home_anchor": true,
-          "synthetic": true
+          "synthetic": true,
+          "preserve_home_location": true
         },
         {
           "datetime": "2025-09-25 07:19:29+00:00",
@@ -2431,9 +2432,9 @@
         },
         {
           "datetime": "2025-09-29T12:09:10+00:00",
-          "location": "Frisco, TX - Preston Road",
-          "lat": 33.0978049,
-          "lng": -96.8056078,
+          "location": "Frisco, TX - 8404 Warren Parkway",
+          "lat": 33.1097617,
+          "lng": -96.8125339,
           "kwh": 0.0,
           "invoice_url": "",
           "dist_home": 0.0,
@@ -2454,7 +2455,7 @@
         "CO"
       ],
       "via_summary": "TX, NM, CO (×7 stops)",
-      "origin_label": "Addison",
+      "origin_label": "Frisco",
       "dest_label": "Frisco",
       "owner": "Akash deep Konda",
       "vin": "7SAYGDED1TA438386",

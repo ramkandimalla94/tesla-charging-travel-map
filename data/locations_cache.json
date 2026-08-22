@@ -1151,6 +1151,14 @@
     "source": "geocode",
     "query": "Preston Road, Frisco, TX, US"
   },
+  "Frisco, TX - 8404 Warren Parkway": {
+    "site_name": "Frisco, TX - 8404 Warren Parkway",
+    "lat": 33.1097617,
+    "lng": -96.8125339,
+    "display_name": "8404 Warren Parkway, Frisco, Collin County, Texas, 75034, United States",
+    "source": "manual",
+    "query": "8404 Warren Parkway, Frisco, TX, US"
+  },
   "Glenwood Springs, CO": {
     "site_name": "Glenwood Springs, CO",
     "lat": 39.5466381,

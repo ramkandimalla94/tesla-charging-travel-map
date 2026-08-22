@@ -33,7 +33,9 @@
         "owner_contains": "Akash"
       },
       "end_before": "2025-10-01T00:00:00+00:00",
-      "end_location": "Frisco, TX - Preston Road",
+      "start_location": "Frisco, TX - 8404 Warren Parkway",
+      "end_location": "Frisco, TX - 8404 Warren Parkway",
+      "origin_label": "Frisco",
       "dest_label": "Frisco"
     }
   ],
