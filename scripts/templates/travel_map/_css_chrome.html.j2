@@ -225,8 +225,15 @@
     body.watching .top-bar,
     body.watching .timeline-bar,
     body.watching #onboarding,
-    body.watching .mapboxgl-ctrl-group,
     body.watching .mapboxgl-ctrl-attrib { opacity: 0 !important; pointer-events: none !important; }
+    /* Keep zoom/compass usable while the journey plays — map gestures stay free too */
+    body.watching .mapboxgl-ctrl-group {
+      opacity: 0.72;
+      pointer-events: auto !important;
+      transition: opacity 0.25s ease;
+    }
+    body.watching .mapboxgl-ctrl-group:hover,
+    body.watching .mapboxgl-ctrl-group:focus-within { opacity: 1; }
     body.watching .transport-dock {
       opacity: 0.94; transition: opacity 0.35s ease;
       bottom: 22px;

@@ -52,9 +52,10 @@ MAX_PHOTO_ROUTE_MI = 45.0
 # Targets sized so 1× feels like an easy passenger-seat pace (not rushed).
 PLAYBACK_TARGET_MIN_MS = 120_000
 PLAYBACK_TARGET_MAX_MS = 720_000
-# Photo holds — long enough to read the memory stage, still brief vs travel.
-MEMORY_HOLD_MS = 1200
-MEMORY_HOLD_OFF_CORRIDOR_MS = 950
+# Photo holds — ~1.2s prior + 3s linger (wall-clock at default 1× after SPEED_REF).
+# JS advances the timeline at PLAYBACK_SPEED_REF (0.5), so duration_ms ≈ half of wall ms.
+MEMORY_HOLD_MS = 2100
+MEMORY_HOLD_OFF_CORRIDOR_MS = 1950
 
 # Continental US bounds for overview camera
 US_BOUNDS = {"west": -125.0, "east": -95.0, "south": 24.0, "north": 49.5}
@@ -542,12 +543,12 @@ def _renormalize_segment_durations(
         # Keep stop holds brief — long dwell % bars felt like waiting.
         "dwell": 650,
         "travel": 4_800,
-        "memory": 1100,
+        "memory": 2000,
     }
     ceilings = {
         "dwell": 1_400,
         "travel": 30_000,
-        "memory": 1_600,
+        "memory": 2_400,
     }
     for s in body:
         kind = s.get("type") or "travel"
