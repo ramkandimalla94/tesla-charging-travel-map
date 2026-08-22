@@ -39,6 +39,56 @@
     .vehicle-body .tesla-accent,
     .vehicle-body .car-accent { fill: rgba(255,255,255,0.85); }
 
+    /* On-foot traveler — forest badge + soft trail bob */
+    .vehicle-wrap.hike { width: 44px; height: 52px; }
+    .vehicle-wrap.hike .hike-glow {
+      inset: -6px;
+      background: radial-gradient(circle, rgba(34,197,94,0.42) 0%, transparent 72%);
+    }
+    .vehicle-wrap.hike .hike-ring {
+      position: absolute; left: 50%; top: 48%; width: 34px; height: 34px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 1.5px dashed rgba(190, 242, 100, 0.7);
+      animation: hikeOrbit 5.5s linear infinite;
+      pointer-events: none;
+    }
+    .vehicle-wrap.hike .hike-body {
+      inset: 4px 4px 12px 4px;
+      background: linear-gradient(160deg, #4ade80 0%, #16a34a 55%, #166534 100%);
+      border-color: rgba(236, 253, 245, 0.95);
+      box-shadow: 0 2px 12px rgba(22, 101, 52, 0.45);
+      animation: hikeBob 1.05s ease-in-out infinite;
+    }
+    .vehicle-wrap.hike .hike-body svg {
+      width: 22px; height: 22px;
+      transform: none;
+      fill: none;
+      stroke: #fff;
+      stroke-width: 3.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .vehicle-wrap.hike .hike-head { fill: #fff; stroke: none; }
+    .vehicle-wrap.hike .hike-pack { stroke: rgba(255,255,255,0.85); }
+    .vehicle-wrap.hike .hike-leg-a,
+    .vehicle-wrap.hike .hike-leg-b { opacity: 0.95; }
+    .vehicle-wrap.hike .hike-caption {
+      position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%);
+      font-size: 8px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      color: #ecfdf5; white-space: nowrap;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.85);
+      pointer-events: none;
+    }
+    @keyframes hikeBob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-2px); }
+    }
+    @keyframes hikeOrbit {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
     /* Nearby-place pins removed */
     .poi-wrap, .poi-pin, .poi-label, .story-pois { display: none !important; }
 

@@ -27,7 +27,8 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **Live trip clock** — large HUD date/time tracks the playhead in the trip’s local timezone; memory captions use the same photo capture instant (not charger stop times). Day and night play at the same rate (no night skip / morning linger).
 - **Gradual day↔night** — map lighting ramps through twilight from the live clock (visual only; does not change playback speed)
 - **Navigation-style chase** — heading-up follow camera (Apple/Google Maps feel): look-ahead course, capped turn rate, car glued to the path; confined/slow stretches (Maroon Bells) zoom in, then pull back on the highway; end-of-trip pulls back to a north-up route recap. Dragging or pinching the map pauses chase briefly, then follow resumes after a short idle.
-- **Large memory stage** — replay photos appear as a large, stable mid-viewport overlay (no map-marker shake); clustered pins stay at exact EXIF GPS — the path routes to those shots
+- **Hike vs drive** — photo trail legs and slow camp crawls switch to an on-foot walker badge (and livelier trail pacing); highway legs keep the car
+- **Large memory stage** — replay photos appear as a large, stable mid-viewport overlay (no map-marker shake); clustered pins stay at exact EXIF GPS — the path routes to those shots; nearby camp shots use short spurs instead of out-and-back corridor snaps
 - **Clean watch chrome** — one status line (en route / stop); polished Journey Complete card; no nearby-place labels or duplicate POI pills
 
 ## Quick start (local)

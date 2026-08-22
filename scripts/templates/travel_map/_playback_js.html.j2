@@ -97,6 +97,7 @@
       smoothBearing = 0; lastTravelBearing = 0;
       resetNavChase();
       if (vehicleMarker) { vehicleMarker.remove(); vehicleMarker=null; }
+      vehicleMode = 'driving';
       clearPoiMarkers();
       if (map?.getSource('active-trail')) map.getSource('active-trail').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
       applyIdleStopVisuals();
