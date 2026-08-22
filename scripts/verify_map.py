@@ -685,6 +685,26 @@ def main() -> int:
                 document.body.classList.remove('watching');
                 return armed && stayed && !userCameraControl;
               })(),
+              userExploreTouchOk: (() => {
+                if (typeof bindMapExploreDuringPlayback !== 'function') return true;
+                if (typeof clearUserCameraControl !== 'function') return false;
+                const wasPlaying = !!isPlaying;
+                isPlaying = true;
+                document.body.classList.add('watching');
+                clearUserCameraControl();
+                const container = map.getCanvasContainer?.() || map.getContainer?.();
+                if (!container) {
+                  isPlaying = wasPlaying;
+                  document.body.classList.remove('watching');
+                  return false;
+                }
+                container.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [] }));
+                const armed = !!userCameraControl;
+                clearUserCameraControl();
+                isPlaying = wasPlaying;
+                document.body.classList.remove('watching');
+                return armed;
+              })(),
             })"""
         )
         print(f"Play control: {dock_state}")
@@ -697,13 +717,31 @@ def main() -> int:
         mobile_default = page.evaluate(
             """() => {
               const panel = document.getElementById('sidebar');
+              const pr = panel?.getBoundingClientRect();
+              const rail = document.getElementById('mobile-dest-rail');
               return {
                 panelHalf: panel?.classList.contains('sheet-half'),
                 panelPeek: panel?.classList.contains('sheet-peek'),
-                panelMaxH: panel?.getBoundingClientRect().height,
+                panelMaxH: pr?.height,
+                mapVisiblePx: Math.max(0, (pr?.top || window.innerHeight) - 56),
+                destRailVisible: !!(rail && !rail.hidden && rail.querySelector('.mobile-dest-chip')),
+                destChips: rail?.querySelectorAll('.mobile-dest-chip').length || 0,
               };
             }"""
         )
+        dest_chip_pick = page.evaluate(
+            """() => {
+              selectTrip('all');
+              setSheetState('peek');
+              const chip = document.querySelector('.mobile-dest-chip');
+              if (!chip) return { hasChip: false, picked: false };
+              const before = selectedId;
+              chip.click();
+              return { hasChip: true, picked: selectedId !== before && selectedId !== 'all', id: selectedId };
+            }"""
+        )
+        page.evaluate("selectTrip('all'); setSheetState('full');")
+        page.wait_for_timeout(350)
         mobile = page.evaluate(
             """() => {
               const panel = document.getElementById('sidebar');
@@ -739,8 +777,10 @@ def main() -> int:
                 panelGrab: !!document.getElementById('panel-grab') && getComputedStyle(document.getElementById('panel-grab')).display !== 'none',
                 panelPeek: panel?.classList.contains('sheet-peek'),
                 panelHalf: panel?.classList.contains('sheet-half'),
+                panelFull: panel?.classList.contains('sheet-full'),
                 panelMaxH: pr.height,
                 panelHeightOk: pr.height >= window.innerHeight * 0.38,
+                mapVisibleRatio: Math.max(0, (pr.top - 56) / window.innerHeight),
                 listClientH: list?.clientHeight || 0,
                 tripListVisible: visibleTrips >= 1,
                 listScrollable: list ? list.scrollHeight > list.clientHeight + 4 : false,
@@ -766,6 +806,7 @@ def main() -> int:
             }"""
         )
         print(f"Mobile default: {mobile_default}")
+        print(f"Mobile dest chip: {dest_chip_pick}")
         print(f"Mobile 390x844: {mobile}")
         page.screenshot(path=str(SCREENSHOTS / "08-mobile-sheet.png"))
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
@@ -1079,6 +1120,9 @@ def main() -> int:
     if not dock_state.get("userExploreOk"):
         print(f"FAIL: User map explore should pause chase camera: {dock_state}")
         ok = False
+    if not dock_state.get("userExploreTouchOk"):
+        print(f"FAIL: Touch on map should arm explore mode before chase fights gesture: {dock_state}")
+        ok = False
     if float(dock_state.get("speedMin") or 1) > 0.25 + 1e-9:
         print(f"FAIL: Speed range should allow 0.25×: {dock_state}")
         ok = False
@@ -1103,16 +1147,25 @@ def main() -> int:
     if mobile.get("vw") != 390:
         print(f"FAIL: Mobile viewport not applied: {mobile}")
         ok = False
-    if not mobile_default.get("panelHalf"):
-        print(f"FAIL: Mobile panel should default to half sheet for browsing: {mobile_default}")
+    if not mobile_default.get("panelPeek"):
+        print(f"FAIL: Mobile panel should default to peek sheet for map-first browsing: {mobile_default}")
         ok = False
-    if not mobile.get("panelHalf"):
-        print(f"FAIL: Mobile panel should stay in half sheet for browsing: {mobile}")
+    if (mobile_default.get("mapVisiblePx") or 0) < 280:
+        print(f"FAIL: Mobile peek sheet hides too much map: {mobile_default}")
+        ok = False
+    if not mobile_default.get("destRailVisible"):
+        print(f"FAIL: Mobile destination quick-pick rail missing: {mobile_default}")
+        ok = False
+    if dest_chip_pick.get("hasChip") and not dest_chip_pick.get("picked"):
+        print(f"FAIL: Mobile destination chip did not select a trip: {dest_chip_pick}")
+        ok = False
+    if not mobile.get("panelFull"):
+        print(f"FAIL: Mobile panel should expand to full sheet for list scroll tests: {mobile}")
         ok = False
     if not mobile.get("panelHeightOk"):
         print(f"FAIL: Mobile panel too short to browse journeys: {mobile}")
         ok = False
-    if mobile.get("togglePanelOverlap"):
+    if not mobile.get("panelFull") and mobile.get("togglePanelOverlap"):
         print(f"FAIL: Mobile panel toggle overlaps sheet content: {mobile}")
         ok = False
     if not mobile.get("tripListVisible"):
@@ -1133,7 +1186,7 @@ def main() -> int:
     if not mobile.get("speedHiddenOnAtlas"):
         print(f"FAIL: Speed rail should hide on atlas browse: {mobile}")
         ok = False
-    if mobile.get("chromeOverlap"):
+    if not mobile.get("panelFull") and mobile.get("chromeOverlap"):
         print(f"FAIL: Mobile chrome overlaps (panel/dock/speed/timeline): {mobile}")
         ok = False
     if not mobile.get("timelineInView"):

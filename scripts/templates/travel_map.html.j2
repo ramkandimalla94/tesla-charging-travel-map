@@ -102,7 +102,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
 
-  <aside class="trip-panel sheet-half" id="sidebar">
+  <nav class="mobile-dest-rail" id="mobile-dest-rail" aria-label="Quick destinations" hidden></nav>
+
+  <aside class="trip-panel sheet-peek" id="sidebar">
     <button type="button" class="panel-grab" id="panel-grab" aria-label="Resize journey list">
       <span class="panel-grab-bar" aria-hidden="true"></span>
       <span class="panel-grab-hint" id="panel-grab-hint">Swipe up for all journeys</span>
@@ -149,10 +151,10 @@
       {% if dest_groups %}
       <div class="group-label">Destinations</div>
       {% for group in dest_groups %}
-      <div class="dest-group-label">
+      <button type="button" class="dest-group-label" data-dest="{{ group.dest }}" data-trip-ids="{{ group.trip_ids|join(',') }}">
         <span>{{ group.dest }}</span>
         <span class="meta">{{ group.trip_count }} trip{% if group.trip_count != 1 %}s{% endif %} · {{ group.total_miles }} mi</span>
-      </div>
+      </button>
       {% for tid in group.trip_ids %}
         {% set trip = trips|selectattr('id', 'equalto', tid)|first %}
         {% if trip %}
@@ -574,6 +576,7 @@
           if (e && e.originalEvent) noteUserCameraInteraction();
         });
       });
+      bindMapExploreDuringPlayback();
       map.on('load', onMapLoad);
     }
 
@@ -586,6 +589,7 @@
       updateDockIdle();
       updateAtlasCta();
       setMapLabelsVisible(true);
+      if (typeof renderMobileDestRail === 'function') renderMobileDestRail();
       document.getElementById('btn-play').disabled = true;
       document.getElementById('btn-rewind') && (document.getElementById('btn-rewind').disabled = true);
       document.getElementById('btn-forward') && (document.getElementById('btn-forward').disabled = true);
@@ -751,6 +755,7 @@
           drawAtlasMarkers();
           drawAtlasSpokes();
         }
+        if (typeof renderMobileDestRail === 'function') renderMobileDestRail();
       } finally {
         eraApplying = false;
       }
@@ -1316,17 +1321,36 @@
       return null;
     }
 
-    function noteUserCameraInteraction() {
-      if (!map || isRecording) return;
-      if (!(isPlaying || document.body.classList.contains('watching'))) return;
-      userCameraControl = true;
-      try { map.stop(); } catch (_) { /* ignore */ }
+    function syncNavFromMapView() {
+      if (!map) return;
+      navZoom = map.getZoom();
+      navPitch = map.getPitch();
+      if (directorMode) camBearing = map.getBearing();
+      const c = map.getCenter();
+      navLat = c.lat;
+      navLng = c.lng;
+    }
+
+    function resetUserCameraIdleTimer() {
       if (userCameraIdleTimer) clearTimeout(userCameraIdleTimer);
       userCameraIdleTimer = setTimeout(() => {
         userCameraControl = false;
         lastNavTs = 0;
         userCameraIdleTimer = null;
+        syncNavFromMapView();
       }, USER_CAMERA_RESUME_MS);
+    }
+
+    function noteUserCameraInteraction() {
+      if (!map || isRecording) return;
+      if (!(isPlaying || document.body.classList.contains('watching'))) return;
+      const wasUser = userCameraControl;
+      userCameraControl = true;
+      // Stop chase animations once — don't interrupt an active pan/pinch gesture.
+      if (!wasUser) {
+        try { map.stop(); } catch (_) { /* ignore */ }
+      }
+      resetUserCameraIdleTimer();
     }
 
     function clearUserCameraControl() {
@@ -1335,6 +1359,24 @@
         clearTimeout(userCameraIdleTimer);
         userCameraIdleTimer = null;
       }
+    }
+
+    function bindMapExploreDuringPlayback() {
+      const container = map.getCanvasContainer?.() || map.getContainer?.();
+      if (!container) return;
+      const armExplore = (e) => {
+        if (!isPlaying || isRecording) return;
+        if (e.type === 'wheel' && Math.abs(e.deltaY) < 0.5) return;
+        noteUserCameraInteraction();
+      };
+      container.addEventListener('touchstart', armExplore, { passive: true });
+      container.addEventListener('mousedown', armExplore);
+      container.addEventListener('wheel', armExplore, { passive: true });
+      ['moveend', 'zoomend', 'rotateend', 'pitchend'].forEach((ev) => {
+        map.on(ev, () => {
+          if (userCameraControl && !isRecording) resetUserCameraIdleTimer();
+        });
+      });
     }
 
     function applyPlaybackCamera(state, force = false) {
@@ -1604,7 +1646,7 @@
       // Map-first on trip focus; restore panel when returning to atlas.
       if (isMobileLayout()) {
         setPanelCollapsed(false);
-        setSheetState('half');
+        setSheetState(id === 'all' ? 'peek' : 'half');
       } else {
         setPanelCollapsed(id !== 'all');
       }
@@ -1644,6 +1686,11 @@
     }
 
     document.getElementById('trip-list').addEventListener('click', e=>{
+      const destBtn = e.target.closest('.dest-group-label');
+      if (destBtn?.dataset.dest) {
+        selectDestGroup(destBtn.dataset.dest);
+        return;
+      }
       const item=e.target.closest('.trip-item'); if(item) selectTrip(item.dataset.id);
     });
     document.getElementById('trip-list').addEventListener('mouseover', e=>{
@@ -1688,7 +1735,7 @@
       if (isMobileLayout()) {
         if (sb.classList.contains('collapsed')) {
           sb.classList.remove('collapsed');
-          setSheetState('half');
+          setSheetState(selectedId === 'all' ? 'peek' : 'half');
         } else {
           sb.classList.add('collapsed');
         }

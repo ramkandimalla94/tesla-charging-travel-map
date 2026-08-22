@@ -225,10 +225,26 @@
     }
 
     .dest-group-label {
+      appearance: none;
+      width: 100%;
+      border: none;
+      background: rgba(255, 248, 235, 0.03);
+      border-radius: 10px;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+      text-align: left;
       font-size: 10px; font-weight: 700; color: var(--text);
       letter-spacing: 0.04em; padding: 10px 8px 4px;
       display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+      transition: background 0.2s, transform 0.15s;
     }
+    .dest-group-label:hover,
+    .dest-group-label:focus-visible {
+      background: rgba(126, 200, 163, 0.1);
+      outline: none;
+    }
+    .dest-group-label:active { transform: scale(0.99); }
     .dest-group-label .meta { font-size: 9px; color: var(--muted); font-weight: 600; }
     .trip-item.nested { margin-left: 8px; padding: 9px 10px; }
     .trip-item.nested .trip-name { font-size: 11px; }
@@ -334,6 +350,60 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .atlas-cta-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    /* Mobile quick-pick destination chips (map-first atlas) */
+    .mobile-dest-rail {
+      display: none;
+      position: absolute;
+      left: max(8px, var(--safe-left));
+      right: max(8px, var(--safe-right));
+      bottom: calc(var(--mobile-chrome-h) + var(--safe-bottom) + 8px);
+      z-index: 11;
+      gap: 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding: 2px 2px 4px;
+      scrollbar-width: none;
+      pointer-events: auto;
+    }
+    .mobile-dest-rail::-webkit-scrollbar { display: none; }
+    .mobile-dest-rail[hidden] { display: none !important; }
+    .mobile-dest-chip {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(214, 196, 160, 0.18);
+      background: rgba(14, 22, 19, 0.88);
+      backdrop-filter: blur(16px) saturate(1.15);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+      transition: transform 0.15s, border-color 0.2s, background 0.2s;
+    }
+    .mobile-dest-chip .chip-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--chip-color, var(--accent));
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--chip-color, var(--accent)) 35%, transparent);
+    }
+    .mobile-dest-chip .chip-count {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      padding: 2px 6px;
+    }
+    .mobile-dest-chip:hover,
+    .mobile-dest-chip:focus-visible {
+      border-color: color-mix(in srgb, var(--chip-color, var(--accent)) 55%, transparent);
+      background: rgba(126, 200, 163, 0.12);
+      outline: none;
+    }
+    .mobile-dest-chip:active { transform: scale(0.97); }
 
     .photo-hover {
       position: fixed; z-index: 30; pointer-events: none;

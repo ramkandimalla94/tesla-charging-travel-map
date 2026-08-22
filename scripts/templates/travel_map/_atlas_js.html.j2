@@ -57,6 +57,7 @@
       const epic = featuredTrip();
       if (!epic || selectedId !== 'all') {
         btn.classList.remove('visible');
+        renderMobileDestRail();
         return;
       }
       document.getElementById('atlas-cta-swatch').style.background = epic.color;
@@ -67,6 +68,56 @@
         `${epic.miles.toLocaleString()} mi · ${epic.stop_count} stops · Play after focus`;
       btn.classList.add('visible');
       btn.dataset.tripId = epic.id;
+      renderMobileDestRail();
+    }
+
+    function visibleDestTripIds(group) {
+      return (group.trip_ids || []).filter(id => {
+        const t = TRIPS.find(x => x.id === id);
+        return t && tripInEra(t);
+      });
+    }
+
+    function pickDestTrip(visibleIds) {
+      return visibleIds
+        .map(id => TRIPS.find(t => t.id === id))
+        .find(t => t?.featured) || TRIPS.find(t => visibleIds.includes(t.id));
+    }
+
+    function selectDestGroup(destName) {
+      const group = DEST_GROUPS.find(g => g.dest === destName);
+      if (!group) return;
+      const visibleIds = visibleDestTripIds(group);
+      const preferred = pickDestTrip(visibleIds);
+      if (preferred) selectTrip(preferred.id);
+    }
+
+    function renderMobileDestRail() {
+      const rail = document.getElementById('mobile-dest-rail');
+      if (!rail) return;
+      if (!isMobileLayout() || selectedId !== 'all') {
+        rail.innerHTML = '';
+        rail.hidden = true;
+        return;
+      }
+      const groups = (DEST_GROUPS || []).filter(g => visibleDestTripIds(g).length > 0);
+      if (!groups.length) {
+        rail.innerHTML = '';
+        rail.hidden = true;
+        return;
+      }
+      rail.hidden = false;
+      rail.innerHTML = groups.map(g => {
+        const count = visibleDestTripIds(g).length;
+        return `<button type="button" class="mobile-dest-chip" data-dest="${g.dest}" style="--chip-color:${g.color}">
+          <span class="chip-dot" aria-hidden="true"></span>
+          <span class="chip-name">${g.dest}</span>
+          <span class="chip-count">${count}</span>
+        </button>`;
+      }).join('');
+      rail.querySelectorAll('.mobile-dest-chip').forEach(btn => {
+        btn.addEventListener('click', () => selectDestGroup(btn.dataset.dest));
+      });
     }
 
     function stopMemoryReel() { /* removed: no auto-cycling memory reel */ }
