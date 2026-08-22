@@ -240,7 +240,28 @@
       if (!on) {
         document.body.classList.remove('journey-done');
         document.getElementById('cinema-title')?.classList.remove('visible');
+        setWatchControlsVisible(false);
       }
+    }
+
+    function setWatchControlsVisible(on) {
+      document.body.classList.toggle('watch-controls-visible', !!on);
+    }
+
+    function toggleWatchControls() {
+      if (!document.body.classList.contains('watching') || isRecording) return;
+      setWatchControlsVisible(!document.body.classList.contains('watch-controls-visible'));
+    }
+
+    function mobileAutoPlayTrip() {
+      if (!isMobileLayout() || selectedId === 'all') return;
+      setPanelCollapsed(true);
+      syncMobileChrome();
+      setWatchControlsVisible(false);
+      window.clearTimeout(mobileAutoPlayTrip._t);
+      mobileAutoPlayTrip._t = window.setTimeout(() => {
+        if (selectedId !== 'all' && !isPlaying) startPlayback(false);
+      }, 480);
     }
 
     function showWatchTitleCard(trip, phase, state) {

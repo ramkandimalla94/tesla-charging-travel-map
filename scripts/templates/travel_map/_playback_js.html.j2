@@ -61,7 +61,10 @@
       resetNavChase();
       if (!forRecording) clearUserCameraControl();
       setPanelCollapsed(true);
-      if (!forRecording) setWatching(true);
+      if (!forRecording) {
+        setWatching(true);
+        setWatchControlsVisible(false);
+      }
       setPlaybackVisuals(true);
       ui('transport-dock')?.classList.remove('idle');
       updateQueueBadge();

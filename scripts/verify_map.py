@@ -654,14 +654,15 @@ def main() -> int:
               })(),
               navCtrlLive: (() => {
                 document.body.classList.add('watching');
+                if (typeof setWatchControlsVisible === 'function') setWatchControlsVisible(true);
                 const el = document.querySelector('.mapboxgl-ctrl-group');
                 if (!el) {
-                  document.body.classList.remove('watching');
+                  document.body.classList.remove('watching', 'watch-controls-visible');
                   return false;
                 }
                 const s = getComputedStyle(el);
                 const ok = s.pointerEvents !== 'none' && parseFloat(s.opacity || '0') > 0.2;
-                document.body.classList.remove('watching');
+                document.body.classList.remove('watching', 'watch-controls-visible');
                 return ok;
               })(),
               userExploreOk: (() => {
@@ -686,24 +687,27 @@ def main() -> int:
                 return armed && stayed && !userCameraControl;
               })(),
               userExploreTouchOk: (() => {
-                if (typeof bindMapExploreDuringPlayback !== 'function') return true;
-                if (typeof clearUserCameraControl !== 'function') return false;
+                if (typeof noteUserCameraInteraction !== 'function') return false;
                 const wasPlaying = !!isPlaying;
                 isPlaying = true;
-                document.body.classList.add('watching');
                 clearUserCameraControl();
-                const container = map.getCanvasContainer?.() || map.getContainer?.();
-                if (!container) {
-                  isPlaying = wasPlaying;
-                  document.body.classList.remove('watching');
-                  return false;
-                }
-                container.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [] }));
-                const armed = !!userCameraControl;
+                const tapOk = !userCameraControl;
+                noteUserCameraInteraction();
+                const dragOk = !!userCameraControl;
                 clearUserCameraControl();
                 isPlaying = wasPlaying;
-                document.body.classList.remove('watching');
-                return armed;
+                return tapOk && dragOk;
+              })(),
+              watchControlsToggleOk: (() => {
+                if (typeof toggleWatchControls !== 'function') return false;
+                document.body.classList.add('watching');
+                setWatchControlsVisible(false);
+                toggleWatchControls();
+                const on = document.body.classList.contains('watch-controls-visible');
+                toggleWatchControls();
+                const off = !document.body.classList.contains('watch-controls-visible');
+                document.body.classList.remove('watching', 'watch-controls-visible');
+                return on && off;
               })(),
             })"""
         )
@@ -810,11 +814,15 @@ def main() -> int:
         print(f"Mobile 390x844: {mobile}")
         page.screenshot(path=str(SCREENSHOTS / "08-mobile-sheet.png"))
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
-        page.wait_for_timeout(400)
+        page.wait_for_timeout(900)
         mobile_pick = page.evaluate(
             """() => ({
               panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
               tripFocus: document.body.classList.contains('trip-focus'),
+              autoPlaying: !!isPlaying,
+              watching: document.body.classList.contains('watching'),
+              controlsHidden: document.body.classList.contains('watching')
+                && !document.body.classList.contains('watch-controls-visible'),
               activeItems: document.querySelectorAll('#trip-list .trip-item.active').length,
             })"""
         )
@@ -1121,7 +1129,10 @@ def main() -> int:
         print(f"FAIL: User map explore should pause chase camera: {dock_state}")
         ok = False
     if not dock_state.get("userExploreTouchOk"):
-        print(f"FAIL: Touch on map should arm explore mode before chase fights gesture: {dock_state}")
+        print(f"FAIL: Touch drag (not tap) should arm explore mode during play: {dock_state}")
+        ok = False
+    if not dock_state.get("watchControlsToggleOk"):
+        print(f"FAIL: Tap should toggle watch controls visibility: {dock_state}")
         ok = False
     if float(dock_state.get("speedMin") or 1) > 0.25 + 1e-9:
         print(f"FAIL: Speed range should allow 0.25×: {dock_state}")
@@ -1201,8 +1212,14 @@ def main() -> int:
     if not mobile.get("panelGrab"):
         print(f"FAIL: Mobile panel grab handle missing: {mobile}")
         ok = False
-    if mobile_pick.get("panelCollapsed") or not mobile_pick.get("tripFocus"):
-        print(f"FAIL: Mobile trip select should keep browse sheet open until play: {mobile_pick}")
+    if not mobile_pick.get("panelCollapsed") or not mobile_pick.get("tripFocus"):
+        print(f"FAIL: Mobile trip select should collapse sheet and focus trip: {mobile_pick}")
+        ok = False
+    if not mobile_pick.get("autoPlaying"):
+        print(f"FAIL: Mobile trip select should auto-start playback: {mobile_pick}")
+        ok = False
+    if not mobile_pick.get("controlsHidden"):
+        print(f"FAIL: Mobile playback should hide controls until tap: {mobile_pick}")
         ok = False
     if mobile.get("eraChips", 0) < 2:
         print(f"FAIL: Mobile era chips missing: {mobile}")
