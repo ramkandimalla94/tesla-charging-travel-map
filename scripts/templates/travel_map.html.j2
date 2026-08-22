@@ -102,7 +102,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
 
-  <aside class="trip-panel sheet-half" id="sidebar">
+  <aside class="trip-panel sheet-peek" id="sidebar">
     <button type="button" class="panel-grab" id="panel-grab" aria-label="Resize journey list">
       <span class="panel-grab-bar" aria-hidden="true"></span>
       <span class="panel-grab-hint" id="panel-grab-hint">Swipe up for all journeys</span>
@@ -1604,7 +1604,7 @@
       // Map-first on trip focus; restore panel when returning to atlas.
       if (isMobileLayout()) {
         setPanelCollapsed(false);
-        setSheetState(selectedId === 'all' ? 'half' : 'half');
+        setSheetState(selectedId === 'all' ? 'peek' : 'half');
       } else {
         setPanelCollapsed(id !== 'all');
       }
@@ -1688,7 +1688,7 @@
       if (isMobileLayout()) {
         if (sb.classList.contains('collapsed')) {
           sb.classList.remove('collapsed');
-          setSheetState('half');
+          setSheetState('peek');
         } else {
           sb.classList.add('collapsed');
         }

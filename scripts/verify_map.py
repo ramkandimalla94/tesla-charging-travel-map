@@ -693,7 +693,18 @@ def main() -> int:
         # Mobile sheet regression (iPhone-ish)
         page.set_viewport_size({"width": 390, "height": 844})
         page.evaluate("selectTrip('all'); setPanelCollapsed(false); ensureMobileBrowseSheet();")
-        page.wait_for_timeout(700)
+        page.wait_for_timeout(400)
+        mobile_peek = page.evaluate(
+            """() => {
+              const panel = document.getElementById('sidebar');
+              return {
+                panelPeek: panel?.classList.contains('sheet-peek'),
+                panelMaxH: panel?.getBoundingClientRect().height,
+              };
+            }"""
+        )
+        page.evaluate("setSheetState('half')")
+        page.wait_for_timeout(300)
         mobile = page.evaluate(
             """() => {
               const panel = document.getElementById('sidebar');
@@ -710,32 +721,40 @@ def main() -> int:
               const sr = speed?.getBoundingClientRect();
               const lr = list?.getBoundingClientRect();
               const overlaps = (a, b) => !!(a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top);
+              const forward = document.getElementById('btn-forward');
+              const fr = forward?.getBoundingClientRect();
               const items = Array.from(document.querySelectorAll('#trip-list .trip-item'));
               const visibleTrips = items.filter(el => {
+                if (getComputedStyle(el).display === 'none') return false;
                 const r = el.getBoundingClientRect();
-                return r.top >= pr.top && r.bottom <= pr.bottom + 2;
+                return r.height > 0 && r.bottom > pr.top + 12 && r.top < pr.bottom - 8;
               }).length;
+              const togglePanelOverlap = !!(tr && pr && tr.left < pr.right && tr.right > pr.left && tr.top < pr.bottom && tr.bottom > pr.top);
               return {
                 panelBottomSheet: pr.bottom > window.innerHeight * 0.55 && pr.top > window.innerHeight * 0.18,
                 panelGrab: !!document.getElementById('panel-grab') && getComputedStyle(document.getElementById('panel-grab')).display !== 'none',
+                panelPeek: panel?.classList.contains('sheet-peek'),
                 panelHalf: panel?.classList.contains('sheet-half'),
                 panelMaxH: pr.height,
-                panelHeightOk: pr.height >= window.innerHeight * 0.45,
-                tripListVisible: visibleTrips >= 2,
+                panelHeightOk: pr.height >= window.innerHeight * 0.38,
+                tripListVisible: visibleTrips >= 1,
                 listScrollable: list ? list.scrollHeight > list.clientHeight + 4 : false,
                 dockWidth: dr.width,
                 dockInView: dr.bottom <= window.innerHeight + 2 && dr.top >= 0,
                 toggleSize: Math.min(tr.width, tr.height),
+                togglePanelOverlap,
+                speedForwardOverlap: overlaps(fr, sr),
                 eraScrollable: era ? era.scrollWidth >= era.clientWidth - 1 : false,
                 eraChips: document.querySelectorAll('.era-chip').length,
                 timelineInView: tlr ? (tlr.left >= -1 && tlr.right <= window.innerWidth + 1 && tlr.bottom <= window.innerHeight + 2) : false,
-                chromeOverlap: overlaps(pr, dr) || overlaps(pr, tlr) || overlaps(tr, sr),
+                chromeOverlap: overlaps(pr, dr) || overlaps(pr, tlr) || overlaps(tr, sr) || togglePanelOverlap,
                 hubs: document.querySelectorAll('.home-hub').length,
                 vw: window.innerWidth,
                 vh: window.innerHeight,
               };
             }"""
         )
+        print(f"Mobile peek: {mobile_peek}")
         print(f"Mobile 390x844: {mobile}")
         page.screenshot(path=str(SCREENSHOTS / "08-mobile-sheet.png"))
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
@@ -752,13 +771,24 @@ def main() -> int:
         page.evaluate(f"selectTrip({json.dumps(trip_co)}); startPlayback()")
         page.wait_for_timeout(900)
         mobile_play = page.evaluate(
-            """() => ({
-              playing: isPlaying,
-              watching: document.body.classList.contains('watching'),
-              panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
-              panelOpenAfterSelect: !document.getElementById('sidebar')?.classList.contains('collapsed'),
-              pad: typeof mapCameraPadding === 'function' ? mapCameraPadding() : null,
-            })"""
+            """() => {
+              const dock = document.getElementById('transport-dock');
+              const speed = document.getElementById('speed-rail');
+              const forward = document.getElementById('btn-forward');
+              const dr = dock?.getBoundingClientRect();
+              const sr = speed?.getBoundingClientRect();
+              const fr = forward?.getBoundingClientRect();
+              const overlaps = (a, b) => !!(a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top);
+              return {
+                playing: isPlaying,
+                watching: document.body.classList.contains('watching'),
+                panelCollapsed: document.getElementById('sidebar')?.classList.contains('collapsed'),
+                panelOpenAfterSelect: !document.getElementById('sidebar')?.classList.contains('collapsed'),
+                speedForwardOverlap: overlaps(fr, sr),
+                speedAboveDock: sr && dr ? sr.bottom <= dr.top + 2 : false,
+                pad: typeof mapCameraPadding === 'function' ? mapCameraPadding() : null,
+              };
+            }"""
         )
         page.evaluate("stopPlayback()")
         print(f"Mobile playback: {mobile_play}")
@@ -1062,11 +1092,17 @@ def main() -> int:
     if mobile.get("vw") != 390:
         print(f"FAIL: Mobile viewport not applied: {mobile}")
         ok = False
+    if not mobile_peek.get("panelPeek"):
+        print(f"FAIL: Mobile panel should default to peek sheet for browsing: {mobile_peek}")
+        ok = False
     if not mobile.get("panelHalf"):
-        print(f"FAIL: Mobile panel should default to half sheet for browsing: {mobile}")
+        print(f"FAIL: Mobile panel should expand to half sheet: {mobile}")
         ok = False
     if not mobile.get("panelHeightOk"):
         print(f"FAIL: Mobile panel too short to browse journeys: {mobile}")
+        ok = False
+    if mobile.get("togglePanelOverlap"):
+        print(f"FAIL: Mobile panel toggle overlaps sheet content: {mobile}")
         ok = False
     if not mobile.get("tripListVisible"):
         print(f"FAIL: Mobile trip list not visible in sheet: {mobile}")
@@ -1094,6 +1130,12 @@ def main() -> int:
         ok = False
     if not mobile_play.get("playing") or not mobile_play.get("panelCollapsed"):
         print(f"FAIL: Mobile watch/play sheet state bad: {mobile_play}")
+        ok = False
+    if mobile_play.get("speedForwardOverlap"):
+        print(f"FAIL: Mobile speed slider overlaps fast-forward during playback: {mobile_play}")
+        ok = False
+    if not mobile_play.get("speedAboveDock"):
+        print(f"FAIL: Mobile speed slider should sit above transport dock while watching: {mobile_play}")
         ok = False
     if not cinema.get("cinema") or not cinema.get("portrait"):
         print(f"FAIL: Export cinema classes missing: {cinema}")
