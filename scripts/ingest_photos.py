@@ -176,7 +176,13 @@ def iter_album_images(photos_root: Path) -> list[tuple[str, Path]]:
     return found
 
 
-def ingest(photos_root: Path, thumbs_root: Path, index_path: Path) -> dict:
+def ingest(
+    photos_root: Path,
+    thumbs_root: Path,
+    index_path: Path,
+    *,
+    skip_thumbs: bool = False,
+) -> dict:
     _register_heif()
     photos: list[dict] = []
     skipped_no_gps = 0
@@ -193,9 +199,10 @@ def ingest(photos_root: Path, thumbs_root: Path, index_path: Path) -> dict:
                 lat, lng = coords
                 captured_at = extract_datetime(exif, path)
                 pid = photo_id(album, path)
-                thumb_rel = f"photos/thumbs/{album}/{pid}.jpg"
-                thumb_abs = thumbs_root / album / f"{pid}.jpg"
-                write_thumb(img, thumb_abs)
+                thumb_rel = ""
+                if not skip_thumbs:
+                    thumb_rel = f"photos/thumbs/{album}/{pid}.jpg"
+                    write_thumb(img, thumbs_root / album / f"{pid}.jpg")
                 photos.append({
                     "id": pid,
                     "album": album,
@@ -232,15 +239,28 @@ def main() -> None:
         default=PHOTOS_DIR,
         help="Root folder containing album subfolders (default: data/photos)",
     )
+    parser.add_argument(
+        "--skip-thumbs",
+        action="store_true",
+        help="Extract GPS/time only; do not write output/photos/thumbs/",
+    )
     args = parser.parse_args()
     print(f"Scanning {args.photos_dir} …")
-    result = ingest(args.photos_dir, THUMBS_DIR, INDEX_FILE)
+    result = ingest(
+        args.photos_dir,
+        THUMBS_DIR,
+        INDEX_FILE,
+        skip_thumbs=args.skip_thumbs,
+    )
     print(
         f"Indexed {result['photo_count']} photos "
         f"(skipped no GPS: {result['skipped_no_gps']}, errors: {result['errors']})"
     )
     print(f"  Index: {INDEX_FILE}")
-    print(f"  Thumbs: {THUMBS_DIR}")
+    if not args.skip_thumbs:
+        print(f"  Thumbs: {THUMBS_DIR}")
+    else:
+        print("  Thumbs: skipped (--skip-thumbs)")
 
 
 if __name__ == "__main__":

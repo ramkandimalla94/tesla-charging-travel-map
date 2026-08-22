@@ -61,7 +61,7 @@ PHOTO_CLUSTER_MI = 0.35
 PHOTO_CLUSTER_GAP_S = 8 * 60
 MEMORY_ROUTE_SNAP_MI = 45.0
 # Skip stray GPS that would yank the whole trip off-corridor (still show pins).
-MAX_PHOTO_ROUTE_MI = 45.0
+MAX_PHOTO_ROUTE_MI = 55.0  # Death Valley spur ~50mi off Dec 2025 corridor
 # Cinematic timeline — UI speed (default 1×) multiplies on top.
 # Targets sized so 1× feels like an easy passenger-seat pace (not rushed).
 PLAYBACK_TARGET_MIN_MS = 120_000
