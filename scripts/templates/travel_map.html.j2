@@ -177,11 +177,19 @@
     </div>
   </aside>
 
-  <!-- Play (bottom-center) — continuous speed lives in #speed-rail (bottom-right) -->
+  <!-- Play (bottom-center) — skip ±8s of viewing; speed lives in #speed-rail -->
   <div class="transport-dock" id="transport-dock">
-    <button class="icon-btn primary" id="btn-play" disabled title="Play (Space)" aria-label="Play">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
-    </button>
+    <div class="dock-transport" role="group" aria-label="Playback">
+      <button class="icon-btn skip" id="btn-rewind" disabled title="Rewind 8 seconds (←)" aria-label="Rewind 8 seconds">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.5 18V6l-8.5 6 8.5 6zm.5-6 8.5 6V6L12 12z"/></svg>
+      </button>
+      <button class="icon-btn primary" id="btn-play" disabled title="Play (Space)" aria-label="Play">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+      </button>
+      <button class="icon-btn skip" id="btn-forward" disabled title="Skip ahead 8 seconds (→)" aria-label="Skip ahead 8 seconds">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 18V6l8.5 6L4 18zm9 0V6l8.5 6-8.5 6z"/></svg>
+      </button>
+    </div>
     <div class="dock-sr" aria-hidden="true">
       <div id="prog-text">Select a trip to replay</div>
       <div id="scrub-fill"></div>
@@ -526,6 +534,8 @@
       updateAtlasCta();
       setMapLabelsVisible(true);
       document.getElementById('btn-play').disabled = true;
+      document.getElementById('btn-rewind') && (document.getElementById('btn-rewind').disabled = true);
+      document.getElementById('btn-forward') && (document.getElementById('btn-forward').disabled = true);
       document.getElementById('prog-text').textContent = 'Select a trip to play';
       introFlyover();
       setTimeout(() => {
@@ -1549,6 +1559,11 @@
       setMapLabelsVisible(!isSingleTrip());
       updateMapLegend(activeTrip());
       document.getElementById('btn-play').disabled = !isSingleTrip();
+      const skipOff = !isSingleTrip();
+      const rw = document.getElementById('btn-rewind');
+      const fw = document.getElementById('btn-forward');
+      if (rw) rw.disabled = skipOff;
+      if (fw) fw.disabled = skipOff;
       syncPlayToggle(false);
       updateDockIdle();
       updateAtlasCta();
@@ -1595,6 +1610,8 @@
       if (isPlaying) stopPlayback();
       else startPlayback();
     });
+    document.getElementById('btn-rewind')?.addEventListener('click', () => seekPlayback(-1));
+    document.getElementById('btn-forward')?.addEventListener('click', () => seekPlayback(1));
     document.getElementById('speed')?.addEventListener('input', e=>{
       setPlaybackSpeed(parseFloat(e.target.value));
     });
@@ -1633,6 +1650,8 @@
       if (e.code==='Space') { e.preventDefault(); isPlaying?stopPlayback():startPlayback(); }
       if (e.key === '[' || e.code === 'BracketLeft') { e.preventDefault(); nudgeSpeed(-1); }
       if (e.key === ']' || e.code === 'BracketRight') { e.preventDefault(); nudgeSpeed(1); }
+      if (e.code === 'ArrowLeft') { e.preventDefault(); seekPlayback(-1); }
+      if (e.code === 'ArrowRight') { e.preventDefault(); seekPlayback(1); }
     });
 
     document.getElementById('onboard-featured').addEventListener('click', startWithFeatured);

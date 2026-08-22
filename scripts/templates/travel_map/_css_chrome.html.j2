@@ -466,6 +466,18 @@
     }
     .transport-dock.idle { opacity: 0.78; transform: translateX(-50%) translateY(2px); }
     body.watching .transport-dock { bottom: 22px; }
+    .dock-transport {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .icon-btn.skip {
+      width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 50%;
+      background: rgba(18, 22, 28, 0.62); border: 1px solid rgba(255,255,255,0.22);
+      color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      backdrop-filter: blur(12px);
+    }
+    .icon-btn.skip svg { width: 18px; height: 18px; }
+    .icon-btn.skip:hover { background: rgba(18, 22, 28, 0.82); border-color: rgba(255,255,255,0.38); }
+    .icon-btn.skip:disabled { opacity: 0.28; }
     .speed-rail {
       position: absolute; z-index: 17;
       right: 18px; bottom: calc(var(--timeline-h) + 18px);
