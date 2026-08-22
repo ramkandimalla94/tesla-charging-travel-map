@@ -384,6 +384,14 @@
           ]
         }
       ]
+    },
+    {
+      "match": {
+        "start_prefix": "2025-12-11",
+        "id_contains": "Bellevue_to_Bellevue"
+      },
+      "photo_end_pad_hours": 72,
+      "note": "Dec 30–Jan 1 Seattle/Bellevue photos after final home charge still belong on this trip."
     }
   ]
 }

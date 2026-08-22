@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 TRIPS_FILE = ROOT / "data" / "trips.json"
 PHOTOS_INDEX = ROOT / "data" / "photos_index.json"
 OUT_FILE = ROOT / "data" / "trip_photos.json"
+OWNER_CONFIG = ROOT / "data" / "owner_config.json"
 
 # Pad trip windows so trailhead / evening photos still attach
 PAD_HOURS = 18
@@ -39,7 +40,10 @@ def assign_photos_to_trips(
     trips: list[dict],
     photos: list[dict],
     pad_hours: float = PAD_HOURS,
+    owner_cfg: dict | None = None,
 ) -> dict[str, list[dict]]:
+    from home_config import matching_trip_override
+
     pad = timedelta(hours=pad_hours)
     windows: list[tuple[str, datetime, datetime]] = []
     for trip in trips:
@@ -49,7 +53,12 @@ def assign_photos_to_trips(
             continue
         if end < start:
             start, end = end, start
-        windows.append((trip["id"], start - pad, end + pad))
+        end_pad = pad
+        rule = matching_trip_override(trip, owner_cfg) if owner_cfg else {}
+        extra_end_h = float(rule.get("photo_end_pad_hours") or 0)
+        if extra_end_h > 0:
+            end_pad += timedelta(hours=extra_end_h)
+        windows.append((trip["id"], start - pad, end + end_pad))
 
     # Prefer the tightest matching window when trips overlap
     assigned: dict[str, list[dict]] = {tid: [] for tid, _, _ in windows}
@@ -110,10 +119,12 @@ def main() -> None:
 
     trips_data = load_json(TRIPS_FILE)
     photos_data = load_json(PHOTOS_INDEX)
+    owner_cfg = load_json(OWNER_CONFIG) if OWNER_CONFIG.exists() else {}
     payload = assign_photos_to_trips(
         trips_data.get("trips", []),
         photos_data.get("photos", []),
         pad_hours=args.pad_hours,
+        owner_cfg=owner_cfg,
     )
     OUT_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     trip_n = len(payload["trips"])
