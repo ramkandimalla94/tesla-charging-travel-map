@@ -690,21 +690,20 @@ def main() -> int:
         print(f"Play control: {dock_state}")
         queue_state = dock_state  # keep name for older assertion block compatibility below
 
-        # Mobile sheet regression (iPhone-ish)
+        # Mobile sheet regression (iPhone-ish) — default browse state, no forced sheet mode
         page.set_viewport_size({"width": 390, "height": 844})
         page.evaluate("selectTrip('all'); setPanelCollapsed(false); ensureMobileBrowseSheet();")
-        page.wait_for_timeout(400)
-        mobile_peek = page.evaluate(
+        page.wait_for_timeout(500)
+        mobile_default = page.evaluate(
             """() => {
               const panel = document.getElementById('sidebar');
               return {
+                panelHalf: panel?.classList.contains('sheet-half'),
                 panelPeek: panel?.classList.contains('sheet-peek'),
                 panelMaxH: panel?.getBoundingClientRect().height,
               };
             }"""
         )
-        page.evaluate("setSheetState('half')")
-        page.wait_for_timeout(300)
         mobile = page.evaluate(
             """() => {
               const panel = document.getElementById('sidebar');
@@ -730,6 +729,11 @@ def main() -> int:
                 return r.height > 0 && r.bottom > pr.top + 12 && r.top < pr.bottom - 8;
               }).length;
               const togglePanelOverlap = !!(tr && pr && tr.left < pr.right && tr.right > pr.left && tr.top < pr.bottom && tr.bottom > pr.top);
+              const scrollBefore = list?.scrollTop || 0;
+              if (list) list.scrollTop = list.scrollHeight;
+              const scrollAfter = list?.scrollTop || 0;
+              const lastItem = items[items.length - 1];
+              const lastR = lastItem?.getBoundingClientRect();
               return {
                 panelBottomSheet: pr.bottom > window.innerHeight * 0.55 && pr.top > window.innerHeight * 0.18,
                 panelGrab: !!document.getElementById('panel-grab') && getComputedStyle(document.getElementById('panel-grab')).display !== 'none',
@@ -737,8 +741,14 @@ def main() -> int:
                 panelHalf: panel?.classList.contains('sheet-half'),
                 panelMaxH: pr.height,
                 panelHeightOk: pr.height >= window.innerHeight * 0.38,
+                listClientH: list?.clientHeight || 0,
                 tripListVisible: visibleTrips >= 1,
                 listScrollable: list ? list.scrollHeight > list.clientHeight + 4 : false,
+                listScrollWorked: scrollAfter > scrollBefore + 20,
+                lastTripReachable: !!(lastR && lr && lastR.top >= lr.top && lastR.bottom <= lr.bottom + 2),
+                dockTimelineOverlap: overlaps(dr, tlr),
+                dockTimelineGap: tlr && dr ? tlr.top - dr.bottom : null,
+                speedHiddenOnAtlas: speed ? getComputedStyle(speed).display === 'none' : true,
                 dockWidth: dr.width,
                 dockInView: dr.bottom <= window.innerHeight + 2 && dr.top >= 0,
                 toggleSize: Math.min(tr.width, tr.height),
@@ -747,14 +757,15 @@ def main() -> int:
                 eraScrollable: era ? era.scrollWidth >= era.clientWidth - 1 : false,
                 eraChips: document.querySelectorAll('.era-chip').length,
                 timelineInView: tlr ? (tlr.left >= -1 && tlr.right <= window.innerWidth + 1 && tlr.bottom <= window.innerHeight + 2) : false,
-                chromeOverlap: overlaps(pr, dr) || overlaps(pr, tlr) || overlaps(tr, sr) || togglePanelOverlap,
+                chromeOverlap: overlaps(pr, dr) || overlaps(pr, tlr) || overlaps(pr, sr) || togglePanelOverlap,
+                mobileChromeH: getComputedStyle(document.documentElement).getPropertyValue('--mobile-chrome-h').trim(),
                 hubs: document.querySelectorAll('.home-hub').length,
                 vw: window.innerWidth,
                 vh: window.innerHeight,
               };
             }"""
         )
-        print(f"Mobile peek: {mobile_peek}")
+        print(f"Mobile default: {mobile_default}")
         print(f"Mobile 390x844: {mobile}")
         page.screenshot(path=str(SCREENSHOTS / "08-mobile-sheet.png"))
         page.evaluate(f"selectTrip({json.dumps(trip_co)})")
@@ -1092,11 +1103,11 @@ def main() -> int:
     if mobile.get("vw") != 390:
         print(f"FAIL: Mobile viewport not applied: {mobile}")
         ok = False
-    if not mobile_peek.get("panelPeek"):
-        print(f"FAIL: Mobile panel should default to peek sheet for browsing: {mobile_peek}")
+    if not mobile_default.get("panelHalf"):
+        print(f"FAIL: Mobile panel should default to half sheet for browsing: {mobile_default}")
         ok = False
     if not mobile.get("panelHalf"):
-        print(f"FAIL: Mobile panel should expand to half sheet: {mobile}")
+        print(f"FAIL: Mobile panel should stay in half sheet for browsing: {mobile}")
         ok = False
     if not mobile.get("panelHeightOk"):
         print(f"FAIL: Mobile panel too short to browse journeys: {mobile}")
@@ -1106,6 +1117,21 @@ def main() -> int:
         ok = False
     if not mobile.get("tripListVisible"):
         print(f"FAIL: Mobile trip list not visible in sheet: {mobile}")
+        ok = False
+    if mobile.get("dockTimelineOverlap"):
+        print(f"FAIL: Mobile transport dock overlaps timeline: {mobile}")
+        ok = False
+    if mobile.get("listClientH", 0) < 120:
+        print(f"FAIL: Mobile trip list scroll area too small: {mobile}")
+        ok = False
+    if mobile.get("listScrollable") and not mobile.get("listScrollWorked"):
+        print(f"FAIL: Mobile trip list did not scroll: {mobile}")
+        ok = False
+    if mobile.get("listScrollable") and not mobile.get("lastTripReachable"):
+        print(f"FAIL: Mobile trip list cannot reach last journey: {mobile}")
+        ok = False
+    if not mobile.get("speedHiddenOnAtlas"):
+        print(f"FAIL: Speed rail should hide on atlas browse: {mobile}")
         ok = False
     if mobile.get("chromeOverlap"):
         print(f"FAIL: Mobile chrome overlaps (panel/dock/speed/timeline): {mobile}")

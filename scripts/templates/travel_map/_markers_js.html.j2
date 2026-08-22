@@ -75,21 +75,76 @@
       return (window.innerWidth || 0) <= 640;
     }
 
+    function measureMobileChrome() {
+      const root = document.documentElement;
+      if (!isMobileLayout()) {
+        root.style.removeProperty('--mobile-chrome-h');
+        root.style.removeProperty('--sheet-offset');
+        return;
+      }
+      const timeline = document.querySelector('.timeline-bar');
+      const dock = document.getElementById('transport-dock');
+      const speed = document.getElementById('speed-rail');
+      const gap = 10;
+      let stack = 8;
+      if (timeline) {
+        const tlStyle = getComputedStyle(timeline);
+        const tlVisible = parseFloat(tlStyle.opacity || '1') > 0.12 && tlStyle.pointerEvents !== 'none';
+        if (tlVisible) {
+          const tlH = Math.ceil(timeline.getBoundingClientRect().height);
+          if (tlH > 0) root.style.setProperty('--timeline-h', tlH + 'px');
+          stack += tlH + gap;
+        }
+      }
+      if (dock) {
+        const dockStyle = getComputedStyle(dock);
+        if (parseFloat(dockStyle.opacity || '1') > 0.12) {
+          const dockH = Math.ceil(dock.getBoundingClientRect().height);
+          if (dockH > 0) stack += dockH + gap;
+        }
+      }
+      if (speed) {
+        const speedStyle = getComputedStyle(speed);
+        const speedVisible = speedStyle.display !== 'none' && parseFloat(speedStyle.opacity || '1') > 0.12;
+        if (speedVisible) {
+          const speedH = Math.ceil(speed.getBoundingClientRect().height);
+          if (speedH > 0) stack += speedH + gap;
+        }
+      }
+      root.style.setProperty('--mobile-chrome-h', Math.max(Math.ceil(stack), 160) + 'px');
+    }
+
+    function scheduleMobileChromeMeasure() {
+      if (!isMobileLayout()) return;
+      requestAnimationFrame(() => requestAnimationFrame(measureMobileChrome));
+    }
+
     function syncMobileChrome() {
       const sb = document.getElementById('sidebar');
       if (!isMobileLayout()) {
         document.body.classList.remove('mobile-sheet-open', 'mobile-sheet-full');
+        document.documentElement.style.removeProperty('--mobile-chrome-h');
+        document.documentElement.style.removeProperty('--sheet-offset');
         return;
       }
       const open = sb && !sb.classList.contains('collapsed');
       document.body.classList.toggle('mobile-sheet-open', !!open);
       document.body.classList.toggle('mobile-sheet-full', !!(open && sb.classList.contains('sheet-full')));
+      if (open && sb) {
+        document.documentElement.style.setProperty(
+          '--sheet-offset',
+          Math.ceil(sb.getBoundingClientRect().height + 10) + 'px'
+        );
+      } else {
+        document.documentElement.style.removeProperty('--sheet-offset');
+      }
       const hint = document.getElementById('panel-grab-hint');
       if (hint && open) {
         if (sb.classList.contains('sheet-full')) hint.textContent = 'Swipe down to see the map';
         else if (sb.classList.contains('sheet-peek')) hint.textContent = 'Swipe up for all journeys';
-        else hint.textContent = selectedId === 'all' ? 'Pick a journey · tap bar to expand' : 'Tap bar to expand list';
+        else hint.textContent = selectedId === 'all' ? 'Swipe up for full list · tap bar to resize' : 'Tap bar to expand list';
       }
+      scheduleMobileChromeMeasure();
     }
 
     function setSheetState(state) {
@@ -107,7 +162,7 @@
       if (!sb.classList.contains('sheet-peek')
         && !sb.classList.contains('sheet-half')
         && !sb.classList.contains('sheet-full')) {
-        setSheetState('peek');
+        setSheetState('half');
       }
       syncMobileChrome();
     }
