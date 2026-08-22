@@ -81,6 +81,14 @@
     let browseDest = null;
     let preserveDestBrowse = false;
 
+    function updateDestBrowseListVisibility() {
+      const accordion = !!browseDest && isMobileLayout() && selectedId === 'all';
+      document.body.classList.toggle('dest-browse', accordion);
+      document.querySelectorAll('.trip-item.nested').forEach(el => {
+        el.classList.toggle('dest-browse-visible', accordion && el.dataset.destGroup === browseDest);
+      });
+    }
+
     function highlightDestBrowse(group) {
       if (!group) return;
       const visibleIds = visibleDestTripIds(group);
@@ -98,6 +106,7 @@
       document.querySelectorAll('.dest-group-label').forEach(el => {
         el.classList.toggle('active', el.dataset.dest === group.dest);
       });
+      updateDestBrowseListVisibility();
       drawAtlasSpokes();
     }
 
@@ -105,11 +114,12 @@
       browseDest = null;
       document.querySelectorAll('.dest-group-label').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.mobile-dest-chip').forEach(el => el.classList.remove('active'));
+      updateDestBrowseListVisibility();
     }
 
     function scrollToDestGroup(destName) {
       const btn = document.querySelector(`.dest-group-label[data-dest="${CSS.escape(destName)}"]`);
-      if (btn) btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (btn) btn.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 
     function fitDestGroup(group, animate = true) {
@@ -147,7 +157,14 @@
         setSheetState('full');
       }
       highlightDestBrowse(group);
-      scrollToDestGroup(destName);
+      if (isMobileLayout()) {
+        // Wait for peek → full sheet layout before scrolling the trip list.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => scrollToDestGroup(destName));
+        });
+      } else {
+        scrollToDestGroup(destName);
+      }
       fitDestGroup(group);
       renderMobileDestRail();
     }

@@ -158,7 +158,7 @@
       {% for tid in group.trip_ids %}
         {% set trip = trips|selectattr('id', 'equalto', tid)|first %}
         {% if trip %}
-      <div class="trip-item nested{% if trip.featured %} featured{% endif %}" data-id="{{ trip.id }}" style="color:{{ trip.color }}">
+      <div class="trip-item nested{% if trip.featured %} featured{% endif %}" data-id="{{ trip.id }}" data-dest-group="{{ group.dest }}" style="color:{{ trip.color }}">
         <div class="trip-swatch" style="background:{{ trip.color }};color:{{ trip.color }}"></div>
         <div>
           <div class="trip-name">{{ trip.start }} · {{ trip.story_dest or trip.dest_label }}</div>
@@ -332,9 +332,10 @@
     let lastNavTs = 0;
     // When the viewer pans/zooms/rotates during play, pause chase-cam until idle.
     let userCameraControl = false;
+    let userCameraInteracting = false;
     let userCameraIdleTimer = null;
     let chaseResumeBlend = null;
-    const USER_CAMERA_RESUME_MS = 4500;
+    const USER_CAMERA_RESUME_MS = 2500;
     const CHASE_RESUME_BLEND_MS = 1200;
     const MAX_PITCH = 60;
     const NAV_LOOKAHEAD_KM = 0.7;        // course window ahead — kills vertex zig-zag
@@ -573,11 +574,6 @@
         map.touchZoomRotate.enable();
         map.touchPitch.enable();
       } catch (_) { /* older GL builds */ }
-      ['dragstart', 'zoomstart', 'rotatestart', 'pitchstart'].forEach((ev) => {
-        map.on(ev, (e) => {
-          if (e && e.originalEvent) noteUserCameraInteraction();
-        });
-      });
       bindMapExploreDuringPlayback();
       bindWatchControlsToggle();
       map.on('load', onMapLoad);
@@ -1385,6 +1381,7 @@
 
     function keepVehicleInViewDuringExplore(state) {
       if (!map || !state || state.lat == null || state.lng == null) return;
+      if (userCameraInteracting) return;
       if (state.phase !== 'travel' && state.phase !== 'dwell') return;
       const canvas = map.getCanvas();
       const w = canvas.clientWidth;
@@ -1449,6 +1446,7 @@
 
     function clearUserCameraControl() {
       userCameraControl = false;
+      userCameraInteracting = false;
       chaseResumeBlend = null;
       if (userCameraIdleTimer) {
         clearTimeout(userCameraIdleTimer);
@@ -1459,26 +1457,56 @@
     function bindMapExploreDuringPlayback() {
       const container = map.getCanvasContainer?.() || map.getContainer?.();
       if (!container) return;
+      const EXPLORE_SLOP = 14;
       let exploreX = 0, exploreY = 0;
+
       const armExplore = (e) => {
         if (!isPlaying || isRecording) return;
-        if (e.type === 'wheel' && Math.abs(e.deltaY) < 0.5) return;
         noteUserCameraInteraction();
       };
+
+      const resetExplorePointer = (x, y) => {
+        exploreX = x;
+        exploreY = y;
+      };
+
+      const maybeArmFromMove = (x, y) => {
+        if (!isPlaying || isRecording || userCameraControl) return;
+        if (Math.hypot(x - exploreX, y - exploreY) > EXPLORE_SLOP) armExplore();
+      };
+
       container.addEventListener('touchstart', (e) => {
-        exploreX = e.touches[0]?.clientX || 0;
-        exploreY = e.touches[0]?.clientY || 0;
+        if (e.touches.length >= 2 && isPlaying && !isRecording) armExplore();
+        resetExplorePointer(e.touches[0]?.clientX || 0, e.touches[0]?.clientY || 0);
       }, { passive: true });
       container.addEventListener('touchmove', (e) => {
-        if (!isPlaying || isRecording || userCameraControl) return;
         const t = e.touches[0];
         if (!t) return;
-        if (Math.hypot(t.clientX - exploreX, t.clientY - exploreY) > 8) armExplore(e);
+        maybeArmFromMove(t.clientX, t.clientY);
       }, { passive: true });
-      container.addEventListener('mousedown', armExplore);
-      container.addEventListener('wheel', armExplore, { passive: true });
+
+      container.addEventListener('mousedown', (e) => {
+        resetExplorePointer(e.clientX, e.clientY);
+      });
+      container.addEventListener('mousemove', (e) => {
+        if ((e.buttons & 1) === 0) return;
+        maybeArmFromMove(e.clientX, e.clientY);
+      });
+
+      container.addEventListener('wheel', (e) => {
+        if (!isPlaying || isRecording) return;
+        if (Math.abs(e.deltaY) < 0.5) return;
+        armExplore();
+      }, { passive: true });
+
+      ['dragstart', 'zoomstart', 'rotatestart', 'pitchstart'].forEach((ev) => {
+        map.on(ev, (e) => {
+          if (e?.originalEvent) userCameraInteracting = true;
+        });
+      });
       ['moveend', 'zoomend', 'rotateend', 'pitchend'].forEach((ev) => {
         map.on(ev, () => {
+          userCameraInteracting = false;
           if (userCameraControl && !isRecording) resetUserCameraIdleTimer();
         });
       });
