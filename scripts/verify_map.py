@@ -578,6 +578,25 @@ def main() -> int:
             """() => ({
               play: !!document.getElementById('btn-play'),
               pauseGone: !document.getElementById('btn-pause'),
+              rewind: !!document.getElementById('btn-rewind'),
+              forward: !!document.getElementById('btn-forward'),
+              seekFn: typeof seekPlayback === 'function',
+              rewindWorks: (() => {
+                if (typeof seekPlayback !== 'function' || typeof positionAtTime !== 'function') return false;
+                const pb = (typeof activePlayback === 'function') ? activePlayback() : null;
+                if (!pb?.total_video_ms) return false;
+                const wasPlaying = !!isPlaying;
+                isPlaying = false;
+                animTimeMs = Math.min(pb.total_video_ms * 0.4, 12_000);
+                const before = animTimeMs;
+                seekPlayback(-1);
+                const after = animTimeMs;
+                const dropped = after < before - 500;
+                seekPlayback(1);
+                const restored = animTimeMs > after + 500;
+                isPlaying = wasPlaying;
+                return dropped && restored;
+              })(),
               toggleWorks: typeof syncPlayToggle === 'function',
               speed: !!document.getElementById('speed'),
               speedPills: document.querySelectorAll('.speed-pill').length,
@@ -957,6 +976,12 @@ def main() -> int:
             ok = False
     if not dock_state.get("play") or not dock_state.get("pauseGone") or not dock_state.get("speed"):
         print(f"FAIL: Play control missing: {dock_state}")
+        ok = False
+    if not dock_state.get("rewind") or not dock_state.get("forward") or not dock_state.get("seekFn"):
+        print(f"FAIL: Rewind / skip-ahead controls missing: {dock_state}")
+        ok = False
+    if not dock_state.get("rewindWorks"):
+        print(f"FAIL: Seek should move the playhead back and forward: {dock_state}")
         ok = False
     if not dock_state.get("dockBoxGone"):
         print(f"FAIL: Transport should be play-only (no dark dock box): {dock_state}")

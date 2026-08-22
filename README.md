@@ -25,7 +25,7 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **3D satellite map** with Mapbox terrain and elevated route lines
 - **Watch mode** — Play hides chrome for a passenger-seat replay; pan, pinch-zoom, scroll, and the zoom controls stay available so you can look around while the path keeps moving
 - **Steady journey playback** — distance-paced travel along chargers and photo GPS; smart zoom when you linger in a small area; photo memories linger ~5s on screen (default **1×** = former easy 0.5× pace; continuous **0.25×–4×** speed slider; `[` / `]` nudge by 0.25×)
-- **Separated play + speed** — play/pause stays bottom-center; continuous speed rail sits bottom-right so captions and Journey Complete never cover controls
+- **Separated play + speed** — play/pause stays bottom-center with rewind / skip-ahead (±8s, `←` / `→`); continuous speed rail sits bottom-right so captions and Journey Complete never cover controls
 - **Live trip clock** — large HUD date/time tracks the playhead in the trip’s local timezone; memory captions use the same photo capture instant (not charger stop times). Day and night play at the same rate (no night skip / morning linger).
 - **Gradual day↔night** — map lighting ramps through twilight from the live clock (visual only; does not change playback speed)
 - **Navigation-style chase** — heading-up follow camera (Apple/Google Maps feel): look-ahead course, capped turn rate, car glued to the path; confined/slow stretches (Maroon Bells) zoom in, then pull back on the highway; end-of-trip pulls back to a north-up route recap. Dragging or pinching the map pauses chase briefly, then follow resumes after a short idle.
