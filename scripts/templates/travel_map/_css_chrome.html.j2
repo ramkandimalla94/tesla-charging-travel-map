@@ -245,6 +245,11 @@
       outline: none;
     }
     .dest-group-label:active { transform: scale(0.99); }
+    .dest-group-label.active {
+      border-color: rgba(214, 196, 160, 0.42);
+      background: rgba(255, 248, 235, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(214, 196, 160, 0.12);
+    }
     .dest-group-label .meta { font-size: 9px; color: var(--muted); font-weight: 600; }
     .trip-item.nested { margin-left: 8px; padding: 9px 10px; }
     .trip-item.nested .trip-name { font-size: 11px; }
@@ -420,6 +425,10 @@
       outline: none;
     }
     .mobile-dest-chip:active { transform: scale(0.97); }
+    .mobile-dest-chip.active {
+      border-color: color-mix(in srgb, var(--chip-color, var(--accent)) 55%, rgba(214, 196, 160, 0.2));
+      background: color-mix(in srgb, var(--chip-color, var(--accent)) 14%, rgba(255, 248, 235, 0.06));
+    }
 
     .photo-hover {
       position: fixed; z-index: 30; pointer-events: none;

@@ -669,6 +669,7 @@ def main() -> int:
                 if (typeof noteUserCameraInteraction !== 'function') return false;
                 if (typeof applyPlaybackCamera !== 'function') return false;
                 if (typeof clearUserCameraControl !== 'function') return false;
+                if (typeof keepVehicleInViewDuringExplore !== 'function') return false;
                 const wasPlaying = !!isPlaying;
                 isPlaying = true;
                 document.body.classList.add('watching');
@@ -678,13 +679,22 @@ def main() -> int:
                 // While exploring, non-forced chase must no-op
                 const z0 = map.getZoom();
                 map.jumpTo({ zoom: Math.max(2, z0 - 0.35) });
-                const warm = positionAtTime(Math.max(animTimeMs, 1500)) || { phase: 'travel', lat: 39, lng: -105, bearing: 0 };
+                animTimeMs = 1500;
+                const warm = positionAtTime(animTimeMs) || { phase: 'travel', lat: 39, lng: -105, bearing: 0 };
                 applyPlaybackCamera(warm, false);
                 const stayed = Math.abs(map.getZoom() - (z0 - 0.35)) < 0.2 || !!userCameraControl;
+                map.panBy([420, 0], { animate: false });
+                const off = { phase: 'travel', lat: Number(warm.lat), lng: Number(warm.lng), bearing: 0 };
+                if (!Number.isFinite(off.lat) || !Number.isFinite(off.lng)) return armed && stayed && !userCameraControl;
+                for (let i = 0; i < 8; i++) applyPlaybackCamera(off, false);
+                const pt = map.project([off.lng, off.lat]);
+                const w = map.getCanvas().clientWidth;
+                const h = map.getCanvas().clientHeight;
+                const vehicleFollow = pt.x >= 0 && pt.x <= w && pt.y >= 0 && pt.y <= h;
                 clearUserCameraControl();
                 isPlaying = wasPlaying;
                 document.body.classList.remove('watching');
-                return armed && stayed && !userCameraControl;
+                return armed && stayed && !userCameraControl && vehicleFollow;
               })(),
               userExploreTouchOk: (() => {
                 if (typeof noteUserCameraInteraction !== 'function') return false;
@@ -738,10 +748,18 @@ def main() -> int:
               selectTrip('all');
               setSheetState('peek');
               const chip = document.querySelector('.mobile-dest-chip');
-              if (!chip) return { hasChip: false, picked: false };
+              if (!chip) return { hasChip: false, browsed: false };
               const before = selectedId;
+              const dest = chip.dataset.dest;
               chip.click();
-              return { hasChip: true, picked: selectedId !== before && selectedId !== 'all', id: selectedId };
+              return {
+                hasChip: true,
+                browsed: selectedId === 'all' && selectedId === before,
+                browseDest: typeof browseDest !== 'undefined' ? browseDest : null,
+                dest,
+                sheetFull: document.getElementById('sidebar')?.classList.contains('sheet-full'),
+                chipActive: chip.classList.contains('active'),
+              };
             }"""
         )
         page.evaluate("selectTrip('all'); setSheetState('full');")
@@ -1167,8 +1185,11 @@ def main() -> int:
     if not mobile_default.get("destRailVisible"):
         print(f"FAIL: Mobile destination quick-pick rail missing: {mobile_default}")
         ok = False
-    if dest_chip_pick.get("hasChip") and not dest_chip_pick.get("picked"):
-        print(f"FAIL: Mobile destination chip did not select a trip: {dest_chip_pick}")
+    if dest_chip_pick.get("hasChip") and not dest_chip_pick.get("browsed"):
+        print(f"FAIL: Mobile destination chip should browse trips, not auto-select: {dest_chip_pick}")
+        ok = False
+    if dest_chip_pick.get("hasChip") and not dest_chip_pick.get("sheetFull"):
+        print(f"FAIL: Mobile destination chip should expand sheet to browse trips: {dest_chip_pick}")
         ok = False
     if not mobile.get("panelFull"):
         print(f"FAIL: Mobile panel should expand to full sheet for list scroll tests: {mobile}")

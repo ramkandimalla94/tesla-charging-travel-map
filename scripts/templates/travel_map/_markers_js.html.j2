@@ -22,10 +22,7 @@
         el.title = `${group.dest} · ${count} trip${count === 1 ? '' : 's'} · ${group.total_miles} mi`;
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          const preferred = visibleIds
-            .map(id => TRIPS.find(t => t.id === id))
-            .find(t => t?.featured) || TRIPS.find(t => t.id === visibleIds[0]);
-          if (preferred) selectTrip(preferred.id);
+          if (typeof browseDestGroup === 'function') browseDestGroup(group.dest);
         });
         el.addEventListener('mouseenter', () => {
           hoveredTripId = null;
