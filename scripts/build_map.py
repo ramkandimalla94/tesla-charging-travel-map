@@ -927,10 +927,18 @@ def build_route_path(
         segment = get_route_segment(
             a["lat"], a["lng"], b["lat"], b["lng"], cache, token, refresh, stats, profile
         )
-        # Always pin exact photo coordinates
+        # Always land exactly on the stop / photo GPS (Mapbox can drift slightly)
         if segment:
             segment = list(segment)
+            segment[0] = [a["lat"], a["lng"]]
             segment[-1] = [b["lat"], b["lng"]]
+        # Photo waypoints: force the vertex so EXIF pins sit on the drawn path
+        if b.get("is_photo") or b.get("kind") == "photo":
+            if not segment:
+                segment = [[a["lat"], a["lng"]], [b["lat"], b["lng"]]]
+            else:
+                segment = list(segment)
+                segment[-1] = [float(b["lat"]), float(b["lng"])]
         if profile == "walking":
             memory_spurs.append({
                 "from": [a["lat"], a["lng"]],
@@ -1819,6 +1827,24 @@ def validate_output(trips: list[dict]) -> None:
                 v = a.get(key)
                 if v is None or (key.endswith("Lat") and abs(v) > 90):
                     issues.append(f"Bad arc endpoint: {t['id']} {key}={v}")
+        # Path must visit exact photo EXIF — never leave hike pins orphaned off-route
+        photos = t.get("photos") or []
+        path = t.get("route_path") or []
+        if photos and path:
+            for p in photos:
+                if not is_valid_coord(p.get("lat"), p.get("lng")):
+                    continue
+                # Sample path densely near photo (full scan for album-sized sets)
+                best = min(
+                    haversine_miles(p["lat"], p["lng"], pt[0], pt[1])
+                    for pt in path
+                )
+                if best > 1.25:
+                    issues.append(
+                        f"Path misses photo EXIF on {t['id']}: "
+                        f"{p.get('id') or p.get('album')} is {best:.1f}mi from route "
+                        f"(expected path through exact shot)"
+                    )
     co_trip = next((t for t in trips if t.get("has_colorado")), None)
     if co_trip:
         co_stops = [s for s in co_trip["stops"] if s.get("in_colorado")]
@@ -1830,8 +1856,11 @@ def validate_output(trips: list[dict]) -> None:
                     issues.append(f"CO stop outside bounds: {s['location']} ({s['lat']},{s['lng']})")
     if issues:
         print("Validation warnings:")
-        for i in issues[:10]:
+        for i in issues[:20]:
             print(f"  ⚠ {i}")
+        hard = [i for i in issues if i.startswith("Path misses photo")]
+        if hard:
+            raise SystemExit(f"Validation failed: {len(hard)} photo(s) not on routed path")
     else:
         print(f"Validation OK — {len(trips)} trips, CO trip: {co_trip['name'] if co_trip else 'none'}")
 

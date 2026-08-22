@@ -383,14 +383,16 @@
       max-height: min(38vh, 360px);
     }
     /*
-      CRITICAL: never put transform / transition:transform on the Mapbox marker
-      root (.photo-pin). Mapbox owns that node's transform for geographic placement;
-      CSS transform fights cause pins to lag into vertical stacks off-route.
+      CRITICAL: the Mapbox marker root is .photo-pin.mapboxgl-marker.
+      Never set position:relative or transform on it — Mapbox needs
+      position:absolute + its own transform for geographic placement.
+      Visual chrome lives on .photo-pin-inner / .photo-pin-face only.
     */
-    .photo-pin {
+    .photo-pin.mapboxgl-marker {
       width: 30px; height: 30px;
       background: transparent; border: none; box-shadow: none;
-      cursor: pointer; position: relative;
+      cursor: pointer;
+      position: absolute !important;
       transition: none !important;
     }
     .photo-pin-inner {
