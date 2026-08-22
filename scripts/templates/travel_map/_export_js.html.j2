@@ -135,14 +135,16 @@
       const story = trip.story || {};
       if (phase === 'outro') {
         document.getElementById('cinema-title-text').textContent = 'Journey Complete';
+        fillCinemaStats(trip);
         document.getElementById('cinema-subtitle').textContent =
-          `${trip.miles.toLocaleString()} mi · ${trip.stop_count} stops · ${trip.duration_days} days`;
+          tripPathStats(trip).line;
         document.getElementById('cinema-highlights').innerHTML = '';
         title.classList.add('outro');
       } else {
         document.getElementById('cinema-title-text').textContent = trip.name;
+        fillCinemaStats(trip);
         document.getElementById('cinema-subtitle').textContent =
-          `${trip.miles.toLocaleString()} mi · ${trip.stop_count} places · ${trip.duration_days} days`;
+          tripPathStats(trip).line;
         const hlEl = document.getElementById('cinema-highlights');
         hlEl.innerHTML = (story.highlights || []).slice(0, 4).map(h => `<span>${h}</span>`).join('');
         title.classList.remove('outro');
@@ -157,6 +159,7 @@
       if (!title) return;
       title.classList.remove('visible', 'outro');
       document.getElementById('cinema-highlights').innerHTML = '';
+      fillCinemaStats(null);
     }
 
     function paintExportComposite(state) {
@@ -282,7 +285,7 @@
             ctx.font = `400 ${Math.round(16 * scale)}px system-ui,sans-serif`;
             ctx.fillStyle = 'rgba(220,230,224,0.9)';
             ctx.fillText(
-              `${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} places · ${trip.duration_days}d`,
+              `${Number(trip.miles || 0).toLocaleString()} miles · ${trip.duration_days} day${trip.duration_days === 1 ? '' : 's'} · ${trip.stop_count} places`,
               w / 2, h * 0.42 + 40 * scale
             );
           }
@@ -316,7 +319,7 @@
           ctx.font = `400 ${Math.round(15 * scale)}px system-ui,sans-serif`;
           ctx.fillStyle = 'rgba(220,230,224,0.9)';
           ctx.fillText(
-            `${Number(trip.miles || 0).toLocaleString()} mi · ${trip.stop_count} places · ${trip.duration_days}d`,
+            `${Number(trip.miles || 0).toLocaleString()} miles · ${trip.duration_days} day${trip.duration_days === 1 ? '' : 's'} · ${trip.stop_count} places`,
             w / 2, yy + 8 * scale
           );
         }

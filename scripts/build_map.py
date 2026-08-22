@@ -37,7 +37,17 @@ LIVE_DEMO_URL = "https://ramkandimalla94.github.io/mymilediary/"
 
 POI_RADIUS_MILES = 40
 POI_MAX_PER_STOP = 3
-MIN_ROUTE_MILES = 0.3
+# Skip only GPS jitter. 0.3 mi used to skip real trail bends (Maroon Dam U-turn).
+MIN_ROUTE_MILES = 0.04
+# Snap photo/stop GPS onto a routed way only when already this close.
+# Longer gaps must walk a mapped trail/road — never a crow-fly chord.
+PIN_ENDPOINT_MI = 0.03
+ACCESS_STITCH_MI = 0.04
+ACCESS_MAX_MI = 8.0
+ACCESS_MAX_RATIO = 12.0
+ROUTE_CACHE_VER = "v3"
+SIMPLIFY_EPSILON_MI = 0.008  # ~13 m — keeps hairpins; even sampling did not
+SIMPLIFY_MAX_POINTS = 900
 ROUTE_FETCH_DELAY_S = 0.25
 WALK_SPUR_MILES = 18.0
 # Photo GPS becomes real route waypoints (hike spurs to Maroon Bells, etc.).
@@ -541,10 +551,6 @@ def leg_path_between_stops(
         path = get_route_segment(lat1, lng1, lat2, lng2, cache, token, refresh, stats, profile)
     else:
         path = extract_leg_path(lat1, lng1, lat2, lng2, cache, token, refresh, stats)
-    if path:
-        path = list(path)
-        path[0] = [lat1, lng1]
-        path[-1] = [lat2, lng2]
     return path
 
 
@@ -828,20 +834,222 @@ def elevated_arc_coords(
 
 
 def path_miles(path: list[list[float]]) -> float:
+    return round(polyline_miles(path))
+
+
+def polyline_miles(path: list[list[float]]) -> float:
     total = 0.0
     for i in range(1, len(path)):
         total += haversine_miles(path[i - 1][0], path[i - 1][1], path[i][0], path[i][1])
-    return round(total)
+    return total
 
 
-def simplify_path(path: list[list[float]], max_points: int = 160) -> list[list[float]]:
-    if len(path) <= max_points:
+def point_to_segment_miles(p: list[float], a: list[float], b: list[float]) -> float:
+    """Distance from p to segment a–b (local equirectangular)."""
+    lat0, lng0 = a[0], a[1]
+    lat1, lng1 = b[0], b[1]
+    coslat = math.cos(((lat0 + lat1) / 2) * math.pi / 180) or 1e-6
+    dx, dy = lat1 - lat0, (lng1 - lng0) * coslat
+    px, py = p[0] - lat0, (p[1] - lng0) * coslat
+    seg2 = dx * dx + dy * dy
+    if seg2 < 1e-18:
+        return haversine_miles(p[0], p[1], lat0, lng0)
+    t = max(0.0, min(1.0, (px * dx + py * dy) / seg2))
+    return haversine_miles(p[0], p[1], lat0 + t * (lat1 - lat0), lng0 + t * (lng1 - lng0))
+
+
+def douglas_peucker(path: list[list[float]], epsilon_mi: float) -> list[list[float]]:
+    """Keep vertices that deviate from the chord — preserves switchbacks."""
+    n = len(path)
+    if n <= 2:
         return path
-    step = (len(path) - 1) / (max_points - 1)
-    simplified = [path[int(round(i * step))] for i in range(max_points)]
-    if simplified[-1] != path[-1]:
-        simplified[-1] = path[-1]
+    keep = [False] * n
+    keep[0] = keep[-1] = True
+    stack = [(0, n - 1)]
+    while stack:
+        i, j = stack.pop()
+        max_d = -1.0
+        max_k = -1
+        a, b = path[i], path[j]
+        for k in range(i + 1, j):
+            d = point_to_segment_miles(path[k], a, b)
+            if d > max_d:
+                max_d = d
+                max_k = k
+        if max_k >= 0 and max_d > epsilon_mi:
+            keep[max_k] = True
+            stack.append((i, max_k))
+            stack.append((max_k, j))
+    return [pt for pt, flag in zip(path, keep) if flag]
+
+
+def simplify_path(
+    path: list[list[float]],
+    max_points: int = SIMPLIFY_MAX_POINTS,
+    epsilon_mi: float = SIMPLIFY_EPSILON_MI,
+    max_hop_mi: float = 0.11,
+) -> list[list[float]]:
+    if len(path) <= 2:
+        return path
+    simplified = douglas_peucker(path, epsilon_mi)
+    eps = epsilon_mi
+    while len(simplified) > max_points and eps < 0.05:
+        eps *= 1.6
+        simplified = douglas_peucker(path, eps)
+    # Never let DP invent a long chord — put original vertices back on big hops.
+    if max_hop_mi > 0 and len(path) > len(simplified):
+        simplified = _restore_long_hops(path, simplified, max_hop_mi)
+    if len(simplified) > max_points:
+        step = (len(simplified) - 1) / (max_points - 1)
+        simplified = [simplified[int(round(i * step))] for i in range(max_points)]
     return simplified
+
+
+def _restore_long_hops(
+    original: list[list[float]], simplified: list[list[float]], max_hop_mi: float
+) -> list[list[float]]:
+    if len(simplified) < 2 or len(original) < 3:
+        return simplified
+    # Map simplified vertices back to original indices (nearest exact match)
+    orig_i = []
+    start = 0
+    for pt in simplified:
+        best_j, best_d = start, 1e9
+        for j in range(start, len(original)):
+            d = haversine_miles(pt[0], pt[1], original[j][0], original[j][1])
+            if d < best_d:
+                best_d = d
+                best_j = j
+            if d < 1e-8:
+                break
+        orig_i.append(best_j)
+        start = best_j
+    out: list[list[float]] = [original[orig_i[0]]]
+    for a, b in zip(orig_i, orig_i[1:]):
+        hop = haversine_miles(original[a][0], original[a][1], original[b][0], original[b][1])
+        if hop > max_hop_mi and b > a + 1:
+            out.extend(original[k] for k in range(a + 1, b + 1))
+        else:
+            out.append(original[b])
+    return out
+
+
+def _trim_crowfly_stubs(path: list[list[float]], max_stub_mi: float = 0.055) -> list[list[float]]:
+    """Drop first/last hops that jump off the mapped way onto a GPS pin."""
+    if not path or len(path) < 3:
+        return path
+    out = [list(pt) for pt in path]
+
+    def hop(i: int) -> float:
+        return haversine_miles(out[i][0], out[i][1], out[i + 1][0], out[i + 1][1])
+
+    interior = [hop(i) for i in range(1, max(1, len(out) - 2))]
+    typical = sorted(interior)[len(interior) // 2] if interior else 0.01
+    thresh = max(max_stub_mi, typical * 4.0)
+    while len(out) > 2 and hop(len(out) - 2) > thresh:
+        out.pop()
+    while len(out) > 2 and hop(0) > thresh:
+        out.pop(0)
+    return out
+
+
+def _join_polylines(head: list[list[float]], tail: list[list[float]]) -> list[list[float]]:
+    if not head:
+        return [list(pt) for pt in (tail or [])]
+    if not tail:
+        return [list(pt) for pt in head]
+    out = [list(pt) for pt in head]
+    t0 = tail[0]
+    if haversine_miles(out[-1][0], out[-1][1], t0[0], t0[1]) < 1.5e-4:
+        out.extend(list(pt) for pt in tail[1:])
+    else:
+        out.extend(list(pt) for pt in tail)
+    return out
+
+
+def _gentle_pin_endpoints(
+    path: list[list[float]], lat1: float, lng1: float, lat2: float, lng2: float
+) -> list[list[float]]:
+    """Pin exact GPS only when already on the way — never invent a long chord."""
+    if not path:
+        return [[lat1, lng1], [lat2, lng2]]
+    out = [list(pt) for pt in path]
+    if haversine_miles(lat1, lng1, out[0][0], out[0][1]) <= PIN_ENDPOINT_MI:
+        out[0] = [lat1, lng1]
+    if haversine_miles(lat2, lng2, out[-1][0], out[-1][1]) <= PIN_ENDPOINT_MI:
+        out[-1] = [lat2, lng2]
+    return out
+
+
+def _route_score(
+    path: list[list[float]] | None, lat1: float, lng1: float, lat2: float, lng2: float
+) -> float:
+    if not path or len(path) < 2:
+        return -1e9
+    start_d = haversine_miles(lat1, lng1, path[0][0], path[0][1])
+    end_d = haversine_miles(lat2, lng2, path[-1][0], path[-1][1])
+    crow = haversine_miles(lat1, lng1, lat2, lng2)
+    n = len(path)
+    pm = polyline_miles(path)
+    if start_d > 0.55 and start_d > crow * 0.25:
+        return -1e6
+    if end_d > 0.55 and end_d > crow * 0.25:
+        return -1e6
+    if crow >= MIN_ROUTE_MILES and n <= 2:
+        return -1e5
+    score = 40.0 - start_d * 90.0 - end_d * 90.0
+    if n <= 2:
+        score -= 40.0
+    score += min(n, 600) * 0.015
+    if crow > 0.05:
+        ratio = pm / crow
+        if ratio < 1.04 and crow > 0.2:
+            score -= 25.0
+        score += min(ratio, 2.8) * 5.0
+        if ratio > 8.0:
+            score -= 12.0
+    return score
+
+
+def _route_good_enough(
+    path: list[list[float]] | None, lat1: float, lng1: float, lat2: float, lng2: float
+) -> bool:
+    if not path or len(path) < 2:
+        return False
+    start_d = haversine_miles(lat1, lng1, path[0][0], path[0][1])
+    end_d = haversine_miles(lat2, lng2, path[-1][0], path[-1][1])
+    crow = haversine_miles(lat1, lng1, lat2, lng2)
+    if start_d > 0.08 or end_d > 0.08:
+        return False
+    if crow >= MIN_ROUTE_MILES and len(path) <= 2:
+        return False
+    return True
+
+
+def _is_valley_cut(path: list[list[float]] | None, lat1: float, lng1: float, lat2: float, lng2: float) -> bool:
+    """True when geometry is basically a crow-fly (cuts switchbacks / valleys)."""
+    if not path or len(path) < 2:
+        return True
+    crow = haversine_miles(lat1, lng1, lat2, lng2)
+    if crow < 0.22:
+        return False
+    pm = polyline_miles(path)
+    if pm < 0.01:
+        return True
+    return (pm / crow) < 1.16
+
+
+def _access_ok(access: list[list[float]] | None, gap_mi: float) -> bool:
+    if not access or gap_mi < ACCESS_STITCH_MI:
+        return False
+    if len(access) < 3:
+        return False
+    pm = polyline_miles(access)
+    if pm > ACCESS_MAX_MI:
+        return False
+    if gap_mi > 0.02 and pm > gap_mi * ACCESS_MAX_RATIO:
+        return False
+    return True
 
 
 def leg_cache_key(lat1: float, lng1: float, lat2: float, lng2: float) -> str:
@@ -921,6 +1129,64 @@ def leg_is_hiking(
     return False
 
 
+def _raw_profile_path(
+    lat1: float, lng1: float, lat2: float, lng2: float,
+    cache: dict, token: str, refresh: bool, stats: dict,
+    profile: str,
+) -> list[list[float]] | None:
+    """Mapbox geometry for one profile — no endpoint chords, no great-circle fallback."""
+    dist = haversine_miles(lat1, lng1, lat2, lng2)
+    if dist < MIN_ROUTE_MILES:
+        return [[lat1, lng1], [lat2, lng2]]
+    key = f"{ROUTE_CACHE_VER}:{profile}:{leg_cache_key(lat1, lng1, lat2, lng2)}"
+    if key in cache and (not refresh or key in stats["session_keys"]):
+        stats["cache_hits"] += 1
+        return cache[key]["path"]
+    if token:
+        result = fetch_mapbox_route(lat1, lng1, lat2, lng2, token, profile)
+        if result:
+            path, miles = result
+            path = _trim_crowfly_stubs(simplify_path(path))
+            cache[key] = {
+                "path": path,
+                "distance_miles": round(miles, 1),
+                "profile": profile,
+                "ver": ROUTE_CACHE_VER,
+            }
+            stats["session_keys"].add(key)
+            stats["fetched"] += 1
+            time.sleep(ROUTE_FETCH_DELAY_S)
+            return path
+        stats["fetch_failed"] += 1
+    return None
+
+
+def _stitch_walking_access(
+    path: list[list[float]],
+    lat1: float, lng1: float, lat2: float, lng2: float,
+    cache: dict, token: str, refresh: bool, stats: dict,
+) -> list[list[float]]:
+    """If driving snapped to a highway, walk the mapped trail to/from the photo."""
+    out = [list(pt) for pt in path]
+    start_gap = haversine_miles(lat1, lng1, out[0][0], out[0][1])
+    if start_gap >= ACCESS_STITCH_MI:
+        access = _raw_profile_path(
+            lat1, lng1, out[0][0], out[0][1], cache, token, refresh, stats, "walking"
+        )
+        if _access_ok(access, start_gap):
+            out = _join_polylines(access, out)
+            stats["access_stitched"] = stats.get("access_stitched", 0) + 1
+    end_gap = haversine_miles(lat2, lng2, out[-1][0], out[-1][1])
+    if end_gap >= ACCESS_STITCH_MI:
+        access = _raw_profile_path(
+            out[-1][0], out[-1][1], lat2, lng2, cache, token, refresh, stats, "walking"
+        )
+        if _access_ok(access, end_gap):
+            out = _join_polylines(out, access)
+            stats["access_stitched"] = stats.get("access_stitched", 0) + 1
+    return out
+
+
 def get_route_segment(
     lat1: float, lng1: float, lat2: float, lng2: float,
     cache: dict, token: str, refresh: bool, stats: dict,
@@ -929,31 +1195,37 @@ def get_route_segment(
     dist = haversine_miles(lat1, lng1, lat2, lng2)
     if dist < MIN_ROUTE_MILES:
         return [[lat1, lng1], [lat2, lng2]]
-    key = f"{profile}:{leg_cache_key(lat1, lng1, lat2, lng2)}"
-    if key in cache and (not refresh or key in stats["session_keys"]):
-        stats["cache_hits"] += 1
-        return cache[key]["path"]
-    # Also accept legacy driving keys without profile prefix
-    legacy = leg_cache_key(lat1, lng1, lat2, lng2)
-    if profile == "driving" and legacy in cache and (not refresh or legacy in stats["session_keys"]):
-        stats["cache_hits"] += 1
-        return cache[legacy]["path"]
-    if token:
-        result = fetch_mapbox_route(lat1, lng1, lat2, lng2, token, profile)
-        if result:
-            path, miles = result
-            # Ensure path ends on the requested endpoint (photo exact GPS)
-            if path and (abs(path[-1][0] - lat2) > 1e-5 or abs(path[-1][1] - lng2) > 1e-5):
-                path = list(path) + [[lat2, lng2]]
-            if path and (abs(path[0][0] - lat1) > 1e-5 or abs(path[0][1] - lng1) > 1e-5):
-                path = [[lat1, lng1]] + list(path)
-            path = simplify_path(path)
-            cache[key] = {"path": path, "distance_miles": round(miles, 1), "profile": profile}
-            stats["session_keys"].add(key)
-            stats["fetched"] += 1
-            time.sleep(ROUTE_FETCH_DELAY_S)
-            return path
-        stats["fetch_failed"] += 1
+
+    def finish(raw: list[list[float]]) -> list[list[float]]:
+        path = _stitch_walking_access(raw, lat1, lng1, lat2, lng2, cache, token, refresh, stats)
+        return _gentle_pin_endpoints(path, lat1, lng1, lat2, lng2)
+
+    def raw(prof: str) -> list[list[float]] | None:
+        return _raw_profile_path(lat1, lng1, lat2, lng2, cache, token, refresh, stats, prof)
+
+    # Highway legs: always keep driving geometry and walk only the last-mile access.
+    # (Full walking over 20–50mi often scores higher just because it hits photo GPS,
+    # then cuts valleys.)
+    if profile != "walking":
+        for prof in ("driving", "cycling", "walking"):
+            cand = raw(prof)
+            if cand:
+                return finish(cand)
+        stats["fallback"] += 1
+        points = max(24, min(120, int(max(dist, 2) * 1.4)))
+        return great_circle_arc(lat1, lng1, lat2, lng2, num_points=points)
+
+    walk = raw("walking")
+    if walk and not _is_valley_cut(walk, lat1, lng1, lat2, lng2):
+        return finish(walk)
+    cycle = raw("cycling")
+    if cycle and not _is_valley_cut(cycle, lat1, lng1, lat2, lng2):
+        return finish(cycle)
+    drive = raw("driving")
+    if drive:
+        return finish(drive)
+    if walk:
+        return finish(walk)
     stats["fallback"] += 1
     points = max(24, min(120, int(max(dist, 2) * 1.4)))
     return great_circle_arc(lat1, lng1, lat2, lng2, num_points=points)
@@ -971,31 +1243,37 @@ def build_route_path(
 ) -> list[list[float]]:
     if not stops:
         return []
-    path: list[list[float]] = [[stops[0]["lat"], stops[0]["lng"]]]
+    path: list[list[float]] = []
     memory_spurs: list[dict] = []
-    for i in range(1, len(stops)):
-        a, b = stops[i - 1], stops[i]
-        if not is_valid_coord(a["lat"], a["lng"]) or not is_valid_coord(b["lat"], b["lng"]):
+    prev: dict | None = None
+    for b in stops:
+        if not is_valid_coord(b.get("lat"), b.get("lng")):
             continue
+        if prev is None:
+            prev = b
+            continue
+        a = prev
         dist = haversine_miles(a["lat"], a["lng"], b["lat"], b["lng"])
         if dist > 1500:
+            prev = b
             continue
         profile = "walking" if leg_wants_walking(a, b, dist) else "driving"
         segment = get_route_segment(
             a["lat"], a["lng"], b["lat"], b["lng"], cache, token, refresh, stats, profile
         )
-        # Always land exactly on the stop / photo GPS (Mapbox can drift slightly)
-        if segment:
-            segment = list(segment)
-            segment[0] = [a["lat"], a["lng"]]
-            segment[-1] = [b["lat"], b["lng"]]
-        # Photo waypoints: force the vertex so EXIF pins sit on the drawn path
-        if b.get("is_photo") or b.get("kind") == "photo":
-            if not segment:
-                segment = [[a["lat"], a["lng"]], [b["lat"], b["lng"]]]
-            else:
-                segment = list(segment)
-                segment[-1] = [float(b["lat"]), float(b["lng"])]
+        if not segment:
+            prev = b
+            continue
+        # Photo sitting off a highway with no mapped trail — keep it as a pin,
+        # don't draw a valley-cutting chord to it.
+        if (
+            (b.get("is_photo") or b.get("kind") == "photo")
+            and dist > 0.22
+            and _is_valley_cut(segment, a["lat"], a["lng"], b["lat"], b["lng"])
+        ):
+            stats["skipped_photo_cuts"] = stats.get("skipped_photo_cuts", 0) + 1
+            continue
+        path = _join_polylines(path, segment)
         if profile == "walking":
             memory_spurs.append({
                 "from": [a["lat"], a["lng"]],
@@ -1003,9 +1281,11 @@ def build_route_path(
                 "path": segment,
             })
             stats["walking_spurs"] = stats.get("walking_spurs", 0) + 1
-        path.extend(segment[1:])
+        prev = b
     # Stash on stats for prepare_trips to pick up (cleared per trip)
     stats["_last_memory_spurs"] = memory_spurs
+    if not path and stops:
+        return [[stops[0]["lat"], stops[0]["lng"]]]
     return path
 
 
@@ -1166,9 +1446,6 @@ def build_playback_timeline(
                 cache, token, refresh, stats, "walking",
             )
             if path:
-                path = list(path)
-                path[0] = [float(a["lat"]), float(a["lng"])]
-                path[-1] = [float(b["lat"]), float(b["lng"])]
                 miles = path_miles(path)
         to_lbl = short_location_label(b.get("location") or "") if not b.get("is_photo") else ""
         if not to_lbl:
@@ -1460,7 +1737,18 @@ def build_playback_timeline(
             travel_profile = leg.get("profile") or "driving"
 
             if use_spur:
-                spur_path = [list(cur_pt), [photo_lat, photo_lng]]
+                spur_stats = stats if stats is not None else {
+                    "cache_hits": 0, "fetched": 0, "fetch_failed": 0,
+                    "fallback": 0, "session_keys": set(),
+                }
+                spur_path = None
+                if cache is not None:
+                    spur_path = get_route_segment(
+                        float(cur_pt[0]), float(cur_pt[1]), photo_lat, photo_lng,
+                        cache, token, refresh, spur_stats, "walking",
+                    )
+                if not spur_path or len(spur_path) < 2:
+                    spur_path = [list(cur_pt), [photo_lat, photo_lng]]
                 append_travel(
                     path, cursor_frac, cursor_frac, leg, max(0, road_i),
                     clock_t0=cursor_clock, clock_t1=mem_ts,
@@ -1478,10 +1766,10 @@ def build_playback_timeline(
                     clock_t0=cursor_clock, clock_t1=mem_ts,
                 )
                 if body and body[-1]["type"] == "travel":
-                    # Pin exact photo GPS only when we didn't take a long corridor detour.
+                    # Pin exact photo GPS only when already on the mapped way.
                     tip = body[-1]["path"][-1]
                     tip_d = haversine_miles(tip[0], tip[1], photo_lat, photo_lng)
-                    if tip_d <= 1.25:
+                    if tip_d <= PIN_ENDPOINT_MI:
                         body[-1]["path"][-1] = [photo_lat, photo_lng]
                         slat, slng = photo_lat, photo_lng
                     else:
@@ -1500,13 +1788,20 @@ def build_playback_timeline(
             clock_t0=cursor_clock, clock_t1=leg["t1"],
         )
         if body and body[-1]["type"] == "travel":
-            body[-1]["path"][-1] = [journey[i + 1]["lat"], journey[i + 1]["lng"]]
+            tip = body[-1]["path"][-1]
+            dest = journey[i + 1]
+            if haversine_miles(tip[0], tip[1], dest["lat"], dest["lng"]) <= PIN_ENDPOINT_MI:
+                body[-1]["path"][-1] = [dest["lat"], dest["lng"]]
 
     body = _renormalize_segment_durations(body, target_ms, intro_ms, outro_ms)
 
     anchor = road_only or journey
     t_start = parse_waypoint_ts(anchor[0].get("datetime") if anchor else None)
     t_end = parse_waypoint_ts(anchor[-1].get("datetime") if anchor else None)
+    path_mi = int(path_miles(route_path or []))
+    days = 1
+    if t_start and t_end and t_end >= t_start:
+        days = max(1, (t_end.date() - t_start.date()).days + 1)
     intro_seg = {
         "type": "intro",
         "duration_ms": intro_ms,
@@ -1515,6 +1810,9 @@ def build_playback_timeline(
         "highlights": story.get("highlights", [])[:4],
         "clock_start": _clock_iso(t_start),
         "clock_end": _clock_iso(t_start),
+        "miles": path_mi,
+        "duration_days": days,
+        "place_count": len(road_only or journey),
     }
     outro_seg = {
         "type": "outro",
@@ -1524,6 +1822,9 @@ def build_playback_timeline(
         "nearby_count": story.get("nearby_count", 0),
         "clock_start": _clock_iso(t_end),
         "clock_end": _clock_iso(t_end),
+        "miles": path_mi,
+        "duration_days": days,
+        "place_count": len(road_only or journey),
     }
     all_segments = [intro_seg, *body, outro_seg]
 
@@ -1776,6 +2077,12 @@ def prepare_trips(
             f"Relive it: {LIVE_DEMO_URL}"
         )
         story = apply_story_overrides(trip, story)
+        days = trip_duration_days(trip["start"], trip["end"])
+        story["outro"] = (
+            f"{miles:,.0f} miles along the mapped route · {days} day"
+            f"{'' if days == 1 else 's'} · {place_count} places"
+            + (f" · {photo_count} photos" if photo_count else "")
+        )
         playback = build_playback_timeline(
             route_stops, route_path, story, journey_pois, cache, token, refresh, stats, photos=photos
         )
@@ -1967,7 +2274,7 @@ def validate_output(trips: list[dict]) -> None:
                 v = a.get(key)
                 if v is None or (key.endswith("Lat") and abs(v) > 90):
                     issues.append(f"Bad arc endpoint: {t['id']} {key}={v}")
-        # Path must visit exact photo EXIF — never leave hike pins orphaned off-route
+        # Path must visit photo EXIF — trail/road routing, not a 1mi crow-fly chord
         photos = t.get("photos") or []
         path = t.get("route_path") or []
         if photos and path:
@@ -1985,6 +2292,29 @@ def validate_output(trips: list[dict]) -> None:
                         f"{p.get('id') or p.get('album')} is {best:.1f}mi from route "
                         f"(expected path through exact shot)"
                     )
+        # Shortcut chords (straight hops that skip the mapped trail/road)
+        if path and "2025-09-25" in t.get("id", ""):
+            for i in range(1, len(path)):
+                a, b = path[i - 1], path[i]
+                hop = haversine_miles(a[0], a[1], b[0], b[1])
+                # Maroon Dam / Maroon Creek trail — a 0.18mi chord was the visible triangle
+                if (
+                    hop > 0.12
+                    and 39.092 <= a[0] <= 39.097 and 39.092 <= b[0] <= 39.097
+                    and -106.957 <= a[1] <= -106.948 and -106.957 <= b[1] <= -106.948
+                ):
+                    issues.append(
+                        f"Path shortcut hop {hop:.2f}mi at Maroon Dam on {t['id']}"
+                    )
+                # Independence Pass photos — 0.33mi and 1.0mi chords jumped off CO-82
+                if (
+                    hop > 0.28
+                    and 39.090 <= min(a[0], b[0]) and max(a[0], b[0]) <= 39.106
+                    and -106.590 <= min(a[1], b[1]) and max(a[1], b[1]) <= -106.565
+                ):
+                    issues.append(
+                        f"Path shortcut hop {hop:.2f}mi at Independence Pass on {t['id']}"
+                    )
     co_trip = next((t for t in trips if t.get("has_colorado")), None)
     if co_trip:
         co_stops = [s for s in co_trip["stops"] if s.get("in_colorado")]
@@ -1998,7 +2328,10 @@ def validate_output(trips: list[dict]) -> None:
         print("Validation warnings:")
         for i in issues[:20]:
             print(f"  ⚠ {i}")
-        hard = [i for i in issues if i.startswith("Path misses photo")]
+        hard = [
+            i for i in issues
+            if i.startswith("Path misses photo") or i.startswith("Path shortcut")
+        ]
         if hard:
             raise SystemExit(f"Validation failed: {len(hard)} photo(s) not on routed path")
     else:
@@ -2085,7 +2418,7 @@ def main() -> None:
     GPX_DIR.mkdir(parents=True, exist_ok=True)
 
     cache = load_routes_cache()
-    stats = {"fetched": 0, "cache_hits": 0, "fallback": 0, "fetch_failed": 0, "walking_spurs": 0, "session_keys": set()}
+    stats = {"fetched": 0, "cache_hits": 0, "fallback": 0, "fetch_failed": 0, "walking_spurs": 0, "access_stitched": 0, "skipped_photo_cuts": 0, "session_keys": set()}
 
     trips_data = load_trips()
     prepared = prepare_trips(trips_data, cache, mapbox_token, args.refresh_routes, stats)
@@ -2128,7 +2461,10 @@ def main() -> None:
     print(f"  Dashboard: {dashboard['total_miles']:,} mi · {dashboard.get('total_photos', 0)} photos · {dashboard.get('total_places', 0)} places")
     print(
         f"  Routes: {stats['fetched']} fetched, {stats['cache_hits']} cached, "
-        f"{stats['fallback']} arc fallback, {stats['fetch_failed']} failed"
+        f"{stats['fallback']} arc fallback, {stats['fetch_failed']} failed, "
+        f"{stats.get('access_stitched', 0)} trail splices, "
+        f"{stats.get('walking_spurs', 0)} walking legs, "
+        f"{stats.get('skipped_photo_cuts', 0)} photo cuts skipped"
     )
     print(f"  Mapbox token: {'loaded' if mapbox_token else 'MISSING (using cache/fallback)'}")
     print(f"  HTML: {HTML_OUTPUT}")

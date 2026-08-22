@@ -174,6 +174,22 @@
       text-shadow: 0 4px 24px rgba(0,0,0,0.95);
     }
     .cinema-title p { font-size: 12px; color: #cbd5e1; margin-top: 6px; letter-spacing: 0.06em; }
+    .cinema-stats {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 18px;
+      margin-top: 14px;
+    }
+    .cinema-stats[hidden] { display: none; }
+    .cinema-stat {
+      font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #cbd5e1; text-shadow: 0 2px 12px rgba(0,0,0,0.85);
+    }
+    .cinema-stat strong {
+      display: block; font-family: var(--font-display); font-size: clamp(22px, 4vw, 34px);
+      font-weight: 800; letter-spacing: -0.03em; color: #fff; line-height: 1.05;
+      text-transform: none; text-shadow: 0 4px 24px rgba(0,0,0,0.95);
+    }
+    body.watching.journey-done .cinema-stats { margin-top: 16px; }
+    body.watching.journey-done .cinema-stat strong { font-size: clamp(26px, 4.4vw, 38px); }
     .cinema-title .cinema-highlights {
       display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 14px;
     }

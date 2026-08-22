@@ -19,6 +19,8 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **Atlas overview** — home hubs + destination constellation + corridor spokes; destination-grouped trip list
 - **Featured journey CTA** — one clear “open a journey” action on the atlas (no mystery auto-reel)
 - **Photo memories** — dump albums into `data/photos/<album>/`; EXIF GPS clusters become real path waypoints (hike spurs to exact shot locations) plus cinematic memory beats during replay
+- **Mapped paths, not shortcuts** — legs follow Mapbox roads and trails (Douglas-Peucker keeps switchbacks). Short photo gaps like the Maroon Dam U-turn are routed instead of drawn as a straight chord; alpine photos splice a walking access onto the highway instead of jumping across the valley
+- **Trip totals on intro & outro** — start and Journey Complete cards show **miles along the plotted route**, plus days and places
 - **Year era filter** — isolate diary chapters by year
 - **3D satellite map** with Mapbox terrain and elevated route lines
 - **Watch mode** — Play hides chrome for a passenger-seat replay; pan, pinch-zoom, scroll, and the zoom controls stay available so you can look around while the path keeps moving
@@ -28,7 +30,7 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **Gradual day↔night** — map lighting ramps through twilight from the live clock (visual only; does not change playback speed)
 - **Navigation-style chase** — heading-up follow camera (Apple/Google Maps feel): look-ahead course, capped turn rate, car glued to the path; confined/slow stretches (Maroon Bells) zoom in, then pull back on the highway; end-of-trip pulls back to a north-up route recap. Dragging or pinching the map pauses chase briefly, then follow resumes after a short idle.
 - **Hike vs drive** — photo trail legs and slow camp crawls switch to an on-foot walker badge (and livelier trail pacing); highway legs keep the car
-- **Large memory stage** — replay photos appear as a large, stable mid-viewport overlay (no map-marker shake); clustered pins stay at exact EXIF GPS — the path routes to those shots; nearby camp shots use short spurs instead of out-and-back corridor snaps
+- **Large memory stage** — replay photos appear as a large, stable mid-viewport overlay (no map-marker shake); clustered pins stay at exact EXIF GPS — the path follows mapped ways to those shots; nearby camp shots use short routed spurs instead of out-and-back corridor snaps
 - **Clean watch chrome** — one status line (en route / stop); polished Journey Complete card; no nearby-place labels or duplicate POI pills
 
 ## Quick start (local)

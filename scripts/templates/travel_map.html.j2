@@ -91,6 +91,7 @@
 
   <div class="cinema-title" id="cinema-title">
     <h2 id="cinema-title-text"></h2>
+    <div class="cinema-stats" id="cinema-stats" hidden></div>
     <p id="cinema-subtitle"></p>
     <div class="cinema-highlights" id="cinema-highlights"></div>
   </div>
@@ -236,6 +237,50 @@
     const MAPBOX_TOKEN = MAPBOX_TOKEN_B64 ? atob(MAPBOX_TOKEN_B64) : "";
     const US_BOUNDS = DASHBOARD.us_bounds;
     const BASE_MS = 1600;
+
+    function tripPathStats(trip, state) {
+      const miles = Number(state?.miles ?? trip?.miles) || 0;
+      const days = Number(state?.duration_days ?? trip?.duration_days) || 0;
+      const places = Number(state?.place_count ?? trip?.stop_count) || 0;
+      const photos = Number(trip?.photo_count) || 0;
+      const parts = [];
+      if (miles) {
+        parts.push(`<span class="cinema-stat"><strong>${miles.toLocaleString()}</strong> miles</span>`);
+      }
+      if (days) {
+        parts.push(`<span class="cinema-stat"><strong>${days}</strong> day${days === 1 ? '' : 's'}</span>`);
+      }
+      if (places) {
+        parts.push(`<span class="cinema-stat"><strong>${places}</strong> place${places === 1 ? '' : 's'}</span>`);
+      }
+      if (photos) {
+        parts.push(`<span class="cinema-stat"><strong>${photos}</strong> photo${photos === 1 ? '' : 's'}</span>`);
+      }
+      return {
+        miles,
+        days,
+        places,
+        html: parts.join(''),
+        line: [
+          miles ? `${miles.toLocaleString()} miles` : '',
+          days ? `${days} day${days === 1 ? '' : 's'}` : '',
+          places ? `${places} places` : '',
+        ].filter(Boolean).join(' · '),
+      };
+    }
+
+    function fillCinemaStats(trip, state) {
+      const el = document.getElementById('cinema-stats');
+      if (!el) return;
+      const stats = tripPathStats(trip, state);
+      if (!stats.html) {
+        el.hidden = true;
+        el.innerHTML = '';
+        return;
+      }
+      el.hidden = false;
+      el.innerHTML = stats.html;
+    }
 
     let map;
 
@@ -422,6 +467,7 @@
             return {
               phase: 'intro', label: seg.title || activeTrip()?.name || '',
               caption: seg.caption || '', highlights: seg.highlights || [],
+              miles: seg.miles, duration_days: seg.duration_days, place_count: seg.place_count,
               frac, stopIndex: 0, bearing: lastTravelBearing, seg,
             };
           }
@@ -429,7 +475,9 @@
             return {
               phase: 'outro', label: 'Journey Complete',
               caption: seg.caption || '', visitedCount: seg.visited_count || 0,
-              nearbyCount: seg.nearby_count || 0, frac, stopIndex: activeStops().length - 1,
+              nearbyCount: seg.nearby_count || 0,
+              miles: seg.miles, duration_days: seg.duration_days, place_count: seg.place_count,
+              frac, stopIndex: activeStops().length - 1,
               bearing: lastTravelBearing, seg,
             };
           }
@@ -479,6 +527,7 @@
         return {
           phase: 'outro', label: 'Journey Complete', caption: last.caption || '',
           visitedCount: last.visited_count || 0, nearbyCount: last.nearby_count || 0,
+          miles: last.miles, duration_days: last.duration_days, place_count: last.place_count,
           frac: 1, stopIndex: activeStops().length - 1, bearing: lastTravelBearing, seg: last,
         };
       }

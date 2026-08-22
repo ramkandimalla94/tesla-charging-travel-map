@@ -109,25 +109,25 @@
       if (phase === 'intro') {
         document.body.classList.remove('journey-done');
         document.getElementById('cinema-title-text').textContent = trip?.name || state?.label || '';
+        fillCinemaStats(trip, state);
         document.getElementById('cinema-subtitle').textContent = state?.caption
-          || (trip ? `${trip.miles.toLocaleString()} mi · ${trip.stop_count} stops · ${trip.duration_days}d` : '');
+          || (trip ? tripPathStats(trip, state).line : '');
         const hlEl = document.getElementById('cinema-highlights');
         hlEl.innerHTML = (state?.highlights || trip?.story?.highlights || []).slice(0, 4)
           .map(h => `<span>${h}</span>`).join('');
         title.classList.add('visible');
       } else if (phase === 'outro') {
         document.body.classList.add('journey-done');
-        const miles = trip?.miles != null ? `${Number(trip.miles).toLocaleString()} mi` : '';
-        const stops = trip?.stop_count != null ? `${trip.stop_count} places` : '';
-        const states = (trip?.state_names || trip?.states || []).slice(0, 6).join(', ');
-        const fallback = [miles, stops, states ? `across ${states}` : ''].filter(Boolean).join(' · ');
         document.getElementById('cinema-title-text').textContent = 'Journey Complete';
-        document.getElementById('cinema-subtitle').textContent = state?.caption || fallback;
+        fillCinemaStats(trip, state);
+        document.getElementById('cinema-subtitle').textContent = state?.caption
+          || tripPathStats(trip, state).line;
         document.getElementById('cinema-highlights').innerHTML = '';
         title.classList.add('visible');
       } else {
         document.body.classList.remove('journey-done');
         title.classList.remove('visible');
+        fillCinemaStats(null);
       }
     }
 
