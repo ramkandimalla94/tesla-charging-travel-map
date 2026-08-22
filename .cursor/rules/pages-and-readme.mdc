@@ -1,0 +1,12 @@
+---
+description: Keep the live diary, README, and Pages deploy aligned after every change
+alwaysApply: true
+---
+
+# Repo + Pages
+
+- Live demo is only `https://ramkandimalla94.github.io/mymilediary/`. Never invent a second public URL.
+- `--public` embeds `MAPBOX_TOKEN` as **base64**. Never a raw `pk.`/`sk.` string (GitHub push protection).
+- Merges to `main` must keep `.github/workflows/pages.yml` green. Secret must be a public `pk.` token.
+- After map/UI changes: rebuild, refresh `docs/screenshots/`, update README in the **same** PR.
+- Path-geometry bugs the user sees on the live site are not fixed until **main** deploys. A PR preview is not the Pages URL.

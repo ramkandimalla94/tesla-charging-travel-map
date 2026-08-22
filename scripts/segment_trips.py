@@ -31,7 +31,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from home_config import extract_city, haversine_miles, load_owner_config, resolve_home_config
+from home_config import (
+    extract_city,
+    haversine_miles,
+    load_owner_config,
+    resolve_home_config,
+    trip_matches_override,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -959,22 +965,14 @@ def init_home_config(locations: list[str], cache: dict) -> None:
 
 
 def trip_matches_end_override(trip: dict, match: dict) -> bool:
-    if match.get("id_contains") and match["id_contains"] not in str(trip.get("id") or ""):
-        return False
-    if match.get("start_prefix") and not str(trip.get("start") or "").startswith(str(match["start_prefix"])):
-        return False
-    if match.get("has_colorado") and not trip.get("has_colorado"):
-        return False
-    owner = trip.get("owner") or ""
-    if match.get("owner_contains") and match["owner_contains"].lower() not in owner.lower():
-        return False
-    return True
+    return trip_matches_override(trip, match)
 
 
 def apply_configured_trip_overrides(trips: list[dict], cache: dict) -> None:
     """
     Optional owner_config.trip_overrides — pin a trip end when Supercharging
     after returning home with leftover range would otherwise extend the trip.
+    Same rules may carry route_via_paths (hike U-turns Mapbox does not know).
     """
     cfg = load_owner_config()
     rules = cfg.get("trip_overrides") or []

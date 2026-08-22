@@ -1,0 +1,16 @@
+---
+description: How photo GPS becomes a mapped trip path — never crow-fly, U-turns need a via
+alwaysApply: true
+---
+
+# Photo path routing
+
+The cyan path must follow a **mapped road or trail**, never a straight shortcut.
+
+- Photo EXIF is a waypoint. Do not skip a photo because walking looks like a valley cut.
+- Mapbox walking often stays on the **road** (Maroon Creek FR 1975) and ignores the **dotted OSM loop**. If the user walked a U-turn and there is no photo at the tip, add `trip_overrides.route_via_paths` (OSM polyline) or rely on `scripts/osm_trails.py`.
+- Do not force-pin photo GPS onto a highway if that creates a chord longer than `PIN_ENDPOINT_MI` (0.03 mi). Walk last-mile access.
+- Never even-sample a simplified polyline. That invented 0.2 mi hops on Independence Pass / CO-82 hairpins. Douglas-Peucker + `_restore_long_hops` only.
+- `MIN_ROUTE_MILES` must stay ~0.04. At 0.3 the Maroon Dam pair (0.18 mi) became a 2-point triangle.
+
+Full write-up: `.agents/TRIP_PATH_LEARNINGS.md`. Rebuild: `python scripts/build_map.py --public`.

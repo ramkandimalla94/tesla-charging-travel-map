@@ -38,6 +38,30 @@ def load_owner_config() -> dict:
         return json.load(f)
 
 
+def trip_matches_override(trip: dict, match: dict) -> bool:
+    """Match owner_config.trip_overrides (home pin, via paths, story)."""
+    if not match:
+        return True
+    if match.get("id_contains") and match["id_contains"] not in str(trip.get("id") or ""):
+        return False
+    if match.get("start_prefix") and not str(trip.get("start") or "").startswith(str(match["start_prefix"])):
+        return False
+    if match.get("has_colorado") and not trip.get("has_colorado"):
+        return False
+    owner = trip.get("owner") or ""
+    if match.get("owner_contains") and match["owner_contains"].lower() not in owner.lower():
+        return False
+    return True
+
+
+def matching_trip_override(trip: dict, cfg: dict | None = None) -> dict:
+    cfg = cfg if cfg is not None else load_owner_config()
+    for rule in cfg.get("trip_overrides") or []:
+        if isinstance(rule, dict) and trip_matches_override(trip, rule.get("match") or {}):
+            return rule
+    return {}
+
+
 def detect_home_bases(
     locations: list[str],
     cache: dict,

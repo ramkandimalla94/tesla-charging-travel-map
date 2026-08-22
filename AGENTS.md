@@ -2,6 +2,9 @@
 
 Follow these on every change. Do not leave the repo, docs, or live site stale.
 
+**Trip-path lessons (Maroon Bells U-turn, Independence Pass, Frisco home pin, playback):**
+read [`.agents/TRIP_PATH_LEARNINGS.md`](.agents/TRIP_PATH_LEARNINGS.md) before changing routing, photos, or `owner_config`. Cursor also loads `.cursor/rules/*.mdc`.
+
 ## Keep the repo current (required)
 
 After any meaningful change (map UI, trip segmentation, data, photos, deploy, features):
@@ -9,9 +12,20 @@ After any meaningful change (map UI, trip segmentation, data, photos, deploy, fe
 1. **Update committed outputs** that the change affects (`data/trips.json`, `data/photos_index.json`, `data/trip_photos.json`, `output/trips.geojson`, `output/photos/thumbs/`, `output/gpx/`, caches as needed). Rebuild with `python scripts/build_map.py` / `--public` when the map or trips change. `--public` writes `output/index.html` and embeds `MAPBOX_TOKEN` as **base64** (never a raw `pk.`/`sk.` string — GitHub push protection blocks those on `gh-pages`).
 2. **Update README.md** whenever user-facing behavior, setup, live URL status, features, or commands change. Do not leave outdated screenshots/captions, wrong endpoints, or broken instructions.
 3. **Refresh README screenshots** after any UI-visible change — regenerate `docs/screenshots/` and update README embeds/captions in the **same** PR. Never ship a diary UI change with stale Road Replay / Tesla screenshots.
-4. **Update examples/config docs** (`data/owner_config.json.example`, photo dump docs, workflow comments, etc.) when config shape or deploy steps change.
+4. **Update examples/config docs** (`data/owner_config.json.example`, photo dump docs, `.agents/`, `.cursor/rules/`, workflow comments) when config shape or deploy steps change.
 5. **Preserve the live demo URL** — always `https://ramkandimalla94.github.io/mymilediary/` in README (after the GitHub repo is renamed to `mymilediary`). That URL is stable; the *content* behind it updates via CI. Never invent a second public URL.
 6. **Protect GitHub Pages deploy** — merges to `main` must keep `.github/workflows/pages.yml` green. Keep repo secret `MAPBOX_TOKEN` set to a public `pk.` token (never `sk.`). Deploy must publish `index.html` **and** `photos/` thumbs when present. If you change `build_map.py` or deploy steps, verify the workflow can still switch to `gh-pages` after a dirty build (built site is copied aside; worktree is reset before checkout).
+7. **Live site lags `main`.** Path bugs the owner sees on the Pages URL are not fixed until the change is **merged**. Do not assume a PR branch is what they are looking at.
+
+## Path geometry (required)
+
+- Follow a mapped road or trail. Never a crow-fly chord between photos.
+- Photo GPS is a waypoint — do not skip it to “avoid a valley cut.”
+- U-turns with no tip photo: `trip_overrides.route_via_paths` (OSM polyline) plus `scripts/osm_trails.py`. Mapbox via points will not invent a trail they do not have (Maroon Scenic Loop).
+- Do not even-sample simplified routes (Independence Pass hairpins).
+- `MIN_ROUTE_MILES` stays ~0.04 so 0.18 mi trail pairs still route.
+- Sep 2025 start/end is 8404 Warren Parkway, Frisco, TX via `trip_overrides`.
+- Playback: `PLAYBACK_SPEED_REF = 0.5` (UI 1× = easy pace), rewind ±8s, hike walker only on real photo/trail legs.
 
 ## Live site
 
@@ -24,9 +38,10 @@ After any meaningful change (map UI, trip segmentation, data, photos, deploy, fe
 - Dump albums at `data/photos/<album>/*` (gitignored originals).
 - Local: `python scripts/ingest_photos.py` → `python scripts/enrich_trips_with_photos.py` → `python scripts/build_map.py`.
 - Hover UI serves thumbs from `output/photos/thumbs/` (committed + deployed).
+- Next-trip checklist: `data/photos/README.md` and `.agents/TRIP_PATH_LEARNINGS.md`.
 
 ## Cursor Cloud specific instructions
 
 - Install via `.cursor/install.sh`; local preview: `python -m http.server 8765` then open `/output/travel_map.html`.
 - Prefer regenerating trip/map artifacts in-repo over documenting manual one-offs.
-- When fixing map behavior users see on the live link, ship the data/template/workflow changes together so main + Pages stay aligned.
+- When fixing map behavior users see on the live link, ship the data/template/workflow changes together so main + Pages stay aligned, then **merge**.

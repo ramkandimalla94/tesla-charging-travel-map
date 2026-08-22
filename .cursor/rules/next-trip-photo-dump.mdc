@@ -1,0 +1,16 @@
+---
+description: Workflow when dumping a new trip's Apple Photos into this diary
+alwaysApply: true
+---
+
+# Next trip photo dump
+
+1. Put originals in `data/photos/<album>/` (gitignored). See `data/photos/README.md`.
+2. `python scripts/ingest_photos.py` then `python scripts/enrich_trips_with_photos.py` then `python scripts/build_map.py --public`.
+3. Pin start/end in `data/owner_config.json` `trip_overrides` when Supercharging after home would extend the trip. Sep 2025 home is **8404 Warren Parkway, Frisco, TX** (33.1097617, −96.8125339).
+4. Play the trip. If the path cuts a valley or skips a dotted trail U-turn, do **not** draw a crow-fly. Add `route_via_paths` on that override (timestamp window + OSM polyline). Bump `ROUTE_CACHE_VER` if routing logic changed.
+5. Hike vs drive: `leg_wants_walking` is photo + distance ≤ 18 mi. Do not force walking on every short spur.
+6. Playback: `PLAYBACK_SPEED_REF = 0.5` so UI 1× is the easy passenger pace; default speed 1; rewind ±8s (`←`/`→`).
+7. Update README + `docs/screenshots/` in the same PR. Live URL stays `https://ramkandimalla94.github.io/mymilediary/`. Merge to `main` deploys Pages.
+
+Read `.agents/TRIP_PATH_LEARNINGS.md` before changing `scripts/build_map.py`.

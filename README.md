@@ -19,7 +19,7 @@ Every merge to `main` rebuilds this site via GitHub Actions (`.github/workflows/
 - **Atlas overview** — home hubs + destination constellation + corridor spokes; destination-grouped trip list
 - **Featured journey CTA** — one clear “open a journey” action on the atlas (no mystery auto-reel)
 - **Photo memories** — dump albums into `data/photos/<album>/`; EXIF GPS clusters become real path waypoints (hike spurs to exact shot locations) plus cinematic memory beats during replay
-- **Mapped paths, not shortcuts** — legs follow Mapbox roads and trails (Douglas-Peucker keeps switchbacks). Short photo gaps like the Maroon Dam U-turn are routed instead of drawn as a straight chord; alpine photos splice a walking access onto the highway instead of jumping across the valley
+- **Mapped paths, not shortcuts** — legs follow Mapbox roads and OSM trails (Douglas-Peucker keeps switchbacks; never even-sample). Short photo gaps still route. Hike U-turns with no tip photo (Maroon Bells Scenic Loop) use `route_via_paths` / OSM instead of a forest-road chord. Alpine photos walk last-mile access instead of jumping a valley.
 - **Trip totals on intro & outro** — start and Journey Complete cards show **miles along the plotted route**, plus days and places
 - **Year era filter** — isolate diary chapters by year
 - **3D satellite map** with Mapbox terrain and elevated route lines
@@ -96,14 +96,18 @@ See [`data/photos/README.md`](data/photos/README.md).
 ## Project layout
 
 ```text
+.agents/                  # trip-path lessons for the next photo-dump agent
+.cursor/rules/            # always-on Cursor rules (routing, Pages, next trip)
 data/
   photos/<album>/     # your dumps (gitignored)
   photos_index.json   # EXIF index
   trip_photos.json    # photos matched to trips
+  owner_config.json   # home pin + route_via_paths
   trips.json
 scripts/
   ingest_photos.py
   enrich_trips_with_photos.py
+  osm_trails.py       # OSM footway U-turns Mapbox misses
   build_map.py
   segment_trips.py
 output/

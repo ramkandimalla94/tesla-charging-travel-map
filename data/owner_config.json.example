@@ -36,7 +36,19 @@
       "start_location": "Frisco, TX - 8404 Warren Parkway",
       "end_location": "Frisco, TX - 8404 Warren Parkway",
       "origin_label": "Frisco",
-      "dest_label": "Frisco"
+      "dest_label": "Frisco",
+      "route_via_paths": [
+        {
+          "after_timestamp": "2025-09-26T18:34:00+00:00",
+          "before_timestamp": "2025-09-26T18:43:00+00:00",
+          "note": "When Mapbox walking stays on the road and the real walk was a dotted-trail U-turn (no photo at the tip), paste the OSM/trail polyline here. See .agents/TRIP_PATH_LEARNINGS.md.",
+          "path": [
+            [39.094983, -106.952019],
+            [39.092634, -106.953103],
+            [39.093764, -106.955047]
+          ]
+        }
+      ]
     }
   ],
   "story_overrides": {

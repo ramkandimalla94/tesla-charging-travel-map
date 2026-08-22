@@ -19,7 +19,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 
-from home_config import load_owner_config
+from home_config import load_owner_config, matching_trip_override
+from osm_trails import osm_detour_path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -45,9 +46,12 @@ PIN_ENDPOINT_MI = 0.03
 ACCESS_STITCH_MI = 0.04
 ACCESS_MAX_MI = 8.0
 ACCESS_MAX_RATIO = 12.0
-ROUTE_CACHE_VER = "v3"
+ROUTE_CACHE_VER = "v4"
 SIMPLIFY_EPSILON_MI = 0.008  # ~13 m — keeps hairpins; even sampling did not
-SIMPLIFY_MAX_POINTS = 900
+# Never even-sample down to this cap — that invented 0.2 mi chords on CO-82.
+SIMPLIFY_MAX_POINTS = 4000
+VALLEY_CUT_RATIO = 1.28
+VALLEY_CUT_MIN_CROW_MI = 0.12
 ROUTE_FETCH_DELAY_S = 0.25
 WALK_SPUR_MILES = 18.0
 # Photo GPS becomes real route waypoints (hike spurs to Maroon Bells, etc.).
@@ -191,6 +195,66 @@ def parse_waypoint_ts(value: str | None) -> datetime:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+def _via_path_coords(entry: dict) -> list[list[float]]:
+    raw = entry.get("path") or []
+    out: list[list[float]] = []
+    for pt in raw:
+        if isinstance(pt, (list, tuple)) and len(pt) >= 2:
+            lat, lng = float(pt[0]), float(pt[1])
+            if is_valid_coord(lat, lng):
+                out.append([lat, lng])
+    return out
+
+
+def matching_via_paths(a: dict, b: dict, via_paths: list[dict]) -> list[dict]:
+    """Config polylines whose time window sits on this stop-to-stop leg."""
+    if not via_paths:
+        return []
+    t0 = parse_waypoint_ts(a.get("datetime"))
+    t1 = parse_waypoint_ts(b.get("datetime"))
+    if t1 < t0:
+        t0, t1 = t1, t0
+    matched = []
+    for v in via_paths:
+        if not isinstance(v, dict):
+            continue
+        after = parse_waypoint_ts(v.get("after_timestamp"))
+        before = parse_waypoint_ts(v.get("before_timestamp") or v.get("after_timestamp"))
+        if after == datetime.min.replace(tzinfo=timezone.utc):
+            continue
+        # Insert only on the stop-to-stop gap that contains the via instant.
+        if not (t0 < after < t1):
+            continue
+        coords = _via_path_coords(v)
+        if not coords:
+            continue
+        # Via must belong to this photo pair, not the previous/next leg.
+        d_fwd = (
+            haversine_miles(float(a["lat"]), float(a["lng"]), coords[0][0], coords[0][1])
+            + haversine_miles(float(b["lat"]), float(b["lng"]), coords[-1][0], coords[-1][1])
+        )
+        d_rev = (
+            haversine_miles(float(a["lat"]), float(a["lng"]), coords[-1][0], coords[-1][1])
+            + haversine_miles(float(b["lat"]), float(b["lng"]), coords[0][0], coords[0][1])
+        )
+        if min(d_fwd, d_rev) > 0.16:
+            continue
+        matched.append(v)
+    return matched
+
+
+def stitch_configured_via_path(
+    lat1: float, lng1: float, lat2: float, lng2: float, via: dict
+) -> list[list[float]]:
+    mid = _via_path_coords(via)
+    path = [list(pt) for pt in mid]
+    if haversine_miles(lat1, lng1, path[0][0], path[0][1]) > 1e-5:
+        path = [[lat1, lng1]] + path
+    if haversine_miles(lat2, lng2, path[-1][0], path[-1][1]) > 1e-5:
+        path = path + [[lat2, lng2]]
+    return _gentle_pin_endpoints(path, lat1, lng1, lat2, lng2)
 
 
 def _lng_utc_offset_hours(lng: float | None) -> int:
@@ -899,9 +963,8 @@ def simplify_path(
     # Never let DP invent a long chord — put original vertices back on big hops.
     if max_hop_mi > 0 and len(path) > len(simplified):
         simplified = _restore_long_hops(path, simplified, max_hop_mi)
-    if len(simplified) > max_points:
-        step = (len(simplified) - 1) / (max_points - 1)
-        simplified = [simplified[int(round(i * step))] for i in range(max_points)]
+    # Do not even-sample when still over max_points. That cut Independence Pass
+    # switchbacks into 0.2 mi stripes. Keep the restored polyline.
     return simplified
 
 
@@ -1031,12 +1094,12 @@ def _is_valley_cut(path: list[list[float]] | None, lat1: float, lng1: float, lat
     if not path or len(path) < 2:
         return True
     crow = haversine_miles(lat1, lng1, lat2, lng2)
-    if crow < 0.22:
+    if crow < VALLEY_CUT_MIN_CROW_MI:
         return False
     pm = polyline_miles(path)
     if pm < 0.01:
         return True
-    return (pm / crow) < 1.16
+    return (pm / crow) < VALLEY_CUT_RATIO
 
 
 def _access_ok(access: list[list[float]] | None, gap_mi: float) -> bool:
@@ -1218,14 +1281,27 @@ def get_route_segment(
     walk = raw("walking")
     if walk and not _is_valley_cut(walk, lat1, lng1, lat2, lng2):
         return finish(walk)
+    # Mapbox often stays on the forest road and misses a dotted OSM loop
+    # (Maroon Bells Scenic Loop U-turn at the bridge/rapids).
+    osm = osm_detour_path(lat1, lng1, lat2, lng2)
+    if osm and len(osm) >= 4 and not _is_valley_cut(osm, lat1, lng1, lat2, lng2):
+        stats["osm_detours"] = stats.get("osm_detours", 0) + 1
+        return _gentle_pin_endpoints(osm, lat1, lng1, lat2, lng2)
     cycle = raw("cycling")
     if cycle and not _is_valley_cut(cycle, lat1, lng1, lat2, lng2):
         return finish(cycle)
     drive = raw("driving")
     if drive:
-        return finish(drive)
+        stitched = finish(drive)
+        if not _is_valley_cut(stitched, lat1, lng1, lat2, lng2):
+            return stitched
+    if osm and len(osm) >= 4:
+        stats["osm_detours"] = stats.get("osm_detours", 0) + 1
+        return _gentle_pin_endpoints(osm, lat1, lng1, lat2, lng2)
     if walk:
         return finish(walk)
+    if drive:
+        return finish(drive)
     stats["fallback"] += 1
     points = max(24, min(120, int(max(dist, 2) * 1.4)))
     return great_circle_arc(lat1, lng1, lat2, lng2, num_points=points)
@@ -1258,21 +1334,21 @@ def build_route_path(
             prev = b
             continue
         profile = "walking" if leg_wants_walking(a, b, dist) else "driving"
-        segment = get_route_segment(
-            a["lat"], a["lng"], b["lat"], b["lng"], cache, token, refresh, stats, profile
-        )
+        configured = matching_via_paths(a, b, stats.get("_via_paths") or [])
+        if configured:
+            segment = stitch_configured_via_path(
+                a["lat"], a["lng"], b["lat"], b["lng"], configured[0]
+            )
+            stats["via_paths"] = stats.get("via_paths", 0) + 1
+        else:
+            segment = get_route_segment(
+                a["lat"], a["lng"], b["lat"], b["lng"], cache, token, refresh, stats, profile
+            )
         if not segment:
             prev = b
             continue
-        # Photo sitting off a highway with no mapped trail — keep it as a pin,
-        # don't draw a valley-cutting chord to it.
-        if (
-            (b.get("is_photo") or b.get("kind") == "photo")
-            and dist > 0.22
-            and _is_valley_cut(segment, a["lat"], a["lng"], b["lat"], b["lng"])
-        ):
-            stats["skipped_photo_cuts"] = stats.get("skipped_photo_cuts", 0) + 1
-            continue
+        # Always visit the photo. Skipping valley-cut vertices made Independence
+        # Pass look like the path never went there.
         path = _join_polylines(path, segment)
         if profile == "walking":
             memory_spurs.append({
@@ -2023,6 +2099,8 @@ def prepare_trips(
         # Path visits exact photo GPS (Maroon Bells, trailheads, etc.).
         route_stops = merge_photo_waypoints(road_stops, photo_clusters)
         stats["_last_memory_spurs"] = []
+        override = matching_trip_override(trip)
+        stats["_via_paths"] = list(override.get("route_via_paths") or [])
         route_path = build_route_path(route_stops, cache, token, refresh, stats)
         memory_spurs = list(stats.get("_last_memory_spurs") or [])
         miles = path_miles(route_path)
@@ -2308,13 +2386,22 @@ def validate_output(trips: list[dict]) -> None:
                     )
                 # Independence Pass photos — 0.33mi and 1.0mi chords jumped off CO-82
                 if (
-                    hop > 0.28
-                    and 39.090 <= min(a[0], b[0]) and max(a[0], b[0]) <= 39.106
-                    and -106.590 <= min(a[1], b[1]) and max(a[1], b[1]) <= -106.565
+                    hop > 0.16
+                    and 39.090 <= min(a[0], b[0]) and max(a[0], b[0]) <= 39.112
+                    and -106.595 <= min(a[1], b[1]) and max(a[1], b[1]) <= -106.555
                 ):
                     issues.append(
                         f"Path shortcut hop {hop:.2f}mi at Independence Pass on {t['id']}"
                     )
+            maroon_pts = [
+                p for p in path
+                if 39.090 <= p[0] <= 39.097 and -106.956 <= p[1] <= -106.948
+            ]
+            if maroon_pts and min(p[0] for p in maroon_pts) > 39.0930:
+                issues.append(
+                    f"Maroon Scenic Loop U-turn missing on {t['id']} "
+                    f"(path stayed on FR 1975, min lat {min(p[0] for p in maroon_pts):.5f})"
+                )
     co_trip = next((t for t in trips if t.get("has_colorado")), None)
     if co_trip:
         co_stops = [s for s in co_trip["stops"] if s.get("in_colorado")]
@@ -2330,7 +2417,9 @@ def validate_output(trips: list[dict]) -> None:
             print(f"  ⚠ {i}")
         hard = [
             i for i in issues
-            if i.startswith("Path misses photo") or i.startswith("Path shortcut")
+            if i.startswith("Path misses photo")
+            or i.startswith("Path shortcut")
+            or i.startswith("Maroon Scenic Loop")
         ]
         if hard:
             raise SystemExit(f"Validation failed: {len(hard)} photo(s) not on routed path")
@@ -2418,7 +2507,7 @@ def main() -> None:
     GPX_DIR.mkdir(parents=True, exist_ok=True)
 
     cache = load_routes_cache()
-    stats = {"fetched": 0, "cache_hits": 0, "fallback": 0, "fetch_failed": 0, "walking_spurs": 0, "access_stitched": 0, "skipped_photo_cuts": 0, "session_keys": set()}
+    stats = {"fetched": 0, "cache_hits": 0, "fallback": 0, "fetch_failed": 0, "walking_spurs": 0, "access_stitched": 0, "skipped_photo_cuts": 0, "osm_detours": 0, "via_paths": 0, "session_keys": set()}
 
     trips_data = load_trips()
     prepared = prepare_trips(trips_data, cache, mapbox_token, args.refresh_routes, stats)
@@ -2463,6 +2552,8 @@ def main() -> None:
         f"  Routes: {stats['fetched']} fetched, {stats['cache_hits']} cached, "
         f"{stats['fallback']} arc fallback, {stats['fetch_failed']} failed, "
         f"{stats.get('access_stitched', 0)} trail splices, "
+        f"{stats.get('osm_detours', 0)} OSM detours, "
+        f"{stats.get('via_paths', 0)} via-path legs, "
         f"{stats.get('walking_spurs', 0)} walking legs, "
         f"{stats.get('skipped_photo_cuts', 0)} photo cuts skipped"
     )
