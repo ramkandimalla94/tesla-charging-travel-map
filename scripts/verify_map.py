@@ -434,7 +434,7 @@ def main() -> int:
               const co = lngLats.filter(ll =>
                 ll.lat >= 37 && ll.lat <= 41 && ll.lng >= -109 && ll.lng <= -102);
               const south = lngLats.filter(ll => ll.lat < 32);
-              // Pins must sit on the corridor (snapped), not wilderness EXIF
+              // Path must route TO exact EXIF pins (not snap pins onto highway)
               const path = trip?.route_path || [];
               function havMi(a, b, c, d) {
                 const R = 3958.8, p = Math.PI / 180;
@@ -451,7 +451,6 @@ def main() -> int:
                   const d = havMi(ll.lat, ll.lng, pt[0], pt[1]);
                   if (d < best) best = d;
                 }
-                // Also check last vertex
                 if (path.length) {
                   const pt = path[path.length - 1];
                   const d = havMi(ll.lat, ll.lng, pt[0], pt[1]);
@@ -459,15 +458,25 @@ def main() -> int:
                 }
                 if (best > maxOff) maxOff = best;
               });
-              // Prefer server-side spur when present (exact snap distance)
-              const spurMax = Math.max(0, ...photos.map(p => Number(p.spur_miles) || 0));
+              // Marker geo must match EXIF payload (never corridor-snapped)
+              let exifMismatch = 0;
+              markers.forEach(m => {
+                const photo = m._photo;
+                if (!photo) return;
+                try {
+                  const ll = m.getLngLat();
+                  if (Math.abs(ll.lat - Number(photo.lat)) > 1e-5 ||
+                      Math.abs(ll.lng - Number(photo.lng)) > 1e-5) {
+                    exifMismatch += 1;
+                  }
+                } catch (_) {}
+              });
               // Marker root must stay position:absolute (Mapbox) — never relative
               const pin = document.querySelector('.photo-pin.mapboxgl-marker')
                 || document.querySelector('.photo-pin');
               const tr = pin ? getComputedStyle(pin).transitionProperty : '';
               const pos = pin ? getComputedStyle(pin).position : '';
               const hasInner = !!document.querySelector('.photo-pin-inner');
-              // Pixel drift between geo projection and DOM box (relative stacking bug)
               let maxPixelDrift = 0;
               markers.forEach(m => {
                 try {
@@ -487,7 +496,7 @@ def main() -> int:
                 inColorado: co.length,
                 southOf32: south.length,
                 maxOffRouteMi: Math.round(maxOff * 100) / 100,
-                maxSpurMi: Math.round(spurMax * 100) / 100,
+                exifMismatch,
                 markerPosition: pos,
                 maxPixelDrift: Math.round(maxPixelDrift * 10) / 10,
                 transformSafe: hasInner && !/transform/i.test(tr || '') && pos === 'absolute',
@@ -929,13 +938,12 @@ def main() -> int:
         if float(pp.get("maxPixelDrift") or 0) > 8:
             print(f"FAIL: Photo pin DOM drifted from geo projection (stacking bug): {pp}")
             ok = False
-        if float(pp.get("maxOffRouteMi") or 0) > 2.5:
-            print(f"FAIL: Photo pins must snap onto the corridor (<=2.5mi sample): {pp}")
+        if int(pp.get("exifMismatch") or 0) > 0:
+            print(f"FAIL: Photo pins must stay at exact EXIF GPS (not snapped to Tesla path): {pp}")
             ok = False
-        # Server spur is the EXIF→corridor distance; pin itself is on-path (off≈0).
-        # Guard against pins that somehow kept wilderness coords (spur unused).
-        if float(pp.get("maxOffRouteMi") or 0) > 2.5 and float(pp.get("maxSpurMi") or 0) > 0:
-            print(f"FAIL: Photo pin markers drifted off corridor: {pp}")
+        # Path must visit the photo GPS — pins at EXIF, route drawn through those shots
+        if float(pp.get("maxOffRouteMi") or 0) > 2.5:
+            print(f"FAIL: Route path must reach exact photo GPS (<=2.5mi): {pp}")
             ok = False
     if story_pacing.get("ok"):
         if story_pacing.get("midTravelVisible"):
